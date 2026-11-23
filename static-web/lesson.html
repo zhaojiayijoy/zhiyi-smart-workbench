@@ -14,7 +14,7 @@
     <main class="content">
 
       <div class="page-head">
-        <div><h1>一键备课</h1><p class="sub" data-page-sub>基于课程资料与学情（当前：消费者行为分析），生成教案、课件、练习、答案与评分量规</p></div>
+        <div><h1>一键备课</h1><p class="sub" data-page-sub>基于课程资料与学情，生成教案、课件、练习、答案与评分量规</p></div>
         <div class="right"><a class="btn" href="#packs">备课包历史</a></div>
       </div>
 
@@ -32,17 +32,17 @@
         <div class="card-b">
           <form data-sim="#lessonOut" data-msg="备课包已生成（示例）">
             <div class="grid g3">
-              <div class="field" style="grid-column:span 2"><label>本次课题 *</label><input type="text" required value="第 6 次课：消费者态度与说服"></div>
+              <div class="field" style="grid-column:span 2"><label>本次课题 *</label><input type="text" required value=""></div>
               <div class="field"><label>课型</label>
                 <select><option>新课讲授</option><option>复习课</option><option>实训课</option><option>讨论课</option><option>翻转课堂</option></select>
               </div>
-              <div class="field"><label>课时</label><input type="text" value="2 课时"></div>
-              <div class="field" style="grid-column:span 2"><label>学生基础 / 能力水平</label><input type="text" value="已掌握动机、知觉与参照群体；数据分析基础较弱"></div>
+              <div class="field"><label>课时</label><input type="text" value=""></div>
+              <div class="field" style="grid-column:span 2"><label>学生基础 / 能力水平</label><input type="text" value=""></div>
             </div>
 
             <div class="grid g2">
-              <div class="field"><label>教学风格 / 课堂活动要求</label><textarea style="min-height:62px">案例驱动，多提问，安排一次 25 分钟小组练习</textarea></div>
-              <div class="field"><label>补充要求</label><textarea style="min-height:62px">练习需包含一道图表阅读题，帮助学生区分百分比与百分点</textarea></div>
+              <div class="field"><label>教学风格 / 课堂活动要求</label><textarea style="min-height:62px"></textarea></div>
+              <div class="field"><label>补充要求</label><textarea style="min-height:62px"></textarea></div>
             </div>
 
             <div class="field">
@@ -57,12 +57,9 @@
             </div>
 
             <div class="field">
-              <label>本次使用的课程资料 <span class="mini" id="docCount">已选 2 / 4</span></label>
+              <label>本次使用的课程资料 <span class="mini" id="docCount">—</span></label>
               <div class="checks" id="docChecks">
-                <label class="chk on" data-doc="教材 · 312 页 · 2026-11-12"><input type="checkbox" checked>消费者行为学（第5版）.pdf</label>
-                <label class="chk on" data-doc="课程标准 · 18 页 · 2026-11-08"><input type="checkbox" checked>课程标准-消费者行为分析.docx</label>
-                <label class="chk" data-doc="案例集 · 46 页 · 2026-10-30"><input type="checkbox">本土品牌案例集.pdf</label>
-                <label class="chk" data-doc="前测数据 · 41 行 · 2026-11-19"><input type="checkbox">学情前测问卷.csv</label>
+                <div class="mini" style="padding:10px 0">暂无数据</div>
               </div>
               <button type="button" class="btn sm" id="docToggle" style="align-self:flex-start;margin-top:6px">展开资料预览</button>
               <div id="docPreview" class="mini" style="display:none;margin-top:6px"></div>
@@ -86,17 +83,13 @@
       </div>
 
       <div class="card" id="lessonOut" hidden style="margin-bottom:14px">
-        <div class="card-h"><h2>第 6 次课：消费者态度与说服</h2><div class="right"><button class="btn sm ghost" type="button" id="lessonCite">引用依据</button><span class="tag ok">双模型一致性 93%</span><span class="tag">待教师审核</span></div></div>
+        <div class="card-h"><h2>备课包</h2><div class="right"><button class="btn sm ghost" type="button" id="lessonCite">引用依据</button><span class="tag">暂无数据</span></div></div>
         <div class="card-b">
-          <div class="rule" style="margin-bottom:12px">生成依据：课程标准中的「态度三成分」要求 + 教材第 7 章 + 近 30 天答疑中的 5 条态度类问题。</div>
+          <div class="rule" style="margin-bottom:12px">暂无数据</div>
           <div class="cite-box" id="lessonCiteBox" hidden>
-            <div class="cite-h"><b>引用依据</b><span class="mini">生成于 2026-11-23 10:20</span></div>
-            <ul>
-              <li><span class="k">教材</span><a href="files.html">消费者行为学（第5版）· 第 7 章 P132-149</a></li>
-              <li><span class="k">课件</span><a href="files.html">第6次课-消费者态度.pptx · 第 12-18 页</a></li>
-              <li><span class="k">数据</span><a href="files.html">学情前测问卷.csv · 字段 question / tag / score</a></li>
-            </ul>
-            <div class="cite-meta"><span>生成模型：智谱 GLM-4</span><span>审核模型：智谱 GLM-4-Air</span><span>生成时间：2026-11-23 10:20</span></div>
+            <div class="cite-h"><b>引用依据</b><span class="mini">—</span></div>
+            <ul><li class="mini">暂无数据</li></ul>
+            <div class="cite-meta"><span>生成模型：—</span><span>审核模型：—</span><span>生成时间：—</span></div>
           </div>
           <div class="tabs">
             <button class="on" data-tab="plan">教案</button>
@@ -108,57 +101,28 @@
 
           <div class="tabpane on" data-pane="plan">
             <h3>教学目标</h3>
-            <p class="mini" style="margin:0 0 10px">能说明态度的认知、情感、行为三成分；能用三成分模型拆解一则广告；能识别说服中的常见偏差。</p>
-            <h3>教学流程（90 分钟）</h3>
-            <div class="stack" style="gap:8px">
-              <div class="list-item"><div class="li-ic">01</div><div><div class="li-t">导入 · 概念澄清（10 分钟）</div><div class="li-s">两道选择题区分参照群体与意见领袖，回收前测数据</div></div></div>
-              <div class="list-item"><div class="li-ic">02</div><div><div class="li-t">新知 · 态度三成分（25 分钟）</div><div class="li-s">以一则国产饮料广告为例，逐层标注认知 / 情感 / 行为</div></div></div>
-              <div class="list-item"><div class="li-ic">03</div><div><div class="li-t">练习 · 小组标注（25 分钟）</div><div class="li-s">每组一则广告，完成三成分表格并说明证据</div></div></div>
-              <div class="list-item"><div class="li-ic">04</div><div><div class="li-t">反馈 · 共性错误（15 分钟）</div><div class="li-s">展示两组典型答案，辨析「情感」与「行为意向」</div></div></div>
-              <div class="list-item"><div class="li-ic">05</div><div><div class="li-t">收尾 · 分层作业（15 分钟）</div><div class="li-s">基础题 5 道 + 拓展题 1 道（跨文化广告比较）</div></div></div>
-            </div>
+            <div class="mini" style="padding:10px 0">暂无数据</div>
+            <h3>教学流程</h3>
+            <div class="stack" style="gap:8px"><div class="mini" style="padding:10px 0">暂无数据</div></div>
           </div>
 
           <div class="tabpane" data-pane="ppt">
-            <div class="grid g2">
-              <div class="rule"><b>P1 封面</b><br>消费者态度与说服 · 第 6 次课</div>
-              <div class="rule"><b>P2 学习目标</b><br>三条可检验的目标，配动词开头</div>
-              <div class="rule"><b>P3-P6 态度三成分</b><br>认知 / 情感 / 行为，每页一个广告案例</div>
-              <div class="rule"><b>P7-P9 说服路径</b><br>中心路径与边缘路径对比表</div>
-              <div class="rule"><b>P10 小组任务</b><br>广告标注模板 + 时间与分工</div>
-              <div class="rule"><b>P11 常见错误</b><br>三组易混概念对照</div>
-            </div>
-            <div class="mini" style="margin-top:10px">共 22 页，含 3 个案例、2 张练习页。静态演示仅展示大纲。</div>
+            <div class="grid g2"><div class="mini" style="padding:10px 0">暂无数据</div></div>
           </div>
 
           <div class="tabpane" data-pane="drill">
-            <div class="stack" style="gap:8px">
-              <div class="rule"><b>1.（单选）</b>「我挺喜欢这个品牌的广告」属于态度中的哪个成分？<br><span class="mini">A 认知　B 情感　C 行为　D 都不是</span></div>
-              <div class="rule"><b>2.（简答）</b>请用态度三成分模型拆解一则你最近看过的广告，并标注证据。</div>
-              <div class="rule"><b>3.（图表题）</b>根据下图，判断「满意度从 62% 提升到 68%」应表述为提升 6 个百分点还是 6%，并说明理由。</div>
-              <div class="rule"><b>4.（小组）</b>同一产品分别面向大学生与职场新人，说服路径应如何调整？给出两条建议。</div>
-            </div>
+            <div class="stack" style="gap:8px"><div class="mini" style="padding:10px 0">暂无数据</div></div>
           </div>
 
           <div class="tabpane" data-pane="key">
-            <div class="stack" style="gap:8px">
-              <div class="rule"><b>1. B</b><br>情感成分指向情绪体验；认知是信念判断，行为是行动倾向。</div>
-              <div class="rule"><b>2. 参考答案</b><br>认知：广告强调「0 糖 0 脂」；情感：画面带来轻松感；行为：结尾引导「立即下单」。</div>
-              <div class="rule"><b>3. 6 个百分点</b><br>基数相同且为百分比指标时，差值用百分点表述，避免歧义。</div>
-              <div class="rule"><b>4. 评分要点</b><br>大学生偏边缘路径（代言人、社群）；职场新人偏中心路径（功能、性价比）。</div>
-            </div>
+            <div class="stack" style="gap:8px"><div class="mini" style="padding:10px 0">暂无数据</div></div>
           </div>
 
           <div class="tabpane" data-pane="rubric">
             <div class="table-wrap">
               <table>
                 <thead><tr><th>维度</th><th>分值</th><th>优秀标准</th><th>常见扣分</th></tr></thead>
-                <tbody>
-                  <tr><td>概念准确</td><td>30</td><td>三成分界定清晰，术语无误</td><td>混淆情感与行为意向</td></tr>
-                  <tr><td>证据使用</td><td>25</td><td>每项判断均有原文或画面证据</td><td>只给结论不给证据</td></tr>
-                  <tr><td>分析深度</td><td>25</td><td>能解释成分之间的相互作用</td><td>停留在罗列</td></tr>
-                  <tr><td>表达规范</td><td>20</td><td>结构清晰，图表有单位</td><td>百分比与百分点混用</td></tr>
-                </tbody>
+                <tbody><tr><td colspan="4" class="mini">暂无数据</td></tr></tbody>
               </table>
             </div>
           </div>
@@ -172,15 +136,11 @@
       </div>
 
       <div class="card" id="packs">
-        <div class="card-h"><h2>备课包历史</h2><div class="right"><span class="mini" id="packCount">3 条</span></div></div>
+        <div class="card-h"><h2>备课包历史</h2><div class="right"><span class="mini" id="packCount">—</span></div></div>
         <div class="table-wrap">
           <table>
             <thead><tr><th>备课包</th><th>生成时间</th><th>模型</th><th>一致性</th><th>状态</th><th>操作</th></tr></thead>
-            <tbody>
-              <tr><td>第 5 次课：参照群体与消费者决策</td><td>11-20 16:22</td><td>智谱 GLM-4</td><td>92%</td><td><span class="tag ok">已审核</span></td><td><button class="btn sm" type="button" data-demo="已打开备课包">打开</button></td></tr>
-              <tr><td>第 4 次课：知觉与学习</td><td>11-13 15:08</td><td>智谱 GLM-4</td><td>88%</td><td><span class="tag ok">已审核</span></td><td><button class="btn sm" type="button" data-demo="已打开备课包">打开</button></td></tr>
-              <tr><td>第 3 次课：动机与需要</td><td>11-06 14:41</td><td>智谱 GLM-4</td><td>90%</td><td><span class="tag ok">已审核</span></td><td><button class="btn sm" type="button" data-demo="已打开备课包">打开</button></td></tr>
-            </tbody>
+            <tbody><tr><td colspan="6" class="mini">暂无数据</td></tr></tbody>
           </table>
         </div>
       </div>
@@ -195,55 +155,8 @@
       </div>
 
       <div class="card" id="lessonVersions" data-versions style="margin-top:14px">
-        <div class="card-h"><h2>版本历史</h2><div class="right"><span class="mini ver-now" data-tpl="当前 {ver}">当前 v3</span><span class="mini">教师修改与 AI 重新生成均会留痕</span></div></div>
-        <div class="card-b">
-          <div class="ver-row current" data-ver="v3" data-kind="AI 重新生成">
-            <div class="ver-main"><div class="li-t">v3 · AI 重新生成</div><div class="li-s">11-22 16:40 · 依据最新学情与课程标准重新生成</div></div>
-            <span class="ver-tag on">当前</span>
-            <div class="ver-ops">
-              <button class="btn sm" type="button" data-vact="view">查看</button>
-              <button class="btn sm" type="button" data-vact="diff">比较</button>
-            </div>
-            <div class="ver-panel" hidden>
-              <div class="ver-snap"><b>版本快照</b><div class="mini">教案 5 环节 · 练习 4 题 · 量规 4 维度 · 双模型一致性 93%</div></div>
-              <div class="ver-diff">
-                <div class="del">− 练习 3：销售额同比计算</div>
-                <div class="add">+ 练习 3：满意度百分点判断</div>
-                <div class="add">+ 导入环节新增两道辨析选择题</div>
-              </div>
-            </div>
-          </div>
-          <div class="ver-row" data-ver="v2" data-kind="教师修改">
-            <div class="ver-main"><div class="li-t">v2 · 教师修改</div><div class="li-s">11-21 10:12 · 替换案例，补充图表阅读题</div></div>
-            <span class="ver-tag">教师修改</span>
-            <div class="ver-ops">
-              <button class="btn sm" type="button" data-vact="view">查看</button>
-              <button class="btn sm" type="button" data-vact="diff">比较</button>
-              <button class="btn sm" type="button" data-vact="restore">恢复</button>
-            </div>
-            <div class="ver-panel" hidden>
-              <div class="ver-snap"><b>版本快照</b><div class="mini">教案 5 环节 · 练习 4 题 · 量规 4 维度 · 双模型一致性 88%</div></div>
-              <div class="ver-diff">
-                <div class="del">− 案例：跨国饮料广告</div>
-                <div class="add">+ 案例：国产气泡水广告</div>
-                <div class="add">+ 练习 4：图表阅读（百分点）</div>
-              </div>
-            </div>
-          </div>
-          <div class="ver-row" data-ver="v1" data-kind="初始生成">
-            <div class="ver-main"><div class="li-t">v1 · 初始生成</div><div class="li-s">11-20 09:30 · 首次生成备课包</div></div>
-            <span class="ver-tag">初始生成</span>
-            <div class="ver-ops">
-              <button class="btn sm" type="button" data-vact="view">查看</button>
-              <button class="btn sm" type="button" data-vact="diff">比较</button>
-              <button class="btn sm" type="button" data-vact="restore">恢复</button>
-            </div>
-            <div class="ver-panel" hidden>
-              <div class="ver-snap"><b>版本快照</b><div class="mini">教案 4 环节 · 练习 3 题 · 量规 4 维度 · 双模型一致性 85%</div></div>
-              <div class="ver-diff"><div class="del">− 无更早版本可比较</div></div>
-            </div>
-          </div>
-        </div>
+        <div class="card-h"><h2>版本历史</h2><div class="right"><span class="mini ver-now" data-tpl="当前 {ver}">—</span><span class="mini">教师修改与 AI 重新生成均会留痕</span></div></div>
+        <div class="card-b"><div class="mini" style="padding:10px 0">暂无数据</div></div>
       </div>
 
     </main>

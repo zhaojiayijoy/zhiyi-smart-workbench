@@ -14,7 +14,7 @@
     <main class="content">
 
       <div class="page-head">
-        <div><h1>学情分析</h1><p class="sub" data-page-sub>把答疑、评审与实训数据汇总为可执行的教学决策（当前：消费者行为分析）</p></div>
+        <div><h1>学情分析</h1><p class="sub" data-page-sub>把答疑、评审与实训数据汇总为可执行的教学决策</p></div>
         <div class="right">
           <button class="icon-btn" type="button" title="导出报告" aria-label="导出报告" data-demo="已导出学情报告（示例）">⤓</button>
           <a class="btn" href="lesson.html">带入备课本</a>
@@ -23,9 +23,9 @@
         </div>
       </div>
 
-      <div class="state is-stale" id="staleNote" data-updated="2026-11-15" hidden>
+      <div class="state is-stale" id="staleNote" data-updated="" hidden>
         <div class="state-ic">⏳</div>
-        <div><b>学情数据可能已过期</b><span id="staleText">上次更新已超过 7 天，讲评结论可能不再准确。</span></div>
+        <div><b>学情数据可能已过期</b><span id="staleText">数据更新时间待加载。</span></div>
         <div class="state-actions"><button class="btn sm" type="button" data-demo="已重新分析学情（示例）">重新分析</button></div>
       </div>
 
@@ -47,10 +47,10 @@
       </div>
 
       <div class="grid g4" style="margin-bottom:14px">
-        <div class="kpi"><div class="label">答疑记录</div><div class="value">27</div><div class="foot">覆盖 3 个知识点</div></div>
-        <div class="kpi"><div class="label">作业评审</div><div class="value">41</div><div class="foot">已发布 37 · 待复核 4</div></div>
-        <div class="kpi warn"><div class="label">建议重点支持</div><div class="value">9 人</div><div class="foot">均分 &lt; 60</div></div>
-        <div class="kpi ok"><div class="label">建议提供拓展任务</div><div class="value">7 人</div><div class="foot">均分 ≥ 85</div></div>
+        <div class="kpi"><div class="label">答疑记录</div><div class="value">—</div><div class="foot">—</div></div>
+        <div class="kpi"><div class="label">作业评审</div><div class="value">—</div><div class="foot">—</div></div>
+        <div class="kpi warn"><div class="label">建议重点支持</div><div class="value">—</div><div class="foot">均分 &lt; 60</div></div>
+        <div class="kpi ok"><div class="label">建议提供拓展任务</div><div class="value">—</div><div class="foot">均分 ≥ 85</div></div>
       </div>
 
       <div class="card" style="margin-bottom:14px">
@@ -63,20 +63,7 @@
           </div>
 
           <div class="tabpane on" data-pane="points">
-            <div class="bars">
-              <div class="bar-row clickable" data-ev="参照群体影响 · 11 次答疑：其中 9 条集中在「参照群体与意见领袖的区别」，2 条涉及「所属群体与向往群体」。主要学生：林小满、周予安。">
-                <div class="t"><b>参照群体影响</b><span>11 次</span></div><div class="bar"><i data-w="0" style="width:0"></i></div>
-              </div>
-              <div class="bar-row clickable" data-ev="锚定效应 · 8 次答疑：多与「原价 / 折扣价呈现」有关，学生能举例但难以说明机制，建议补一个对照案例。">
-                <div class="t"><b>锚定效应</b><span>8 次</span></div><div class="bar"><i data-w="0" style="width:0"></i></div>
-              </div>
-              <div class="bar-row clickable" data-ev="消费者态度 · 5 次答疑：3 条集中在态度三成分模型的应用，2 条涉及说服路径选择。">
-                <div class="t"><b>消费者态度</b><span>5 次</span></div><div class="bar"><i data-w="0" style="width:0"></i></div>
-              </div>
-              <div class="bar-row clickable" data-ev="损失厌恶 · 3 次答疑：均围绕「凑单 / 满减」场景，学生能识别现象，但对边际效用解释较弱。">
-                <div class="t"><b>损失厌恶</b><span>3 次</span></div><div class="bar"><i data-w="0" style="width:0"></i></div>
-              </div>
-            </div>
+            <div class="bars"></div>
             <div class="state is-empty" data-barempty hidden>
               <div class="state-ic">◌</div>
               <div><b>暂无可用数据</b><span>当前课程还没有答疑或评审记录，生成后即可查看分布。</span></div>
@@ -86,7 +73,7 @@
               </div>
             </div>
             <div class="evidence" data-evbox></div>
-            <div class="rule clickable" id="pointsConclusion" style="margin-top:14px" data-ev="结论依据：27 条答疑中 11 条为参照群体影响，占 41%；其中 9 条明确提到「与意见领袖混在一起」。建议下次课开场用两道选择题澄清。">结论：参照群体影响占全部答疑的 41%，且多集中在「与意见领袖的区别」，适合作为下次课开场澄清点。<span class="mini">（点击查看证据）</span></div>
+            <div class="rule clickable" id="pointsConclusion" style="margin-top:14px" data-ev="暂无数据">暂无数据</div>
           </div>
 
           <div class="tabpane" data-pane="errors">
@@ -94,33 +81,14 @@
               <table>
                 <thead><tr><th>错误类型</th><th>占比</th><th>说明</th><th>建议</th></tr></thead>
                 <tbody>
-                  <tr><td>概念混淆</td><td>38%</td><td>参照群体与意见领袖边界不清</td><td>开场两道选择题</td></tr>
-                  <tr><td>因果倒置</td><td>27%</td><td>把相关当因果，缺少控制变量</td><td>补一个对照案例</td></tr>
-                  <tr><td>数据误读</td><td>21%</td><td>未区分百分比与百分点</td><td>图表阅读微练习</td></tr>
-                  <tr><td>表达不规范</td><td>14%</td><td>图表缺单位、引用不完整</td><td>发布提交检查清单</td></tr>
+                  <tr><td colspan="4" class="mini">暂无数据</td></tr>
                 </tbody>
               </table>
             </div>
           </div>
 
           <div class="tabpane" data-pane="dims">
-            <div class="bars">
-              <div class="bar-row clickable" data-ev="理论理解 78 分：评分依据为作业评审「理论应用」维度均分 23.4/30，扣分集中在概念边界表述。">
-                <div class="t"><b>理论理解</b><span>78 分</span></div><div class="bar"><i data-w="0" style="width:0"></i></div>
-              </div>
-              <div class="bar-row clickable" data-ev="数据分析 71 分：全部维度最低；实训 Excel 测算表完整率为 62%，主要问题是缺少敏感性分析。">
-                <div class="t"><b>数据分析</b><span>71 分</span></div><div class="bar"><i data-w="0" style="width:0"></i></div>
-              </div>
-              <div class="bar-row clickable" data-ev="方案设计 74 分：评审中「方案可行性」维度均分 18.5/25，普遍缺少成本测算与风险应对。">
-                <div class="t"><b>方案设计</b><span>74 分</span></div><div class="bar"><i data-w="0" style="width:0"></i></div>
-              </div>
-              <div class="bar-row clickable" data-ev="表达规范 82 分：最高维度；主要扣分为图表缺单位与引用不完整。">
-                <div class="t"><b>表达规范</b><span>82 分</span></div><div class="bar"><i data-w="0" style="width:0"></i></div>
-              </div>
-              <div class="bar-row clickable" data-ev="协作沟通 76 分：来自小组互评与汇报评分，差异主要体现在分工说明是否清晰。">
-                <div class="t"><b>协作沟通</b><span>76 分</span></div><div class="bar"><i data-w="0" style="width:0"></i></div>
-              </div>
-            </div>
+            <div class="bars"></div>
             <div class="state is-empty" data-barempty hidden>
               <div class="state-ic">◌</div>
               <div><b>暂无可用数据</b><span>当前课程还没有答疑或评审记录，生成后即可查看分布。</span></div>
@@ -130,29 +98,24 @@
               </div>
             </div>
             <div class="evidence" data-evbox></div>
-            <div class="rule" id="dimsConclusion" style="margin-top:14px">数据分析是最低维度（71 分），与实训中 Excel 测算的完成度一致。</div>
+            <div class="rule" id="dimsConclusion" style="margin-top:14px">暂无数据</div>
           </div>
 
           <div class="tabpane" data-pane="supports">
             <div class="stack" style="gap:8px">
-              <div class="list-item"><span class="tag warn">重点支持</span><div style="flex:1"><div class="li-t">9 名学生均分低于 60</div><div class="li-s">建议第 6 次课前安排 20 分钟概念澄清，并布置基础巩固题</div></div></div>
-              <div class="list-item"><span class="tag ok">拓展</span><div style="flex:1"><div class="li-t">7 名学生均分高于 85</div><div class="li-s">建议追加开放型任务：跨文化广告说服路径比较</div></div></div>
-              <div class="list-item"><span class="tag acc">共性</span><div style="flex:1"><div class="li-t">数据误读占比 21%</div><div class="li-s">建议增加图表阅读微练习，重点区分百分比与百分点</div></div></div>
+              <div class="mini" style="padding:10px 0">暂无数据</div>
             </div>
           </div>
         </div>
       </div>
 
       <div class="card" id="masteryCard" style="margin-bottom:14px">
-        <div class="card-h"><h2>班级知识点掌握</h2><div class="right"><span class="mini">41 名学生 · 更新于 11-22 18:00</span></div></div>
+        <div class="card-h"><h2>班级知识点掌握</h2><div class="right"><span class="mini">暂无数据</span></div></div>
         <div class="table-wrap">
           <table>
             <thead><tr><th>知识点</th><th>掌握率</th><th>错题人数</th><th>最近错误</th><th>趋势</th></tr></thead>
             <tbody>
-              <tr><td>参照群体与意见领袖</td><td><div class="bar" style="width:70px;display:inline-block;vertical-align:middle"><i data-w="58" style="width:58%"></i></div> <span class="mini">58%</span></td><td>17 / 41</td><td class="mini">11-21 20:14</td><td><span class="tag warn">↓ 3%</span></td></tr>
-              <tr><td>态度三成分</td><td><div class="bar" style="width:70px;display:inline-block;vertical-align:middle"><i data-w="64" style="width:64%"></i></div> <span class="mini">64%</span></td><td>12 / 41</td><td class="mini">11-20 16:38</td><td><span class="tag ok">↑ 2%</span></td></tr>
-              <tr><td>锚定效应</td><td><div class="bar" style="width:70px;display:inline-block;vertical-align:middle"><i data-w="76" style="width:76%"></i></div> <span class="mini">76%</span></td><td>8 / 41</td><td class="mini">11-19 10:22</td><td><span class="tag">→ 持平</span></td></tr>
-              <tr><td>百分点与百分比</td><td><div class="bar" style="width:70px;display:inline-block;vertical-align:middle"><i data-w="83" style="width:83%"></i></div> <span class="mini">83%</span></td><td>6 / 41</td><td class="mini">11-18 21:02</td><td><span class="tag ok">↑ 5%</span></td></tr>
+              <tr><td colspan="5" class="mini">暂无数据</td></tr>
             </tbody>
           </table>
         </div>
@@ -160,28 +123,23 @@
 
       <div class="split">
         <div class="card" id="actionCenter">
-          <div class="card-h"><h2>下一课行动中心</h2><div class="right"><span class="tag acc" id="actionLessonTag">第 6 次课</span></div></div>
+          <div class="card-h"><h2>下一课行动中心</h2><div class="right"><span class="tag acc" id="actionLessonTag">—</span></div></div>
           <div class="card-b">
             <h3>本节课薄弱知识点</h3>
             <div class="stack" id="weakStack" style="gap:6px;margin-bottom:10px">
-              <div class="rule clickable" data-ev="参照群体与意见领袖混淆：27 条答疑中 11 条提到，课堂选择题正确率 54%。">① 参照群体 vs 意见领袖混淆 <span class="tag warn">41%</span></div>
-              <div class="rule clickable" data-ev="态度三成分：41 份作业中有 8 份把「情感」与「行为意向」混为一谈。">② 态度三成分边界不清 <span class="tag warn">32%</span></div>
-              <div class="rule clickable" data-ev="图表阅读：约 21% 的作业把「百分点」写成「%」。">③ 图表阅读（百分比 / 百分点） <span class="tag warn">21%</span></div>
+              <div class="mini" style="padding:10px 0">暂无数据</div>
             </div>
             <div class="evidence" data-evbox id="actionEv"></div>
             <div class="hr"></div>
             <h3>建议讲评时间</h3>
-            <p class="mini" id="reviewTime" style="margin:0 0 12px">第 6 次课开场 20 分钟（09:00-09:20）：先用两道选择题澄清概念，再进入新知。</p>
+            <p class="mini" id="reviewTime" style="margin:0 0 12px">暂无数据</p>
             <h3>补偿练习</h3>
             <div class="stack" id="remedialStack" style="gap:6px;margin-bottom:12px">
-              <div class="rule">辨析题 2 道：判断「同学都在买」与「博主推荐」分别属于哪种影响。</div>
-              <div class="rule">图表题 1 道：满意度 62%→68%，写出正确表述并说明理由。</div>
+              <div class="mini" style="padding:10px 0">暂无数据</div>
             </div>
             <h3>课堂追问</h3>
             <div class="stack" id="questionStack" style="gap:6px;margin-bottom:14px">
-              <div class="rule">如果博主不是专家，还算意见领袖吗？</div>
-              <div class="rule">「同学都在买」和「博主推荐」同时出现时，哪个作用更强？</div>
-              <div class="rule">62% 到 68%，是提升 6% 还是 6 个百分点？</div>
+              <div class="mini" style="padding:10px 0">暂无数据</div>
             </div>
             <div class="form-actions">
               <a class="btn" href="lesson.html">带入下一课备课</a>
@@ -194,9 +152,7 @@
           <div class="card-h"><h2>数据来源</h2><div class="right"><span class="mini">近 30 天</span></div></div>
           <div class="card-b">
             <div class="bars">
-              <div class="bar-row"><div class="t"><b>学生答疑</b><span>27 条</span></div><div class="bar"><i data-w="39" style="width:0"></i></div></div>
-              <div class="bar-row"><div class="t"><b>作业评审</b><span>41 份</span></div><div class="bar"><i data-w="59" style="width:0"></i></div></div>
-              <div class="bar-row"><div class="t"><b>实训提交</b><span>70 人次</span></div><div class="bar"><i data-w="100" style="width:0"></i></div></div>
+              <div class="mini" style="padding:10px 0">暂无数据</div>
             </div>
             <div class="hr"></div>
             <p class="mini" style="margin:0">所有统计仅使用当前课程与当前班级的数据，不上传到外部服务。</p>
@@ -210,9 +166,7 @@
 
 <div class="toast"></div>
 <script>
-/* 为条形图写入目标宽度 */
-document.querySelectorAll('[data-pane="points"] .bar > i').forEach(function(el,i){el.setAttribute('data-w',[92,66,42,25][i]);});
-document.querySelectorAll('[data-pane="dims"] .bar > i').forEach(function(el,i){el.setAttribute('data-w',[78,71,74,82,76][i]);});
+/* 条形图宽度由真实数据渲染 */
 
 /* 点击柱状图 / 知识点 / 结论，查看证据（兼容 live.js 动态渲染的条形） */
 (function(){
@@ -232,11 +186,7 @@ document.querySelectorAll('[data-pane="dims"] .bar > i').forEach(function(el,i){
       box.textContent = ev;
       box.classList.add("on");
       if (!box.querySelector(".cite-box")) box.insertAdjacentHTML("beforeend",
-        '<div class="cite-box" style="margin-top:8px"><div class="cite-h"><b>引用依据</b><span class="mini">生成于 2026-11-23 10:20</span></div><ul>' +
-        '<li><span class="k">教材</span><span>消费者行为学（第5版）· 第 6 章 P112-118</span></li>' +
-        '<li><span class="k">课件</span><span>第5次课-参照群体与决策.pptx · 第 8-15 页</span></li>' +
-        '<li><span class="k">数据</span><span>学情前测问卷.csv · 字段 question / tag / score</span></li></ul>' +
-        '<div class="cite-meta"><span>生成模型：' + (window.__eduModel || "智谱 GLM-4") + '</span><span>审核模型：' + (window.__eduModel || "智谱 GLM-4-Air") + '</span><span>生成时间：2026-11-23 10:20</span></div></div>');
+        '<div class="cite-box" style="margin-top:8px"><div class="mini">暂无引用依据</div></div>');
     });
   });
 })();

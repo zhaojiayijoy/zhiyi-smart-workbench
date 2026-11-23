@@ -58,9 +58,7 @@
           <div class="card-b">
             <p class="mini" style="margin:0 0 10px">把学生的错题按知识点和错误类型归类，生成讲评顺序。</p>
             <div class="stack" style="gap:6px">
-              <div class="rule">概念混淆 · 38%</div>
-              <div class="rule">因果倒置 · 27%</div>
-              <div class="rule">数据误读 · 21%</div>
+              <div class="mini" style="padding:10px 0">暂无数据</div>
             </div>
             <div class="form-actions" style="margin-top:12px"><a class="btn" href="analytics.html">查看学情分析</a></div>
           </div>
@@ -71,9 +69,9 @@
         <div class="card-h"><h2>课堂小工具</h2><div class="right"><span class="mini">即点即用</span></div></div>
         <div class="card-b">
           <div class="grid g4">
-            <div class="rule"><b>随机点名</b><br>从当前班级 41 人中随机抽取<div class="form-actions" style="margin-top:8px"><button class="btn sm" type="button" id="pickOne">开始</button></div><div class="mini" id="pickResult" style="margin-top:6px"></div></div>
+            <div class="rule"><b>随机点名</b><br>随机抽取一名学生<div class="form-actions" style="margin-top:8px"><button class="btn sm" type="button" id="pickOne">开始</button></div><div class="mini" id="pickResult" style="margin-top:6px"></div></div>
             <div class="rule"><b>课堂计时</b><br>小组练习倒计时 5 分钟<div class="form-actions" style="margin-top:8px"><button class="btn sm" type="button" id="timerBtn">开始</button></div><div class="mini" id="timerResult" style="margin-top:6px"></div></div>
-            <div class="rule"><b>快速分组</b><br>41 人分为 10 组，4-5 人一组<div class="form-actions" style="margin-top:8px"><button class="btn sm" type="button" data-demo="已生成 10 个小组（示例）">分组</button></div></div>
+            <div class="rule"><b>快速分组</b><br>按当前班级人数自动分组<div class="form-actions" style="margin-top:8px"><button class="btn sm" type="button" data-demo="分组功能（示例）">分组</button></div></div>
             <div class="rule"><b>练习生成</b><br>按知识点生成课堂练习<div class="form-actions" style="margin-top:8px"><a class="btn sm" href="lesson.html">去生成</a></div></div>
           </div>
         </div>
@@ -90,10 +88,12 @@
 <script src="assets/js/live.js?v=1795490000"></script>
 <script>
 (function(){
-  var names = ['陈思远','林小满','周予安','王可欣','赵一鸣','刘子涵','孙悦','吴昊','郑雨桐','冯天翊'];
+  var names = [];
   var pick = document.getElementById('pickOne');
   pick.addEventListener('click', function(){
-    document.getElementById('pickResult').textContent = '抽到：' + names[Math.floor(Math.random()*names.length)];
+    var out = document.getElementById('pickResult');
+    if (!names.length) { out.textContent = '暂无学生数据'; return; }
+    out.textContent = '抽到：' + names[Math.floor(Math.random()*names.length)];
   });
   var btn = document.getElementById('timerBtn'), out = document.getElementById('timerResult'), t = null;
   btn.addEventListener('click', function(){

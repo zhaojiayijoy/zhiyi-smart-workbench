@@ -14,8 +14,8 @@
     <main class="content">
 
       <div class="page-head">
-        <div><h1>作业评审</h1><p class="sub" data-page-sub>AI 给出分维度评分证据，教师复核后发布（当前：消费者行为分析）</p></div>
-        <div class="right" id="reviewHeadTags"><span class="tag warn">4 份待复核</span><span class="tag ok">37 份已发布</span></div>
+        <div><h1>作业评审</h1><p class="sub" data-page-sub>AI 给出分维度评分证据，教师复核后发布</p></div>
+        <div class="right" id="reviewHeadTags"><span class="tag warn">— 份待复核</span><span class="tag ok">— 份已发布</span></div>
       </div>
 
       <div class="ctx">
@@ -56,64 +56,30 @@
               <span class="mini">评审结果需教师逐项确认后才计入成绩。</span>
             </div>
           </form>
-          <div class="rule" id="reviewOut" hidden style="margin-top:12px">已创建评审任务（静态演示）。真实版本会解析提交内容，并生成可追溯的评分证据。</div>
+          <div class="rule" id="reviewOut" hidden style="margin-top:12px">暂无数据</div>
         </div>
       </div>
 
       <div class="split" style="margin-bottom:14px">
         <div class="card">
-          <div class="card-h"><h2>学生提交</h2><div class="right"><span class="mini" id="reviewSubmitCount">3 份</span></div></div>
+          <div class="card-h"><h2>学生提交</h2><div class="right"><span class="mini" id="reviewSubmitCount">—</span></div></div>
           <div class="table-wrap">
             <table>
               <thead><tr><th>学生</th><th>文件</th><th>总分</th><th>状态</th></tr></thead>
-              <tbody>
-                <tr>
-                  <td><b>陈思远</b><div class="mini">S-017</div></td><td>促销方案.docx</td><td>86.5</td>
-                  <td><span class="tag ok">已发布</span></td>
-                </tr>
-                <tr>
-                  <td><b>林小满</b><div class="mini">S-023</div></td><td>定价策略分析.docx</td><td>78</td>
-                  <td><span class="tag warn">待复核</span></td>
-                </tr>
-                <tr>
-                  <td><b>周予安</b><div class="mini">S-031</div></td><td>渠道调研报告.docx</td><td>91</td>
-                  <td><span class="tag ok">已发布</span></td>
-                </tr>
-              </tbody>
+              <tbody><tr><td colspan="4" class="mini">暂无数据</td></tr></tbody>
             </table>
           </div>
           <div class="card-b" style="border-top:1px solid var(--line)">
-            <div class="mini">正在查看：<b id="reviewViewing" style="color:var(--text)">陈思远 · 促销方案.docx</b></div>
+            <div class="mini">正在查看：<b id="reviewViewing" style="color:var(--text)">暂无数据</b></div>
           </div>
         </div>
 
         <div class="card">
-          <div class="card-h"><h2>分维度评分证据</h2><div class="right"><span class="tag acc" id="reviewAiScore">AI 初评 86.5</span></div></div>
+          <div class="card-h"><h2>分维度评分证据</h2><div class="right"><span class="tag acc" id="reviewAiScore">AI 初评 —</span></div></div>
           <div class="table-wrap">
             <table>
               <thead><tr><th>维度</th><th>得分</th><th>依据 / 扣分原因</th><th>位置</th><th>采纳</th></tr></thead>
-              <tbody id="reviewEvidenceTb">
-                <tr>
-                  <td>理论应用</td><td><b>27</b>/30</td>
-                  <td class="wrap">准确使用锚定效应与损失厌恶解释满减门槛设计<div class="mini">扣分：参照群体部分仅一句带过</div></td>
-                  <td>P3</td><td><input type="checkbox" checked></td>
-                </tr>
-                <tr>
-                  <td>数据支撑</td><td><b>22</b>/25</td>
-                  <td class="wrap">引用前测问卷中的价格敏感度分布<div class="mini">扣分：未说明样本量，图表缺少单位</div></td>
-                  <td>表 1</td><td><input type="checkbox" checked></td>
-                </tr>
-                <tr>
-                  <td>方案可行性</td><td><b>19</b>/25</td>
-                  <td class="wrap">给出三档满减与库存联动规则<div class="mini">扣分：缺少成本测算，毛利风险未评估</div></td>
-                  <td>P6</td><td><input type="checkbox" checked></td>
-                </tr>
-                <tr>
-                  <td>表达规范</td><td><b>18.5</b>/20</td>
-                  <td class="wrap">结构清晰，术语使用规范<div class="mini">扣分：个别段落口语化</div></td>
-                  <td>全文</td><td><input type="checkbox" checked></td>
-                </tr>
-              </tbody>
+              <tbody id="reviewEvidenceTb"><tr><td colspan="5" class="mini">暂无数据</td></tr></tbody>
             </table>
           </div>
         </div>
@@ -124,13 +90,13 @@
         <div class="card-b">
           <form data-sim="#finalOut" data-msg="教师终评已保存（示例）">
             <div class="grid g4">
-              <div class="field"><label>理论应用</label><input type="number" value="27" max="30"></div>
-              <div class="field"><label>数据支撑</label><input type="number" value="22" max="25"></div>
-              <div class="field"><label>方案可行性</label><input type="number" value="19" max="25"></div>
-              <div class="field"><label>表达规范</label><input type="number" value="18.5" max="20"></div>
+              <div class="field"><label>理论应用</label><input type="number" value="" max="30"></div>
+              <div class="field"><label>数据支撑</label><input type="number" value="" max="25"></div>
+              <div class="field"><label>方案可行性</label><input type="number" value="" max="25"></div>
+              <div class="field"><label>表达规范</label><input type="number" value="" max="20"></div>
             </div>
             <div class="grid g2">
-              <div class="field"><label>终评评语</label><textarea style="min-height:80px">方案结构完整，理论应用到位。建议补充成本测算与样本说明，使结论更可信。</textarea></div>
+              <div class="field"><label>终评评语</label><textarea style="min-height:80px"></textarea></div>
               <div>
                 <div class="field"><label>修改原因（若调整 AI 评分）</label><input type="text" placeholder="例如：数据支撑扣分过重，已上调 2 分"></div>
                 <div class="field"><label>处理结果</label>
@@ -146,62 +112,16 @@
               <button class="btn" type="submit" data-confirm="保存后该学生成绩将按终评计入课程，确定保存？">保存教师终评</button>
               <button class="btn" type="button" data-demo="已退回给学生修改">退回修改</button>
               <button class="btn ghost" type="button" data-demo="已标记为需人工检查">需要人工进一步检查</button>
-              <span class="mini">总计 <b id="reviewFinalTotal">86.5</b> / 100</span>
+              <span class="mini">总计 <b id="reviewFinalTotal">—</b> / 100</span>
             </div>
           </form>
-          <div class="rule" id="finalOut" hidden style="margin-top:12px">教师终评已保存（静态演示）。真实版本会记录修改原因，并将结果同步到学生端。</div>
+          <div class="rule" id="finalOut" hidden style="margin-top:12px">暂无数据</div>
         </div>
       </div>
 
       <div class="card" id="rubricVersions" data-versions style="margin-top:14px">
-        <div class="card-h"><h2>评分标准版本历史</h2><div class="right"><span class="mini ver-now" data-tpl="当前 {ver}">当前 v3</span><span class="mini">评分标准调整会记录在案</span></div></div>
-        <div class="card-b">
-          <div class="ver-row current" data-ver="v3" data-kind="教师修改">
-            <div class="ver-main"><div class="li-t">v3 · 教师修改</div><div class="li-s">11-21 15:20 · 提高「证据引用」权重，新增反例辨析维度</div></div>
-            <span class="ver-tag on">当前</span>
-            <div class="ver-ops">
-              <button class="btn sm" type="button" data-vact="view">查看</button>
-              <button class="btn sm" type="button" data-vact="diff">比较</button>
-            </div>
-            <div class="ver-panel" hidden>
-              <div class="ver-snap"><b>版本快照</b><div class="mini">5 维度 / 100 分：结构 20 · 洞察 25 · 证据 30 · 反例 10 · 表达 15</div></div>
-              <div class="ver-diff">
-                <div class="del">− 证据引用 20 分</div>
-                <div class="add">+ 证据引用 30 分</div>
-                <div class="add">+ 新增「反例辨析 10 分」</div>
-              </div>
-            </div>
-          </div>
-          <div class="ver-row" data-ver="v2" data-kind="AI 重新生成">
-            <div class="ver-main"><div class="li-t">v2 · AI 重新生成</div><div class="li-s">11-19 11:00 · 按课程标准与本次作业目标重新生成量规</div></div>
-            <span class="ver-tag">AI 重新生成</span>
-            <div class="ver-ops">
-              <button class="btn sm" type="button" data-vact="view">查看</button>
-              <button class="btn sm" type="button" data-vact="diff">比较</button>
-              <button class="btn sm" type="button" data-vact="restore">恢复</button>
-            </div>
-            <div class="ver-panel" hidden>
-              <div class="ver-snap"><b>版本快照</b><div class="mini">4 维度 / 100 分：结构 25 · 洞察 30 · 证据 20 · 表达 25</div></div>
-              <div class="ver-diff">
-                <div class="del">− 维度：格式规范</div>
-                <div class="add">+ 维度：证据引用</div>
-              </div>
-            </div>
-          </div>
-          <div class="ver-row" data-ver="v1" data-kind="初始生成">
-            <div class="ver-main"><div class="li-t">v1 · 初始生成</div><div class="li-s">11-18 09:40 · 首次生成评分量规</div></div>
-            <span class="ver-tag">初始生成</span>
-            <div class="ver-ops">
-              <button class="btn sm" type="button" data-vact="view">查看</button>
-              <button class="btn sm" type="button" data-vact="diff">比较</button>
-              <button class="btn sm" type="button" data-vact="restore">恢复</button>
-            </div>
-            <div class="ver-panel" hidden>
-              <div class="ver-snap"><b>版本快照</b><div class="mini">4 维度 / 100 分：格式 25 · 结构 25 · 内容 30 · 表达 20</div></div>
-              <div class="ver-diff"><div class="del">− 无更早版本可比较</div></div>
-            </div>
-          </div>
-        </div>
+        <div class="card-h"><h2>评分标准版本历史</h2><div class="right"><span class="mini ver-now" data-tpl="当前 {ver}">—</span><span class="mini">评分标准调整会记录在案</span></div></div>
+        <div class="card-b"><div class="mini" style="padding:10px 0">暂无数据</div></div>
       </div>
 
     </main>

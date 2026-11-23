@@ -14,7 +14,7 @@
     <main class="content">
 
       <div class="page-head">
-        <div><h1>创建实训</h1><p class="sub" data-page-sub>用真实工作场景生成任务包，覆盖 Excel、Word、PPT 与数据分析要求（当前：消费者行为分析）</p></div>
+        <div><h1>创建实训</h1><p class="sub" data-page-sub>用真实工作场景生成任务包，覆盖 Excel、Word、PPT 与数据分析要求</p></div>
         <div class="right"><a class="btn" href="#taskList">任务列表</a></div>
       </div>
 
@@ -41,12 +41,12 @@
           <form data-sim="#trainOut" data-msg="实训任务包已生成（示例）">
             <div class="field">
               <label>真实工作场景 *</label>
-              <textarea id="trainScenario" required style="min-height:84px">某快消品牌准备在双十一期间推出一档满减活动，市场部需要你在 3 天内完成一份促销方案，说明目标人群、优惠结构与传播节奏，并用数据支撑你的选择。</textarea>
+              <textarea id="trainScenario" required style="min-height:84px"></textarea>
               <span class="hint">选择上方模板可自动预填场景、角色、交付物与评分量规。</span>
             </div>
             <div class="field">
               <label>补充要求</label>
-              <textarea id="trainExtra" style="min-height:60px">要求使用课程中的参照群体与锚定效应；提交 Excel 测算表、Word 方案与 6 页 PPT；小组 4 人分工。</textarea>
+              <textarea id="trainExtra" style="min-height:60px"></textarea>
             </div>
             <div class="form-actions">
               <button class="btn primary" type="submit">生成实训任务包</button>
@@ -58,30 +58,11 @@
       </div>
 
       <div class="card" id="trainOut" hidden style="margin-bottom:14px">
-        <div class="card-h"><h2 id="trainTitle">任务包：双十一满减促销方案</h2><div class="right"><span class="tag">草稿</span><span class="tag acc">100 分</span></div></div>
+        <div class="card-h"><h2 id="trainTitle">任务包：暂无数据</h2><div class="right"><span class="tag">—</span><span class="tag acc">—</span></div></div>
         <div class="card-b">
           <div class="grid g2">
-            <div id="trainColA">
-              <h3>项目背景</h3>
-              <p class="mini" style="margin:0 0 12px">品牌计划在双十一推出满减活动，需要在预算有限的前提下提升客单价与复购率。你所在的市场部小组负责方案设计与数据测算。</p>
-              <h3>学生角色</h3>
-              <p class="mini" style="margin:0 0 12px">市场部助理（4 人小组）：1 人负责数据测算，1 人负责人群与洞察，1 人负责方案撰写，1 人负责汇报。</p>
-              <h3>任务目标</h3>
-              <div class="stack" style="gap:6px">
-                <div class="rule">① 用前测问卷数据识别价格敏感人群，说明依据。</div>
-                <div class="rule">② 设计三档满减结构，给出毛利测算与风险提示。</div>
-                <div class="rule">③ 用锚定效应解释优惠呈现方式，并给出反例。</div>
-              </div>
-            </div>
-            <div id="trainColB">
-              <h3>交付物要求</h3>
-              <div class="stack" style="gap:8px">
-                <div class="rule"><b>Excel</b><br>至少 3 个工作表：原始数据、测算模型、敏感性分析；公式可追溯。</div>
-                <div class="rule"><b>Word</b><br>1500-2000 字方案，含目标人群、优惠结构、传播节奏、风险与应对。</div>
-                <div class="rule"><b>PPT</b><br>6 页以内，包含一页核心数据图与一页结论。</div>
-                <div class="rule"><b>数据任务</b><br>从问卷中清洗出有效样本，计算各价格带的人数与占比，判断差异是否显著。</div>
-              </div>
-            </div>
+            <div id="trainColA"><div class="mini" style="padding:10px 0">暂无数据</div></div>
+            <div id="trainColB"><div class="mini" style="padding:10px 0">暂无数据</div></div>
           </div>
           <div id="trainRubric" style="margin-top:14px"></div>
           <div class="form-actions" style="margin-top:14px">
@@ -105,23 +86,13 @@
               <option value="draft">草稿</option>
               <option value="closed">已关闭</option>
             </select>
-            <span class="mini" id="taskCount">3 个</span>
+            <span class="mini" id="taskCount">—</span>
           </div>
         </div>
         <div class="table-wrap">
           <table>
             <thead><tr><th>任务</th><th>状态</th><th>任务总分</th><th>提交情况</th><th>创建时间</th><th>操作</th></tr></thead>
-            <tbody id="taskTbody">
-              <tr data-status="published">
-                <td><b>双十一促销方案设计</b></td><td><span class="tag ok">已发布</span></td><td>100</td><td>32 / 41 人</td><td>11-18 14:20</td><td></td>
-              </tr>
-              <tr data-status="published">
-                <td><b>消费者访谈与洞察报告</b></td><td><span class="tag ok">已发布</span></td><td>100</td><td>38 / 41 人</td><td>11-12 09:05</td><td></td>
-              </tr>
-              <tr data-status="draft">
-                <td><b>竞品价格带分析（Excel）</b></td><td><span class="tag warn">草稿</span></td><td>80</td><td>—</td><td>11-20 16:40</td><td></td>
-              </tr>
-            </tbody>
+            <tbody id="taskTbody"><tr><td colspan="6" class="mini">暂无数据</td></tr></tbody>
           </table>
         </div>
       </div>
@@ -156,7 +127,7 @@
           tr.cells[5].innerHTML = ops;
         }
 
-        function rows(){ return Array.prototype.slice.call(tb.querySelectorAll("tr")); }
+        function rows(){ return Array.prototype.slice.call(tb.querySelectorAll("tr")).filter(function(tr){ return tr.cells.length >= 6; }); }
 
         function applyFilter(){
           var q = (search.value || "").trim().toLowerCase();
@@ -386,43 +357,8 @@
       </script>
 
       <div class="card" id="trainVersions" data-versions style="margin-top:14px">
-        <div class="card-h"><h2>版本历史</h2><div class="right"><span class="mini ver-now" data-tpl="当前 {ver}">当前 v2</span><span class="mini">任务包与评分量规的修改均可追溯</span></div></div>
-        <div class="card-b">
-          <div class="ver-row current" data-ver="v2" data-kind="AI 重新生成">
-            <div class="ver-main"><div class="li-t">v2 · AI 重新生成</div><div class="li-s">11-22 09:10 · 按「财务测算」模板重新生成角色与交付物</div></div>
-            <span class="ver-tag on">当前</span>
-            <div class="ver-ops">
-              <button class="btn sm" type="button" data-vact="view">查看</button>
-              <button class="btn sm" type="button" data-vact="diff">比较</button>
-            </div>
-            <div class="ver-panel" hidden>
-              <div class="ver-snap"><b>版本快照</b><div class="mini">角色：财务分析助理（3 人） · 交付物：Excel / Word / PPT · 量规 4 维度</div></div>
-              <div class="ver-diff">
-                <div class="del">− 交付物：促销海报（设计稿）</div>
-                <div class="add">+ 交付物：Excel 三表模型（假设 / 利润 / 现金流）</div>
-                <div class="add">+ 量规新增「敏感性分析 20 分」</div>
-              </div>
-            </div>
-          </div>
-          <div class="ver-row" data-ver="v1" data-kind="教师修改">
-            <div class="ver-main"><div class="li-t">v1 · 教师修改</div><div class="li-s">11-20 16:40 · 调整评分量规权重</div></div>
-            <span class="ver-tag">教师修改</span>
-            <div class="ver-ops">
-              <button class="btn sm" type="button" data-vact="view">查看</button>
-              <button class="btn sm" type="button" data-vact="diff">比较</button>
-              <button class="btn sm" type="button" data-vact="restore">恢复</button>
-            </div>
-            <div class="ver-panel" hidden>
-              <div class="ver-snap"><b>版本快照</b><div class="mini">角色：营销助理（4 人） · 交付物：Excel / Word / PPT · 量规 4 维度</div></div>
-              <div class="ver-diff">
-                <div class="del">− 模型准确性 30 分</div>
-                <div class="add">+ 模型准确性 35 分</div>
-                <div class="del">− 汇报表达 25 分</div>
-                <div class="add">+ 汇报表达 20 分</div>
-              </div>
-            </div>
-          </div>
-        </div>
+        <div class="card-h"><h2>版本历史</h2><div class="right"><span class="mini ver-now" data-tpl="当前 {ver}">—</span><span class="mini">任务包与评分量规的修改均可追溯</span></div></div>
+        <div class="card-b"><div class="mini" style="padding:10px 0">暂无数据</div></div>
       </div>
 
     </main>
