@@ -144,18 +144,33 @@
       </div>
 
       <div class="split">
-        <div class="card">
-          <div class="card-h"><h2>下一课方案</h2><div class="right"><span class="tag acc">第 6 次课</span></div></div>
+        <div class="card" id="actionCenter">
+          <div class="card-h"><h2>下一课行动中心</h2><div class="right"><span class="tag acc">第 6 次课</span></div></div>
           <div class="card-b">
-            <p class="sub" style="margin-bottom:10px">消费者态度与说服 · 2 课时（90 分钟）</p>
-            <div class="stack" style="gap:8px">
-              <div class="list-item"><div class="li-ic">10'</div><div><div class="li-t">概念澄清</div><div class="li-s">两道选择题区分参照群体与意见领袖</div></div></div>
-              <div class="list-item"><div class="li-ic">30'</div><div><div class="li-t">新知讲授</div><div class="li-s">态度三成分模型 + 广告案例拆解</div></div></div>
-              <div class="list-item"><div class="li-ic">25'</div><div><div class="li-t">小组练习</div><div class="li-s">广告态度成分标注，要求给出证据</div></div></div>
-              <div class="list-item"><div class="li-ic">10'</div><div><div class="li-t">收尾</div><div class="li-s">发布基础题与拓展题的分层作业</div></div></div>
+            <h3>本节课薄弱知识点</h3>
+            <div class="stack" style="gap:6px;margin-bottom:10px">
+              <div class="rule clickable" data-ev="参照群体与意见领袖混淆：27 条答疑中 11 条提到，课堂选择题正确率 54%。">① 参照群体 vs 意见领袖混淆 <span class="tag warn">41%</span></div>
+              <div class="rule clickable" data-ev="态度三成分：41 份作业中有 8 份把「情感」与「行为意向」混为一谈。">② 态度三成分边界不清 <span class="tag warn">32%</span></div>
+              <div class="rule clickable" data-ev="图表阅读：约 21% 的作业把「百分点」写成「%」。">③ 图表阅读（百分比 / 百分点） <span class="tag warn">21%</span></div>
             </div>
-            <div class="form-actions" style="margin-top:12px">
-              <a class="btn" href="lesson.html">用这份方案去备课</a>
+            <div class="evidence" data-evbox id="actionEv"></div>
+            <div class="hr"></div>
+            <h3>建议讲评时间</h3>
+            <p class="mini" style="margin:0 0 12px">第 6 次课开场 20 分钟（09:00-09:20）：先用两道选择题澄清概念，再进入新知。</p>
+            <h3>补偿练习</h3>
+            <div class="stack" style="gap:6px;margin-bottom:12px">
+              <div class="rule">辨析题 2 道：判断「同学都在买」与「博主推荐」分别属于哪种影响。</div>
+              <div class="rule">图表题 1 道：满意度 62%→68%，写出正确表述并说明理由。</div>
+            </div>
+            <h3>课堂追问</h3>
+            <div class="stack" style="gap:6px;margin-bottom:14px">
+              <div class="rule">如果博主不是专家，还算意见领袖吗？</div>
+              <div class="rule">「同学都在买」和「博主推荐」同时出现时，哪个作用更强？</div>
+              <div class="rule">62% 到 68%，是提升 6% 还是 6 个百分点？</div>
+            </div>
+            <div class="form-actions">
+              <a class="btn" href="lesson.html">带入下一课备课</a>
+              <button class="btn" type="button" data-confirm="将根据本次学情生成讲评课 PPT，确定继续？" data-demo="讲评课 PPT 已生成并加入备课包">生成讲评课 PPT</button>
             </div>
           </div>
         </div>
@@ -208,6 +223,19 @@ document.querySelectorAll('[data-pane="dims"] .bar > i').forEach(function(el,i){
         '<li><span class="k">数据</span><span>学情前测问卷.csv · 字段 question / tag / score</span></li></ul>' +
         '<div class="cite-meta"><span>生成模型：智谱 GLM-4</span><span>审核模型：智谱 GLM-4-Air</span><span>生成时间：2026-11-23 10:20</span></div></div>');
     });
+  });
+})();
+
+/* 下一课行动中心：点击薄弱知识点查看证据 */
+(function(){
+  var center = document.getElementById("actionCenter");
+  var box = document.getElementById("actionEv");
+  if (!center || !box) return;
+  center.addEventListener("click", function(e){
+    var el = e.target.closest(".rule.clickable[data-ev]");
+    if (!el) return;
+    box.textContent = el.getAttribute("data-ev");
+    box.classList.add("on");
   });
 })();
 
