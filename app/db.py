@@ -36,6 +36,10 @@ CREATE TABLE IF NOT EXISTS projects (
     difficulties TEXT NOT NULL DEFAULT '',
     progress TEXT NOT NULL DEFAULT '',
     textbook_version TEXT NOT NULL DEFAULT '',
+    class_size INTEGER NOT NULL DEFAULT 0,
+    current_session INTEGER NOT NULL DEFAULT 0,
+    total_sessions INTEGER NOT NULL DEFAULT 0,
+    note TEXT NOT NULL DEFAULT '',
     is_demo INTEGER NOT NULL DEFAULT 0,
     created_at REAL NOT NULL
 );
@@ -129,6 +133,10 @@ def _migrate(conn: sqlite3.Connection) -> None:
         ("difficulties", "TEXT NOT NULL DEFAULT ''"),
         ("progress", "TEXT NOT NULL DEFAULT ''"),
         ("textbook_version", "TEXT NOT NULL DEFAULT ''"),
+        ("class_size", "INTEGER NOT NULL DEFAULT 0"),
+        ("current_session", "INTEGER NOT NULL DEFAULT 0"),
+        ("total_sessions", "INTEGER NOT NULL DEFAULT 0"),
+        ("note", "TEXT NOT NULL DEFAULT ''"),
         ("is_demo", "INTEGER NOT NULL DEFAULT 0"),
     ):
         if col not in proj_cols:
@@ -269,7 +277,9 @@ def update_course(project_id: int, *, audience: str | None = None, hours: str | 
                   version: str | None = None, review_model: str | None = None,
                   class_name: str | None = None, key_points: str | None = None,
                   difficulties: str | None = None, progress: str | None = None,
-                  textbook_version: str | None = None) -> None:
+                  textbook_version: str | None = None,
+                  class_size: int | None = None, current_session: int | None = None,
+                  total_sessions: int | None = None, note: str | None = None) -> None:
     """更新课程项目信息（只更新传入的字段）。"""
     sets, args = [], []
     for col, val in (
@@ -278,6 +288,8 @@ def update_course(project_id: int, *, audience: str | None = None, hours: str | 
         ("class_name", class_name), ("key_points", key_points),
         ("difficulties", difficulties), ("progress", progress),
         ("textbook_version", textbook_version),
+        ("class_size", class_size), ("current_session", current_session),
+        ("total_sessions", total_sessions), ("note", note),
     ):
         if val is not None:
             sets.append(f"{col}=?")
@@ -294,7 +306,9 @@ def list_projects(limit: int = 100) -> list[dict[str, Any]]:
     with _conn() as c:
         rows = c.execute(
             "SELECT p.id, p.name, p.description, p.folder, p.class_name, p.progress,"
-            " p.is_demo, p.created_at,"
+            " p.audience, p.hours, p.objectives, p.key_points, p.difficulties,"
+            " p.textbook_version, p.class_size, p.current_session, p.total_sessions,"
+            " p.note, p.is_demo, p.created_at,"
             " (SELECT COUNT(*) FROM files WHERE project_id=p.id) AS file_count,"
             " (SELECT COUNT(*) FROM tasks WHERE project_id=p.id) AS task_count"
             " FROM projects p ORDER BY p.created_at DESC, p.id DESC LIMIT ?",

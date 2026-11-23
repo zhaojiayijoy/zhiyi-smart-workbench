@@ -11,6 +11,7 @@ from __future__ import annotations
 import io
 import json
 import os
+import re
 import sys
 import time
 import uuid
@@ -21,7 +22,7 @@ from urllib.parse import quote
 from fastapi import FastAPI, HTTPException, UploadFile, File, Form, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response, JSONResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 # 确保以项目根目录为工作基准，与 streamlit_app.py 行为一致
 ROOT = Path(__file__).resolve().parent
@@ -285,9 +286,35 @@ def save_settings(body: SettingsIn) -> dict:
 # ---------------------------------------------------------------------------
 # 课程项目
 # ---------------------------------------------------------------------------
+def _course_out(p: Optional[dict]) -> Optional[dict]:
+    """把 SQLite 行归一化为前端可直接消费的课程对象。
+
+    同时保留原始字段（class_name / hours 等）并把 hours 里的数字
+    解析成 totalHours 整数，避免前端再做字符串清洗。
+    """
+    if not p:
+        return None
+    out = dict(p)
+    m = re.search(r"\d+", str(p.get("hours") or ""))
+    out["totalHours"] = int(m.group()) if m else 0
+    out["classSize"] = int(p.get("class_size") or 0)
+    out["currentSession"] = int(p.get("current_session") or 0)
+    out["totalSessions"] = int(p.get("total_sessions") or 0)
+    out["class"] = p.get("class_name") or ""
+    out["className"] = p.get("class_name") or ""
+    out["textbook"] = p.get("textbook_version") or ""
+    out["desc"] = p.get("description") or ""
+    out["note"] = p.get("note") or ""
+    out["key"] = p.get("key_points") or ""
+    out["diff"] = p.get("difficulties") or ""
+    if "file_count" in out:
+        out["resourceCount"] = int(out.get("file_count") or 0)
+    return out
+
+
 @app.get("/api/courses")
 def list_courses() -> dict:
-    return ok(db.list_projects())
+    return ok([_course_out(p) for p in db.list_projects()])
 
 
 @app.get("/api/courses/{cid}")
@@ -296,7 +323,7 @@ def get_course(cid: int) -> dict:
     if not p:
         raise HTTPException(404, "课程不存在")
     p["overview"] = db.course_overview(cid)
-    return ok(p)
+    return ok(_course_out(p))
 
 
 @app.get("/api/courses/{cid}/overview")
@@ -306,43 +333,82 @@ def course_overview_api(cid: int) -> dict:
 
 class CourseIn(BaseModel):
     name: str
+    # 前端 camelCase 数字字段
+    classSize: Optional[int] = None
+    totalHours: Optional[int] = None
+    currentSession: Optional[int] = None
+    totalSessions: Optional[int] = None
+    resourceCount: Optional[int] = None
+    # 前端简写字段（class 是 Python 关键字，用 alias 接收）
+    class_: Optional[str] = Field(None, alias="class")
+    textbook: Optional[str] = None
+    desc: Optional[str] = None
+    note: Optional[str] = None
+    key: Optional[str] = None
+    diff: Optional[str] = None
+    objectives: Optional[str] = None
+    progress: Optional[str] = None
     audience: Optional[str] = None
+    # 后端 snake_case 兼容字段
     class_name: Optional[str] = None
     hours: Optional[str] = None
     textbook_version: Optional[str] = None
     description: Optional[str] = ""
-    objectives: Optional[str] = None
     key_points: Optional[str] = None
     difficulties: Optional[str] = None
-    progress: Optional[str] = None
 
 
 @app.post("/api/courses")
 def create_course(body: CourseIn) -> dict:
     if not body.name.strip():
         raise HTTPException(400, "课程名称必填")
-    pid = db.create_project(body.name.strip(), description=body.description or "")
+    pid = db.create_project(body.name.strip(), description=(body.description or body.desc or ""))
+
+    hours_val = None
+    if body.totalHours is not None:
+        hours_val = str(int(body.totalHours))
+    elif body.hours is not None:
+        hours_val = body.hours
+
     db.update_course(
         pid,
-        audience=body.audience, class_name=body.class_name or body.audience,
-        hours=body.hours, textbook_version=body.textbook_version,
-        objectives=body.objectives, key_points=body.key_points,
-        difficulties=body.difficulties, progress=body.progress,
+        audience=body.audience,
+        class_name=body.class_ or body.class_name or body.audience,
+        hours=hours_val,
+        textbook_version=body.textbook or body.textbook_version,
+        objectives=body.objectives,
+        key_points=body.key or body.key_points,
+        difficulties=body.diff or body.difficulties,
+        progress=body.progress,
+        class_size=body.classSize,
+        current_session=body.currentSession,
+        total_sessions=body.totalSessions,
+        note=body.note,
     )
-    return ok(db.get_project(pid), id=pid)
+    return ok(_course_out(db.get_project(pid)), id=pid)
 
 
 class CoursePatch(BaseModel):
     name: Optional[str] = None
     description: Optional[str] = None
+    desc: Optional[str] = None
     audience: Optional[str] = None
+    class_: Optional[str] = Field(None, alias="class")
     class_name: Optional[str] = None
+    classSize: Optional[int] = None
     hours: Optional[str] = None
+    totalHours: Optional[int] = None
+    currentSession: Optional[int] = None
+    totalSessions: Optional[int] = None
     textbook_version: Optional[str] = None
+    textbook: Optional[str] = None
     objectives: Optional[str] = None
     key_points: Optional[str] = None
+    key: Optional[str] = None
     difficulties: Optional[str] = None
+    diff: Optional[str] = None
     progress: Optional[str] = None
+    note: Optional[str] = None
 
 
 @app.put("/api/courses/{cid}")
@@ -353,17 +419,33 @@ def update_course_api(cid: int, body: CoursePatch) -> dict:
     name = body.name.strip() if body.name is not None else None
     if body.name is not None and not name:
         raise HTTPException(400, "课程名称不能为空")
+
+    hours_val = None
+    if body.totalHours is not None:
+        hours_val = str(int(body.totalHours))
+    elif body.hours is not None:
+        hours_val = body.hours
+
     try:
-        db.update_project(cid, name=name, description=body.description)
+        db.update_project(cid, name=name, description=body.description or body.desc)
         db.update_course(
-            cid, audience=body.audience, class_name=body.class_name,
-            hours=body.hours, textbook_version=body.textbook_version,
-            objectives=body.objectives, key_points=body.key_points,
-            difficulties=body.difficulties, progress=body.progress,
+            cid,
+            audience=body.audience,
+            class_name=body.class_ or body.class_name,
+            hours=hours_val,
+            textbook_version=body.textbook or body.textbook_version,
+            objectives=body.objectives,
+            key_points=body.key or body.key_points,
+            difficulties=body.diff or body.difficulties,
+            progress=body.progress,
+            class_size=body.classSize,
+            current_session=body.currentSession,
+            total_sessions=body.totalSessions,
+            note=body.note,
         )
     except Exception as e:
         raise HTTPException(400, f"更新失败：{e}")
-    return ok(db.get_project(cid))
+    return ok(_course_out(db.get_project(cid)))
 
 
 @app.delete("/api/courses/{cid}")

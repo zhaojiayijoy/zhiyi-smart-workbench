@@ -166,8 +166,11 @@
   var $ = function(id){ return document.getElementById(id); };
   var form = $("newCourseForm");
 
-  /** 取当前课程列表（Live API 覆盖演示数据后也自动生效） */
-  function list(){ return (Edu.state.courses && Edu.state.courses.length) ? Edu.state.courses : (window.EDU.courses || []); }
+  /** 取当前课程列表（Live API 覆盖演示数据后也自动生效；含演示模式持久化的自定义课程） */
+  function list(){
+    if (Edu.currentCourses) return Edu.currentCourses();
+    return (Edu.state.courses && Edu.state.courses.length) ? Edu.state.courses : (window.EDU.courses || []);
+  }
 
   /** 把表单里的所有值收集成一个课程对象，数字字段清洗后存数字 */
   function collectForm(){
@@ -333,13 +336,13 @@
           toast("创建课程失败：" + (err.message || err));
         });
       } else {
-        // 演示模式 → 加到本地列表
+        // 演示模式 → 写入 localStorage 持久化，刷新后仍然存在
+        if (Edu.addCustomCourse) Edu.addCustomCourse(newCourse);
         if (!Edu.state.courses.length) Edu.state.courses = list();
-        Edu.state.courses.push(newCourse);
-        // 同步到 EDU.courses（如果演示源还在）
-        if (window.EDU && Array.isArray(window.EDU.courses) && window.EDU.courses.length && Edu.state.courses[0] === window.EDU.courses[0]){
-          window.EDU.courses = Edu.state.courses;
-        }
+        var exists = Edu.state.courses.some(function (c) {
+          return String(c.id) === String(newCourse.id);
+        });
+        if (!exists) Edu.state.courses.push(newCourse);
         finishCreate(newCourse);
       }
     });

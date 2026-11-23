@@ -85,13 +85,46 @@
     courses: []
   };
 
+  /* ---------- 演示模式自定义课程（localStorage 持久化） ---------- */
+  var CUSTOM_COURSES_KEY = "edu.customCourses";
+
+  function readCustomCourses() {
+    try {
+      var raw = localStorage.getItem(CUSTOM_COURSES_KEY);
+      var arr = raw ? JSON.parse(raw) : [];
+      return Array.isArray(arr) ? arr : [];
+    } catch (e) { return []; }
+  }
+
+  function writeCustomCourses(list) {
+    try { localStorage.setItem(CUSTOM_COURSES_KEY, JSON.stringify(list || [])); } catch (e) {}
+  }
+
+  Edu.addCustomCourse = function (course) {
+    if (!course || !course.id) return;
+    var list = readCustomCourses().filter(function (c) {
+      return String(c.id) !== String(course.id);
+    });
+    list.push(course);
+    writeCustomCourses(list);
+  };
+
   /** 从课程列表派生当前选中课程对象 */
   function getSelectedCourse() {
-    var list = (Edu.state.courses && Edu.state.courses.length) ? Edu.state.courses : (window.EDU.courses || []);
+    var list = currentCourses();
     if (!list || !list.length) return null;
-    return list.filter(function (c) { return String(c.id) === String(Edu.state.selectedCourseId); })[0]
-      || list[0]  // fallback：第一个
-      || null;
+    var found = list.filter(function (c) {
+      return String(c.id) === String(Edu.state.selectedCourseId);
+    })[0];
+    if (found) return found;
+
+    // 没有有效选中：收敛到第一门，并同步状态与下拉框，避免"顶栏与页面数据错位"
+    var fallback = list[0];
+    Edu.state.selectedCourseId = String(fallback.id);
+    try { localStorage.setItem("edu.course", String(fallback.id)); } catch (e) {}
+    var pick = document.querySelector("#coursePick");
+    if (pick) pick.value = String(fallback.id);
+    return fallback;
   }
   Edu.getSelectedCourse = getSelectedCourse;
   Edu.isLive = function () { return !!Edu.state.live; };
@@ -126,9 +159,17 @@
   }
   Edu.courseSummary = courseSummary;
 
+  /** 当前可用课程：内存/接口课程 + 演示模式持久化的自定义课程（按 id 去重） */
   function currentCourses() {
-    return (Edu.state.courses && Edu.state.courses.length) ? Edu.state.courses : (window.EDU.courses || []);
+    var base = (Edu.state.courses && Edu.state.courses.length) ? Edu.state.courses : (window.EDU.courses || []);
+    base = base || [];
+    var custom = readCustomCourses();
+    if (!custom.length) return base;
+    var ids = {};
+    base.forEach(function (c) { ids[String(c.id)] = 1; });
+    return base.concat(custom.filter(function (c) { return !ids[String(c.id)]; }));
   }
+  Edu.currentCourses = currentCourses;
 
   /** 切换课程（全局） */
   function selectCourse(id) {
@@ -440,10 +481,12 @@
         var pick = document.querySelector("#coursePick");
         if (pick) {
           var saved = null; try { saved = localStorage.getItem("edu.course"); } catch (e) {}
-          var target = (saved && list.some(function (c) { return String(c.id) === String(saved); })) ? saved
-            : (list[0] ? list[0].id : "");
+          // 用合并后的列表重建下拉框，避免覆盖掉演示模式持久化的自定义课程
+          var visible = currentCourses();
+          var target = (saved && visible.some(function (c) { return String(c.id) === String(saved); })) ? saved
+            : (visible[0] ? visible[0].id : "");
           Edu.state.selectedCourseId = target || null;
-          pick.innerHTML = list.length ? list.map(function (c) {
+          pick.innerHTML = visible.length ? visible.map(function (c) {
             return '<option value="' + c.id + '">' + c.name + " · " + (c.class_name || c.class || "") + "</option>";
           }).join("") : '<option value="">（暂无课程）</option>';
           pick.value = target;
@@ -455,7 +498,14 @@
     }).catch(function () {
       liveBadge(false);
       Edu.state.courses = window.EDU.courses || [];
-      Edu.state.selectedCourseId = (window.EDU.courses && window.EDU.courses[0]) ? window.EDU.courses[0].id : null;
+      // 优先恢复上次选中的课程（含演示模式持久化的自定义课程），避免刷新后串课
+      var saved = null; try { saved = localStorage.getItem("edu.course"); } catch (e) {}
+      var visible = currentCourses();
+      Edu.state.selectedCourseId = (saved && visible.some(function (c) { return String(c.id) === String(saved); }))
+        ? saved
+        : (visible[0] ? visible[0].id : null);
+      var pick = document.querySelector("#coursePick");
+      if (pick && Edu.state.selectedCourseId) pick.value = String(Edu.state.selectedCourseId);
       toast("演示模式：启动 api_server.py 后刷新可接入真实数据");
       emitCourseChange();
       renderTopCourseSummary();
