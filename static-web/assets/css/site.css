@@ -149,9 +149,10 @@ select{cursor:pointer}
 .sticky-bar .est{font-size:12.5px;color:var(--text-2)}
 .sticky-bar .est b{color:var(--accent);font-weight:650;font-size:13.5px}
 .form-note{font-size:11.5px;color:var(--text-3);background:var(--panel-3);border:1px dashed var(--line-strong);border-radius:8px;padding:8px 10px}
-.ctx{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:11px 14px;margin-bottom:14px}
-.ctx .k{font-size:10.5px;color:var(--text-3);display:block}
-.ctx b{font-size:12.5px;font-weight:600;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ctx{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 22px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:9px 14px;margin-bottom:14px}
+.ctx>div{display:flex;align-items:baseline;gap:6px;min-width:0}
+.ctx .k{font-size:10.5px;color:var(--text-3);white-space:nowrap}
+.ctx b{font-size:12.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 /* ---------- 学生答疑三栏 ---------- */
 .tutor-layout{display:grid;grid-template-columns:290px minmax(0,1fr) 340px;gap:14px;align-items:start}
 @media (max-width:1280px){.tutor-layout{grid-template-columns:1fr}}

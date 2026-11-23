@@ -255,7 +255,6 @@
     top.innerHTML =
       mobile +
       '<div class="crumb"><span>致壹</span><span>/</span><b>' + (TITLES[page] || "首页") + "</b></div>" +
-      '<div class="course-summary empty" title="点击切换课程"></div>' +
       '<div class="top-right">' +
         '<label class="course-pick"><span>课程</span><select id="coursePick">' + options + '</select></label>' +
         (isStudent ? "" : '<a class="btn sm" href="courses.html#newCourse">＋ 创建课程</a>') +
