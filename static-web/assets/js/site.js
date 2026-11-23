@@ -60,10 +60,6 @@
         { href: "student.html#feedback", icon: "check", text: "教师反馈", page: "student" },
         { href: "student.html#review", icon: "book", text: "错题回顾", page: "student" }
       ]
-    },
-    {
-      label: "返回",
-      items: [{ href: "index.html", icon: "grid", text: "教师工作台", page: "index" }]
     }
   ];
 
@@ -204,11 +200,12 @@
     });
     var u = isStudent ? window.EDU.student : window.EDU.teacher;
     aside.innerHTML =
-      '<a class="brand" href="index.html">' +
+      '<a class="brand" href="' + (isStudent ? "student.html" : "index.html") + '">' +
         '<div class="mark">致</div>' +
         '<div><div class="name">' + window.EDU.brand.name + '</div><div class="sub">' + window.EDU.brand.sub + "</div></div>" +
       "</a>" +
-      '<div class="side-new"><button type="button" data-go="index.html">' + ic("plus", 14) + " 新建教学任务</button></div>" +
+      '<div class="side-new"><button type="button" data-go="' + (isStudent ? "student.html#tasks" : "index.html") + '">' +
+        ic("plus", 14) + (isStudent ? " 我的学习任务" : " 新建教学任务") + "</button></div>" +
       '<nav class="nav">' + nav + "</nav>" +
       '<div class="side-foot"><div class="avatar">' + u.initials + "</div>" +
         "<div><b>" + (isStudent ? u.name : "本地用户") + "</b><span>" + (isStudent ? u.class : "教师 · 单租户") + "</span></div></div>";
@@ -261,7 +258,7 @@
       '<div class="course-summary empty" title="点击切换课程"></div>' +
       '<div class="top-right">' +
         '<label class="course-pick"><span>课程</span><select id="coursePick">' + options + '</select></label>' +
-        '<a class="btn sm" href="courses.html#newCourse">＋ 创建课程</a>' +
+        (isStudent ? "" : '<a class="btn sm" href="courses.html#newCourse">＋ 创建课程</a>') +
         '<div class="mode-switch">' +
           '<button type="button" class="' + (isStudent ? "" : "on") + '" data-go="index.html">教师工作台</button>' +
           '<button type="button" class="' + (isStudent ? "on" : "") + '" data-go="student.html">学生空间</button>' +
