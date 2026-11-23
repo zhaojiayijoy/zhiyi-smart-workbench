@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>一键备课 · 致壹 智能教育工作台</title>
-<link rel="stylesheet" href="assets/css/site.css?v=1795420906">
+<link rel="stylesheet" href="assets/css/site.css?v=1795468000">
 </head>
 <body data-page="lesson">
 <div class="app">
@@ -47,7 +47,7 @@
 
             <div class="field">
               <label>输出物</label>
-              <div class="checks">
+              <div class="checks" id="outChecks">
                 <label class="chk on"><input type="checkbox" checked>教案</label>
                 <label class="chk on"><input type="checkbox" checked>PPT</label>
                 <label class="chk on"><input type="checkbox" checked>课堂练习</label>
@@ -57,13 +57,15 @@
             </div>
 
             <div class="field">
-              <label>本次使用的课程资料</label>
-              <div class="checks">
-                <label class="chk on"><input type="checkbox" checked>消费者行为学（第5版）.pdf</label>
-                <label class="chk on"><input type="checkbox" checked>课程标准-消费者行为分析.docx</label>
-                <label class="chk"><input type="checkbox">本土品牌案例集.pdf</label>
-                <label class="chk"><input type="checkbox">学情前测问卷.csv</label>
+              <label>本次使用的课程资料 <span class="mini" id="docCount">已选 2 / 4</span></label>
+              <div class="checks" id="docChecks">
+                <label class="chk on" data-doc="教材 · 312 页 · 2026-11-12"><input type="checkbox" checked>消费者行为学（第5版）.pdf</label>
+                <label class="chk on" data-doc="课程标准 · 18 页 · 2026-11-08"><input type="checkbox" checked>课程标准-消费者行为分析.docx</label>
+                <label class="chk" data-doc="案例集 · 46 页 · 2026-10-30"><input type="checkbox">本土品牌案例集.pdf</label>
+                <label class="chk" data-doc="前测数据 · 41 行 · 2026-11-19"><input type="checkbox">学情前测问卷.csv</label>
               </div>
+              <button type="button" class="btn sm" id="docToggle" style="align-self:flex-start;margin-top:6px">展开资料预览</button>
+              <div id="docPreview" class="mini" style="display:none;margin-top:6px"></div>
             </div>
 
             <div class="grid g3">
@@ -174,6 +176,15 @@
         </div>
       </div>
 
+      <div class="sticky-bar">
+        <div class="grow">
+          <span class="est">预计生成 <b id="estCount">5</b> 项成果</span>
+          <span class="mini" id="estList" style="margin-left:8px">教案 · PPT · 课堂练习 · 答案与解析 · 评分量规</span>
+        </div>
+        <button class="btn" type="button" id="stickyReset">清空参数</button>
+        <button class="btn primary" type="button" id="stickyGen">生成备课包</button>
+      </div>
+
     </main>
   </div>
 </div>
@@ -183,5 +194,66 @@
 <script src="assets/js/site.js?v=1795420906"></script>
 <script src="assets/js/api.js?v=1795420906"></script>
 <script src="assets/js/live.js?v=1795420906"></script>
+<script>
+(function(){
+  function $id(id){ return document.getElementById(id); }
+  var form = document.querySelector('form[data-sim="#lessonOut"]');
+
+  function syncOut(){
+    var boxes = document.querySelectorAll("#outChecks input");
+    var names = [];
+    Array.prototype.forEach.call(boxes, function(b){
+      b.closest("label").classList.toggle("on", b.checked);
+      if (b.checked) names.push(b.parentElement.textContent.trim());
+    });
+    var c = $id("estCount"), l = $id("estList");
+    if (c) c.textContent = names.length;
+    if (l) l.textContent = names.length ? names.join(" · ") : "未选择输出物";
+  }
+
+  function syncDocs(){
+    var boxes = document.querySelectorAll("#docChecks input");
+    var n = 0;
+    Array.prototype.forEach.call(boxes, function(b){
+      b.closest("label").classList.toggle("on", b.checked);
+      if (b.checked) n++;
+    });
+    var c = $id("docCount");
+    if (c) c.textContent = "已选 " + n + " / " + boxes.length;
+  }
+
+  document.addEventListener("change", function(e){
+    if (e.target.closest && e.target.closest("#outChecks")) syncOut();
+    if (e.target.closest && e.target.closest("#docChecks")) syncDocs();
+  });
+
+  var tg = $id("docToggle");
+  if (tg) tg.addEventListener("click", function(){
+    var p = $id("docPreview");
+    var open = p.style.display === "none";
+    if (open){
+      p.innerHTML = Array.prototype.map.call(document.querySelectorAll("#docChecks label"), function(l){
+        return "<div>· " + l.textContent.trim() + " — " + (l.getAttribute("data-doc") || "") + "</div>";
+      }).join("");
+      p.style.display = "block";
+      tg.textContent = "收起资料预览";
+    } else {
+      p.style.display = "none";
+      tg.textContent = "展开资料预览";
+    }
+  });
+
+  var gen = $id("stickyGen"), reset = $id("stickyReset");
+  if (gen && form) gen.addEventListener("click", function(){
+    if (form.requestSubmit) form.requestSubmit();
+    else form.dispatchEvent(new Event("submit", { cancelable: true, bubbles: true }));
+  });
+  if (reset && form) reset.addEventListener("click", function(){
+    form.reset(); syncOut(); syncDocs();
+  });
+
+  syncOut(); syncDocs();
+})();
+</script>
 </body>
 </html>

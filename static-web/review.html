@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>作业评审 · 致壹 智能教育工作台</title>
-<link rel="stylesheet" href="assets/css/site.css?v=1795420906">
+<link rel="stylesheet" href="assets/css/site.css?v=1795468000">
 </head>
 <body data-page="review">
 <div class="app">
@@ -26,11 +26,25 @@
       </div>
 
       <div class="card" style="margin-bottom:14px">
-        <div class="card-h"><h2>上传学生提交</h2><div class="right"><span class="mini">支持多文件 · docx / pdf / pptx</span></div></div>
+        <div class="card-h"><h2>上传学生提交</h2><div class="right"><span class="mini">支持多文件 · docx / xlsx / pdf / pptx</span></div></div>
         <div class="card-b">
+          <div class="steps" id="reviewSteps">
+            <span class="step cur" data-step="1"><i>1</i>AI 评审</span><span class="arw">→</span>
+            <span class="step" data-step="2"><i>2</i>教师复核</span><span class="arw">→</span>
+            <span class="step" data-step="3"><i>3</i>发布成绩</span>
+          </div>
           <form data-sim="#reviewOut" data-msg="已开始评审（示例）">
+            <div class="field">
+              <label>学生提交文件</label>
+              <div class="dropzone" id="dz" tabindex="0" role="button" aria-label="拖拽或点击上传学生提交文件">
+                <div class="dz-ic">↑</div>
+                <div class="dz-t">拖拽文件到此处，或点击选择</div>
+                <div class="dz-s">支持 docx / xlsx / pdf / pptx；同一名学生可一次上传多个文件</div>
+              </div>
+              <input type="file" id="dzInput" multiple accept=".docx,.xlsx,.xls,.pdf,.pptx" hidden>
+              <div class="dz-files" id="dzFiles"></div>
+            </div>
             <div class="grid g2">
-              <div class="field" style="grid-column:span 2"><label>学生提交文件</label><input type="file" multiple></div>
               <div class="field"><label>学生姓名</label><input type="text" placeholder="例如：陈思远"></div>
               <div class="field"><label>匿名编号</label><input type="text" placeholder="例如：S-017"></div>
               <div class="field"><label>班级</label><input type="text" data-fill="course.class" placeholder="自动带入当前课程班级"></div>
@@ -144,6 +158,85 @@
 </div>
 
 <div class="toast"></div>
+<script>
+(function(){
+  var dz = document.getElementById("dz");
+  var input = document.getElementById("dzInput");
+  var list = document.getElementById("dzFiles");
+  var files = [];
+
+  function render(){
+    list.innerHTML = "";
+    files.forEach(function(f, idx){
+      var row = document.createElement("div");
+      row.className = "dz-file";
+      var nm = document.createElement("span");
+      nm.className = "nm";
+      nm.textContent = f.name;
+      var sz = document.createElement("span");
+      sz.className = "mini";
+      sz.textContent = Math.max(1, Math.round(f.size / 1024)) + " KB";
+      var rm = document.createElement("button");
+      rm.type = "button";
+      rm.className = "btn sm ghost";
+      rm.textContent = "移除";
+      rm.addEventListener("click", function(){ files.splice(idx, 1); render(); });
+      row.appendChild(nm); row.appendChild(sz); row.appendChild(rm);
+      list.appendChild(row);
+    });
+    syncInput();
+  }
+  function syncInput(){
+    if (!input) return;
+    try {
+      var dt = new DataTransfer();
+      files.forEach(function(f){ dt.items.add(f); });
+      input.files = dt.files;
+    } catch (e) {}
+  }
+  function addFiles(fl){
+    Array.prototype.forEach.call(fl, function(f){ files.push(f); });
+    render();
+  }
+  if (dz && input && list){
+    dz.addEventListener("click", function(){ input.click(); });
+    dz.addEventListener("keydown", function(e){
+      if (e.key === "Enter" || e.key === " "){ e.preventDefault(); input.click(); }
+    });
+    input.addEventListener("change", function(){ addFiles(input.files); });
+    ["dragenter","dragover"].forEach(function(ev){
+      dz.addEventListener(ev, function(e){ e.preventDefault(); dz.classList.add("drag"); });
+    });
+    ["dragleave","drop"].forEach(function(ev){
+      dz.addEventListener(ev, function(e){ e.preventDefault(); dz.classList.remove("drag"); });
+    });
+    dz.addEventListener("drop", function(e){
+      if (e.dataTransfer && e.dataTransfer.files) addFiles(e.dataTransfer.files);
+    });
+  }
+
+  var steps = document.querySelectorAll("#reviewSteps .step");
+  function setStage(stage){
+    Array.prototype.forEach.call(steps, function(s){
+      var n = parseInt(s.getAttribute("data-step"), 10);
+      s.classList.remove("done", "cur");
+      var ic = s.querySelector("i");
+      if (n < stage){ s.classList.add("done"); if (ic) ic.textContent = "✓"; }
+      else if (n === stage){ s.classList.add("cur"); if (ic) ic.textContent = String(n); }
+      else if (ic) ic.textContent = String(n);
+    });
+  }
+  var f1 = document.querySelector('form[data-sim="#reviewOut"]');
+  if (f1) f1.addEventListener("submit", function(){ setStage(2); });
+  var f2 = document.querySelector('form[data-sim="#finalOut"]');
+  if (f2) f2.addEventListener("submit", function(){
+    Array.prototype.forEach.call(steps, function(s){
+      s.classList.remove("cur"); s.classList.add("done");
+      var ic = s.querySelector("i"); if (ic) ic.textContent = "✓";
+    });
+  });
+})();
+</script>
 <script src="assets/js/data.js?v=1795420906"></script>
 <script src="assets/js/site.js?v=1795420906"></script>
 <script src="assets/js/api.js?v=1795420906"></script>

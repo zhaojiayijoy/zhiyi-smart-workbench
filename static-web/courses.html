@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>课程项目 · 致壹 智能教育工作台</title>
-<link rel="stylesheet" href="assets/css/site.css?v=1795420906">
+<link rel="stylesheet" href="assets/css/site.css?v=1795468000">
 </head>
 <body data-page="courses">
 <div class="app">
@@ -15,7 +15,11 @@
 
       <div class="page-head">
         <div><h1>课程项目</h1><p class="sub" id="pageSub">课程是备课、答疑、实训与学情分析共用的上下文</p></div>
-        <div class="right"><a class="btn primary" href="#newCourse">＋ 新建课程项目</a></div>
+        <div class="right">
+          <a class="btn" href="#newCourse">＋ 新建课程项目</a>
+          <a class="btn" href="lesson.html">查看下一课建议</a>
+          <a class="btn primary" href="lesson.html">继续备课</a>
+        </div>
       </div>
 
       <div class="ctx" id="ctxBar">
@@ -27,12 +31,12 @@
       </div>
 
       <div class="grid g6" style="margin-bottom:14px">
-        <div class="kpi"><div class="label">课程资料</div><div class="value" id="kpiFiles">—</div><div class="foot">教材 / 标准 / 案例 / 课件</div></div>
-        <div class="kpi"><div class="label">最近备课包</div><div class="value" style="font-size:14px">第 5 次课</div><div class="foot">11-20 16:22 · 已审核</div></div>
-        <div class="kpi"><div class="label">实训任务</div><div class="value">3</div><div class="foot">2 个已发布</div></div>
-        <div class="kpi warn"><div class="label">待评审作业</div><div class="value">4</div><div class="foot">AI 已生成评分证据</div></div>
-        <div class="kpi"><div class="label">高频薄弱知识点</div><div class="value" style="font-size:14px">参照群体影响</div><div class="foot">答疑出现 11 次</div></div>
-        <div class="kpi"><div class="label">下一课建议</div><div class="value" style="font-size:14px">消费者态度与说服</div><div class="foot">第 6 次课</div></div>
+        <a class="kpi" href="files.html" title="进入课程资料"><div class="label">课程资料</div><div class="value" id="kpiFiles">—</div><div class="foot">教材 / 标准 / 案例 / 课件</div></a>
+        <a class="kpi" href="lesson.html" title="查看最近备课包"><div class="label">最近备课包</div><div class="value" id="kpiLesson" style="font-size:14px">—</div><div class="foot" id="kpiLessonFoot">尚无备课记录</div></a>
+        <a class="kpi" href="tasks.html" title="进入实训任务"><div class="label">实训任务</div><div class="value" id="kpiTasks">—</div><div class="foot" id="kpiTasksFoot">点击查看与发布任务</div></a>
+        <a class="kpi warn" href="review.html" title="进入作业评审"><div class="label">待评审作业</div><div class="value" id="kpiReviews">—</div><div class="foot">AI 已生成评分证据</div></a>
+        <a class="kpi" href="analytics.html" title="查看学情分析"><div class="label">高频薄弱知识点</div><div class="value" id="kpiWeak" style="font-size:14px">—</div><div class="foot" id="kpiWeakFoot">待分析</div></a>
+        <a class="kpi" href="lesson.html" title="备下一课"><div class="label">下一课建议</div><div class="value" id="kpiNext" style="font-size:14px">—</div><div class="foot" id="kpiNextFoot">—</div></a>
       </div>
 
       <div class="card" style="margin-bottom:14px" id="currentCourseCard">
@@ -257,8 +261,24 @@
         el.textContent = c.diff || "—";
       }
     });
-    // KPI 里的资料数量也同步
-    if ($("kpiFiles")) $("kpiFiles").textContent = (c && c.resourceCount) || 0;
+    // 六个 KPI 同步（不写死课程内容，缺失时给出可行动文案）
+    if ($("kpiFiles")) $("kpiFiles").textContent = c ? (c.resourceCount || 0) : "—";
+    if ($("kpiLesson")) {
+      $("kpiLesson").textContent = (c && c.currentSession) ? "第 " + c.currentSession + " 次课" : "—";
+      if ($("kpiLessonFoot")) $("kpiLessonFoot").textContent = (c && c.currentSession) ? "点击查看备课包" : "尚无备课记录";
+    }
+    if ($("kpiTasks")) $("kpiTasks").textContent = "—";
+    if ($("kpiReviews")) $("kpiReviews").textContent = "—";
+    if ($("kpiWeak")) {
+      $("kpiWeak").textContent = "待分析";
+      if ($("kpiWeakFoot")) $("kpiWeakFoot").textContent = "完成评审与答疑后生成";
+    }
+    if ($("kpiNext")) {
+      var hasProg = c && c.currentSession && c.totalSessions;
+      var next = hasProg ? Math.min(c.currentSession + 1, c.totalSessions) : null;
+      $("kpiNext").textContent = next ? "第 " + next + " 次课" : "—";
+      if ($("kpiNextFoot")) $("kpiNextFoot").textContent = hasProg ? "点击生成备课包" : "先完善教学进度";
+    }
   }
 
   /** 重绘全部课程表格 */

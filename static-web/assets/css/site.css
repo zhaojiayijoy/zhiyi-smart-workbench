@@ -121,6 +121,12 @@ h3{font-size:13.5px;margin:0 0 6px;font-weight:650}
 .kpi .foot{font-size:11px;color:var(--text-3)}
 .kpi.ok .value{color:#2F5C46}
 .kpi.warn .value{color:#8A5A28}
+/* 可点击的 KPI 卡片（整卡跳转对应模块） */
+a.kpi{display:block;text-decoration:none;color:inherit;position:relative;transition:border-color .15s,box-shadow .15s,transform .15s}
+a.kpi:hover{border-color:var(--accent-line);box-shadow:0 4px 16px rgba(37,50,45,.08);transform:translateY(-1px)}
+a.kpi:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+a.kpi::after{content:"›";position:absolute;right:12px;top:10px;font-size:15px;color:var(--text-3);opacity:0;transition:opacity .15s}
+a.kpi:hover::after{opacity:1}
 
 /* ---------- 表单 ---------- */
 .field{display:flex;flex-direction:column;gap:5px;margin-bottom:12px}
@@ -137,10 +143,52 @@ select{cursor:pointer}
 .chk input{accent-color:var(--accent);margin:0}
 .chk.on{border-color:var(--accent-line);background:var(--accent-soft);color:var(--active-text)}
 .form-actions{display:flex;gap:10px;align-items:center;margin-top:6px}
+/* 吸底操作栏：长表单随时可提交 */
+.sticky-bar{position:sticky;bottom:0;z-index:25;display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:12px 28px;margin:14px -28px -64px;background:rgba(255,252,246,.95);backdrop-filter:blur(10px);border-top:1px solid var(--line);box-shadow:0 -8px 24px rgba(37,50,45,.06)}
+.sticky-bar .grow{flex:1;min-width:180px}
+.sticky-bar .est{font-size:12.5px;color:var(--text-2)}
+.sticky-bar .est b{color:var(--accent);font-weight:650;font-size:13.5px}
 .form-note{font-size:11.5px;color:var(--text-3);background:var(--panel-3);border:1px dashed var(--line-strong);border-radius:8px;padding:8px 10px}
 .ctx{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:11px 14px;margin-bottom:14px}
 .ctx .k{font-size:10.5px;color:var(--text-3);display:block}
 .ctx b{font-size:12.5px;font-weight:600;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* ---------- 学生答疑三栏 ---------- */
+.tutor-layout{display:grid;grid-template-columns:290px minmax(0,1fr) 340px;gap:14px;align-items:start}
+@media (max-width:1280px){.tutor-layout{grid-template-columns:1fr}}
+.tutor-list{max-height:660px;overflow:auto}
+.tq{border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:8px;cursor:pointer;background:var(--panel-2);transition:border-color .15s,background .15s}
+.tq:hover{border-color:var(--line-strong)}
+.tq.on{border-color:var(--accent-line);background:var(--accent-soft)}
+.tq .q{font-size:12.5px;font-weight:600;line-height:1.45;color:var(--text)}
+.tq .meta{font-size:11px;color:var(--text-3);margin-top:5px;display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+
+/* ---------- 拖拽上传 ---------- */
+.dropzone{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;border:1.5px dashed var(--line-strong);border-radius:12px;background:var(--panel-3);padding:24px 16px;text-align:center;cursor:pointer;transition:border-color .15s,background .15s}
+.dropzone:hover,.dropzone.drag{border-color:var(--accent);background:var(--accent-soft)}
+.dropzone .dz-ic{width:36px;height:36px;border-radius:50%;display:grid;place-items:center;background:var(--panel);border:1px solid var(--line);font-size:16px;color:var(--accent)}
+.dropzone .dz-t{font-size:13px;font-weight:600}
+.dropzone .dz-s{font-size:11.5px;color:var(--text-3)}
+.dz-files{display:flex;flex-direction:column;gap:6px;margin-top:10px}
+.dz-file{display:flex;align-items:center;gap:8px;font-size:12px;border:1px solid var(--line);border-radius:8px;padding:6px 10px;background:var(--panel-2)}
+.dz-file .nm{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* ---------- 三步状态 ---------- */
+.steps{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:14px}
+.step{display:inline-flex;align-items:center;gap:7px;font-size:12px;padding:5px 12px;border-radius:20px;border:1px solid var(--line);background:var(--panel-2);color:var(--text-2)}
+.step i{width:16px;height:16px;border-radius:50%;display:grid;place-items:center;font-size:10px;font-style:normal;background:#EAE3D6;color:var(--text-3)}
+.step.done{border-color:rgba(62,122,94,.3);background:var(--ok-soft);color:#2F5C46}
+.step.done i{background:#3E7A5E;color:#fff}
+.step.cur{border-color:var(--accent-line);background:var(--accent-soft);color:var(--accent);box-shadow:0 0 0 2px rgba(54,91,76,.12)}
+.step.cur i{background:var(--accent);color:#fff}
+.steps .arw{color:var(--text-3);font-size:11px}
+
+/* ---------- 可点击查看证据 ---------- */
+.clickable{cursor:pointer;transition:background .15s,border-color .15s}
+.bar-row.clickable{border-radius:8px;padding:4px 6px;margin:-4px -6px}
+.bar-row.clickable:hover{background:var(--hover)}
+.rule.clickable:hover{background:var(--hover)}
+.evidence{display:none;margin-top:10px;font-size:11.5px;line-height:1.6;color:var(--text-2);background:var(--panel-3);border:1px dashed var(--line-strong);border-radius:8px;padding:8px 10px}
+.evidence.on{display:block}
 
 /* ---------- 表格 ---------- */
 .table-wrap{overflow:auto;border-radius:0 0 var(--radius) var(--radius)}
@@ -187,8 +235,26 @@ td.wrap{white-space:normal}
 .composer{display:flex;gap:10px;align-items:flex-end;background:var(--panel-2);border:1px solid var(--line-strong);border-radius:12px;padding:10px;box-shadow:var(--shadow)}
 .composer textarea{border:0;box-shadow:none;padding:2px 4px;min-height:44px;background:transparent}
 .composer textarea:focus{box-shadow:none}
+/* AI 回答下方的后续操作 */
+.msg-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:9px;padding-top:8px;border-top:1px dashed var(--line)}
+.msg-actions button{border:0;background:transparent;padding:0;font-size:11px;color:var(--text-3);cursor:pointer}
+.msg-actions button:hover{color:var(--accent)}
 
 /* ---------- 杂项 ---------- */
+/* 确保 hidden 生效（避免被 display:flex/grid 覆盖） */
+[hidden]{display:none !important}
+/* 学生空间子页紧凑标题栏 */
+.compact-bar{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 16px;background:var(--panel);border:1px solid var(--line);border-radius:10px;margin-bottom:14px;box-shadow:var(--shadow)}
+.compact-bar h2{font-size:16px;margin:0;letter-spacing:-.2px}
+.compact-bar .sub{margin:2px 0 0;font-size:11.5px;color:var(--text-3)}
+/* 学生反馈卡 */
+.fb{cursor:pointer;transition:border-color .15s,box-shadow .15s}
+.fb:hover{border-color:var(--accent-line);box-shadow:0 3px 12px rgba(37,50,45,.07)}
+.fb .fb-h{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.fb .fb-foot{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:8px;flex-wrap:wrap}
+/* 筛选行 */
+.filter-row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
+.filter-row select{width:auto;min-width:130px}
 .list-item{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid #EAE3D6}
 .list-item:last-child{border-bottom:0;padding-bottom:0}
 .list-item:first-child{padding-top:0}

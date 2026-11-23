@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>学生空间 · 致壹 智能教育工作台</title>
-<link rel="stylesheet" href="assets/css/site.css?v=1795420906">
+<link rel="stylesheet" href="assets/css/site.css?v=1795468000">
 </head>
 <body data-page="student" data-mode="student">
 <div class="app">
@@ -13,7 +13,7 @@
     <header class="topbar"></header>
     <main class="content">
 
-      <section class="hero">
+      <section class="hero" id="studentHero">
         <h1>你好，陈思远</h1>
         <p><span data-fill="course.classWithSize">—</span> · <b data-fill="course.name">—</b>。本周有 2 个任务待完成，1 条教师反馈待阅读。</p>
         <div class="row">
@@ -22,7 +22,15 @@
         </div>
       </section>
 
-      <div class="grid g4" style="margin-bottom:14px">
+      <div class="compact-bar" id="subBar" hidden>
+        <div>
+          <h2 id="subBarTitle">我的任务</h2>
+          <p class="sub" id="subBarSub">—</p>
+        </div>
+        <a class="btn" href="#home">返回首页</a>
+      </div>
+
+      <div class="grid g4" id="studentKpis" style="margin-bottom:14px">
         <div class="kpi warn"><div class="label">待完成任务</div><div class="value">2</div><div class="foot">最近截止 11-25</div></div>
         <div class="kpi"><div class="label">待阅读反馈</div><div class="value">1</div><div class="foot">促销方案已发布</div></div>
         <div class="kpi ok"><div class="label">作业平均分</div><div class="value">86.5</div><div class="foot">班级平均 81.2</div></div>
@@ -97,35 +105,104 @@
           </div>
 
           <div class="tabpane" data-pane="feedback">
-            <div class="stack" style="gap:10px">
-              <div class="rule">
-                <b>促销方案.docx · 86.5 分 · 已发布</b><br>
-                方案结构完整，理论应用到位。建议补充成本测算与样本说明，使结论更可信。<br>
-                <span class="mini">理论应用 27/30 · 数据支撑 22/25 · 方案可行性 19/25 · 表达规范 18.5/20</span>
+            <div class="filter-row">
+              <select id="fbFilter" aria-label="筛选反馈">
+                <option value="">全部反馈</option>
+                <option value="unread">未读</option>
+                <option value="read">已读</option>
+              </select>
+              <span class="mini" id="fbCount">共 4 条</span>
+              <span style="flex:1"></span>
+              <button class="btn sm" type="button" id="fbPrev">上一页</button>
+              <span class="mini" id="fbPage">1 / 2</span>
+              <button class="btn sm" type="button" id="fbNext">下一页</button>
+            </div>
+            <div class="stack" id="fbList" style="gap:10px">
+              <div class="rule fb" tabindex="0" role="button" data-read="0" data-page="1">
+                <div class="fb-h"><b>促销方案.docx · 86.5 分 · 已发布</b><span class="tag acc fb-unread">未读</span></div>
+                <p class="mini" style="margin:6px 0 0">方案结构完整，理论应用到位。建议补充成本测算与样本说明，使结论更可信。</p>
+                <div class="fb-foot">
+                  <span class="mini">理论应用 27/30 · 数据支撑 22/25 · 方案可行性 19/25 · 表达规范 18.5/20</span>
+                  <button class="btn sm" type="button" data-act="loc">查看原文位置</button>
+                </div>
               </div>
-              <div class="rule">
-                <b>消费者访谈与洞察报告 · 82 分 · 已发布</b><br>
-                访谈记录完整，编码过程清晰。注意区分相关与因果，结论不要超出样本范围。<br>
-                <span class="mini">教师批注 3 处 · 可点击查看原文位置</span>
+              <div class="rule fb" tabindex="0" role="button" data-read="1" data-page="1">
+                <div class="fb-h"><b>消费者访谈与洞察报告 · 82 分 · 已发布</b><span class="tag fb-unread" hidden>未读</span></div>
+                <p class="mini" style="margin:6px 0 0">访谈记录完整，编码过程清晰。注意区分相关与因果，结论不要超出样本范围。</p>
+                <div class="fb-foot">
+                  <span class="mini">教师批注 3 处</span>
+                  <button class="btn sm" type="button" data-act="loc">查看原文位置</button>
+                </div>
               </div>
-              <div class="rule">
-                <b>第 5 次课课后练习 · 86 分</b><br>
-                参照群体与意见领袖的两道题需要再区分一次，其余题目掌握良好。
+              <div class="rule fb" tabindex="0" role="button" data-read="0" data-page="2">
+                <div class="fb-h"><b>第 5 次课课后练习 · 86 分</b><span class="tag acc fb-unread">未读</span></div>
+                <p class="mini" style="margin:6px 0 0">参照群体与意见领袖的两道题需要再区分一次，其余题目掌握良好。</p>
+                <div class="fb-foot">
+                  <span class="mini">8 题 · 错 2 题</span>
+                  <button class="btn sm" type="button" data-act="loc">查看原文位置</button>
+                </div>
+              </div>
+              <div class="rule fb" tabindex="0" role="button" data-read="1" data-page="2">
+                <div class="fb-h"><b>小组互评 · 双十一促销方案</b><span class="tag fb-unread" hidden>未读</span></div>
+                <p class="mini" style="margin:6px 0 0">同组同学认为你的数据测算表最清晰，建议汇报时主动讲解测算逻辑。</p>
+                <div class="fb-foot">
+                  <span class="mini">来自 3 位组员</span>
+                  <button class="btn sm" type="button" data-act="loc">查看原文位置</button>
+                </div>
               </div>
             </div>
           </div>
 
           <div class="tabpane" data-pane="review">
+            <div class="rule" style="margin-bottom:12px">
+              <div class="bar-row">
+                <div class="t"><b>掌握进度</b><span id="rvProgText">2 / 4 题已订正</span></div>
+                <div class="bar"><i id="rvProgBar" data-w="50" style="width:0"></i></div>
+              </div>
+            </div>
+            <div class="filter-row">
+              <select id="rvPoint" aria-label="按知识点筛选">
+                <option value="">全部知识点</option>
+                <option value="参照群体">参照群体</option>
+                <option value="锚定效应">锚定效应</option>
+                <option value="消费者态度">消费者态度</option>
+                <option value="数据分析">数据分析</option>
+              </select>
+              <select id="rvState" aria-label="按状态筛选">
+                <option value="">全部状态</option>
+                <option value="todo">待巩固</option>
+                <option value="done">已订正</option>
+              </select>
+              <span class="mini" id="rvCount">4 题</span>
+              <span style="flex:1"></span>
+              <button class="btn primary" type="button" id="rvStart">开始连续复习（2 题）</button>
+            </div>
             <div class="table-wrap">
               <table>
                 <thead><tr><th>题目</th><th>知识点</th><th>我的错因</th><th>状态</th><th>操作</th></tr></thead>
-                <tbody>
-                  <tr><td>判断「同学都在买」属于哪种影响</td><td>参照群体</td><td>与意见领袖混淆</td><td><span class="tag ok">已订正</span></td><td><button class="btn sm" type="button" data-demo="已打开解析">看解析</button></td></tr>
-                  <tr><td>分析满减门槛的锚定作用</td><td>锚定效应</td><td>只答结论未给证据</td><td><span class="tag warn">待巩固</span></td><td><button class="btn sm primary" type="button" data-demo="已加入今日复习">去巩固</button></td></tr>
-                  <tr><td>广告态度三成分标注</td><td>消费者态度</td><td>情感与行为意向混淆</td><td><span class="tag warn">待巩固</span></td><td><button class="btn sm primary" type="button" data-demo="已加入今日复习">去巩固</button></td></tr>
-                  <tr><td>百分点与百分比的区别</td><td>数据分析</td><td>单位表述错误</td><td><span class="tag ok">已订正</span></td><td><button class="btn sm" type="button" data-demo="已打开解析">看解析</button></td></tr>
+                <tbody id="rvTbody">
+                  <tr data-point="参照群体" data-state="done"><td>判断「同学都在买」属于哪种影响</td><td>参照群体</td><td>与意见领袖混淆</td><td><span class="tag ok">已订正</span></td><td><button class="btn sm" type="button" data-act="explain">看解析</button></td></tr>
+                  <tr data-point="锚定效应" data-state="todo"><td>分析满减门槛的锚定作用</td><td>锚定效应</td><td>只答结论未给证据</td><td><span class="tag warn">待巩固</span></td><td><button class="btn sm primary" type="button" data-act="practice">去巩固</button></td></tr>
+                  <tr data-point="消费者态度" data-state="todo"><td>广告态度三成分标注</td><td>消费者态度</td><td>情感与行为意向混淆</td><td><span class="tag warn">待巩固</span></td><td><button class="btn sm primary" type="button" data-act="practice">去巩固</button></td></tr>
+                  <tr data-point="数据分析" data-state="done"><td>百分点与百分比的区别</td><td>数据分析</td><td>单位表述错误</td><td><span class="tag ok">已订正</span></td><td><button class="btn sm" type="button" data-act="explain">看解析</button></td></tr>
                 </tbody>
               </table>
+            </div>
+
+            <div class="card" id="practice" hidden style="margin-top:12px;border-color:var(--accent-line)">
+              <div class="card-h">
+                <h2 id="pracTitle">连续复习</h2>
+                <div class="right"><span class="mini" id="pracProg">第 1 / 2 题</span><button class="btn sm ghost" type="button" id="pracClose">退出</button></div>
+              </div>
+              <div class="card-b">
+                <div class="rule" id="pracQ">—</div>
+                <div class="checks" id="pracOpts" style="margin-top:10px"></div>
+                <div class="evidence" id="pracFb"></div>
+                <div class="form-actions" style="margin-top:12px">
+                  <button class="btn primary" type="button" id="pracSubmit" disabled>提交答案</button>
+                  <button class="btn" type="button" id="pracNext" hidden>下一题</button>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -137,6 +214,211 @@
 </div>
 
 <div class="toast"></div>
+<script>
+(function(){
+  function toast(msg){
+    if (window.Edu && Edu.toast) Edu.toast(msg);
+    else window.alert(msg);
+  }
+
+  /* 1. 子页紧凑标题栏：只在首页保留欢迎区与四张统计卡 */
+  var hero = document.getElementById("studentHero");
+  var kpis = document.getElementById("studentKpis");
+  var subBar = document.getElementById("subBar");
+  var tabBox = document.querySelector(".tabs[data-hash]");
+  var titles = {
+    tasks: ["我的任务", "查看待完成与已提交的作业、实训与练习"],
+    qa: ["我的答疑", "查看提问记录与老师提示"],
+    feedback: ["教师反馈", "整卡点击查看详情，支持未读筛选与翻页"],
+    review: ["错题回顾", "按知识点与状态筛选，可进入连续复习"]
+  };
+  function chrome(){
+    var on = tabBox ? tabBox.querySelector("button.on") : null;
+    var key = on ? on.getAttribute("data-tab") : "home";
+    var isHome = key === "home";
+    if (hero) hero.style.display = isHome ? "" : "none";
+    if (kpis) kpis.style.display = isHome ? "" : "none";
+    if (subBar){
+      subBar.hidden = isHome;
+      if (!isHome){
+        var t = titles[key] || ["", ""];
+        document.getElementById("subBarTitle").textContent = t[0];
+        document.getElementById("subBarSub").textContent = t[1];
+      }
+    }
+  }
+  if (tabBox) tabBox.addEventListener("click", function(){ setTimeout(chrome, 0); });
+  window.addEventListener("hashchange", function(){ setTimeout(chrome, 0); });
+  chrome();
+
+  /* 2. 教师反馈：整卡可点击 + 未读标记 + 筛选 + 分页 */
+  var fbList = document.getElementById("fbList");
+  if (fbList){
+    var fbCards = Array.prototype.slice.call(fbList.querySelectorAll(".fb"));
+    var fbFilter = document.getElementById("fbFilter");
+    var fbCount = document.getElementById("fbCount");
+    var fbPageEl = document.getElementById("fbPage");
+    var fbPrev = document.getElementById("fbPrev");
+    var fbNext = document.getElementById("fbNext");
+    var fbPage = 1, PER = 2;
+
+    function renderFb(){
+      var f = fbFilter ? fbFilter.value : "";
+      var pool = fbCards.filter(function(c){
+        var read = c.getAttribute("data-read") === "1";
+        return !f || (f === "read" && read) || (f === "unread" && !read);
+      });
+      var pages = Math.max(1, Math.ceil(pool.length / PER));
+      if (fbPage > pages) fbPage = pages;
+      fbCards.forEach(function(c){ c.style.display = "none"; });
+      pool.slice((fbPage - 1) * PER, fbPage * PER).forEach(function(c){ c.style.display = ""; });
+      if (fbCount) fbCount.textContent = "共 " + pool.length + " 条";
+      if (fbPageEl) fbPageEl.textContent = (pool.length ? fbPage : 0) + " / " + pages;
+      if (fbPrev) fbPrev.disabled = fbPage <= 1;
+      if (fbNext) fbNext.disabled = fbPage >= pages;
+    }
+    if (fbFilter) fbFilter.addEventListener("change", function(){ fbPage = 1; renderFb(); });
+    if (fbPrev) fbPrev.addEventListener("click", function(){ fbPage = Math.max(1, fbPage - 1); renderFb(); });
+    if (fbNext) fbNext.addEventListener("click", function(){ fbPage++; renderFb(); });
+
+    fbList.addEventListener("click", function(e){
+      var btn = e.target.closest("button[data-act]");
+      var card = e.target.closest(".fb");
+      if (!card) return;
+      if (btn){ toast("已定位到原文位置（示例）"); return; }
+      card.setAttribute("data-read", "1");
+      var tag = card.querySelector(".fb-unread");
+      if (tag) tag.hidden = true;
+      renderFb();
+      toast("已打开反馈详情（示例）");
+    });
+    fbList.addEventListener("keydown", function(e){
+      if (e.key === "Enter" || e.key === " "){
+        var c = e.target.closest(".fb");
+        if (c){ e.preventDefault(); c.click(); }
+      }
+    });
+    renderFb();
+  }
+
+  /* 3. 错题回顾：筛选 + 连续复习流程 */
+  var rvTbody = document.getElementById("rvTbody");
+  if (rvTbody){
+    var rvRows = Array.prototype.slice.call(rvTbody.querySelectorAll("tr"));
+    var rvPoint = document.getElementById("rvPoint");
+    var rvState = document.getElementById("rvState");
+    var rvCount = document.getElementById("rvCount");
+
+    function applyRv(){
+      var p = rvPoint ? rvPoint.value : "";
+      var s = rvState ? rvState.value : "";
+      var shown = 0;
+      rvRows.forEach(function(tr){
+        var ok = (!p || tr.getAttribute("data-point") === p) && (!s || tr.getAttribute("data-state") === s);
+        tr.style.display = ok ? "" : "none";
+        if (ok) shown++;
+      });
+      if (rvCount) rvCount.textContent = shown + " 题";
+    }
+    if (rvPoint) rvPoint.addEventListener("change", applyRv);
+    if (rvState) rvState.addEventListener("change", applyRv);
+    applyRv();
+
+    var practice = document.getElementById("practice");
+    var pracQ = document.getElementById("pracQ");
+    var pracOpts = document.getElementById("pracOpts");
+    var pracFb = document.getElementById("pracFb");
+    var pracProg = document.getElementById("pracProg");
+    var pracSubmit = document.getElementById("pracSubmit");
+    var pracNext = document.getElementById("pracNext");
+    var pracClose = document.getElementById("pracClose");
+
+    var bank = [
+      { q: "分析满减门槛的锚定作用：为什么「原价 ¥299，现价 ¥199」比直接标 ¥199 更容易被接受？",
+        opts: ["因为 199 看起来更低", "因为原价成为参照锚点，让现价显得便宜", "因为满减一定更划算", "因为消费者不会计算差价"],
+        ans: 1,
+        ev: "正确答案：B。原价 ¥299 是锚点，消费者以它为参照判断现价，差值被感知为收益。这属于锚定效应，而非真实的成本差异。" },
+      { q: "广告态度三成分标注：「这个广告让我觉得很温暖」属于态度中的哪个成分？",
+        opts: ["认知成分", "情感成分", "行为成分", "以上都不是"],
+        ans: 1,
+        ev: "正确答案：B。情感成分指向情绪体验；认知是信念判断，行为是行动倾向。" }
+    ];
+    var idx = 0, picked = -1;
+
+    function renderQ(){
+      var item = bank[idx];
+      pracProg.textContent = "第 " + (idx + 1) + " / " + bank.length + " 题";
+      pracQ.textContent = item.q;
+      pracOpts.innerHTML = "";
+      picked = -1;
+      item.opts.forEach(function(o, i){
+        var l = document.createElement("label");
+        l.className = "chk";
+        var r = document.createElement("input");
+        r.type = "radio";
+        r.name = "pracOpt";
+        r.value = String(i);
+        l.appendChild(r);
+        l.appendChild(document.createTextNode(o));
+        l.addEventListener("click", function(){
+          picked = i;
+          Array.prototype.forEach.call(pracOpts.children, function(c){ c.classList.remove("on"); });
+          l.classList.add("on");
+          pracSubmit.disabled = false;
+        });
+        pracOpts.appendChild(l);
+      });
+      pracFb.classList.remove("on");
+      pracFb.textContent = "";
+      pracSubmit.hidden = false;
+      pracSubmit.disabled = true;
+      pracNext.hidden = true;
+    }
+
+    function openPractice(){
+      if (!practice) return;
+      idx = 0;
+      practice.hidden = false;
+      renderQ();
+      practice.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+
+    function finish(){
+      pracProg.textContent = "已完成";
+      pracQ.textContent = "本轮复习完成：" + bank.length + " / " + bank.length + " 题已作答。";
+      pracOpts.innerHTML = "";
+      pracFb.textContent = "连续复习记录已保存（示例）。可以退出后按需继续下一轮。";
+      pracFb.classList.add("on");
+      pracSubmit.hidden = true;
+      pracNext.hidden = true;
+    }
+
+    if (pracSubmit) pracSubmit.addEventListener("click", function(){
+      var item = bank[idx];
+      pracFb.textContent = item.ev + (picked === item.ans ? "" : "（你的选择与答案不一致，建议再看一次题干。）");
+      pracFb.classList.add("on");
+      pracSubmit.disabled = true;
+      pracNext.hidden = false;
+    });
+    if (pracNext) pracNext.addEventListener("click", function(){
+      idx++;
+      if (idx >= bank.length) finish();
+      else renderQ();
+    });
+    if (pracClose) pracClose.addEventListener("click", function(){ if (practice) practice.hidden = true; });
+
+    var rvStart = document.getElementById("rvStart");
+    if (rvStart) rvStart.addEventListener("click", openPractice);
+
+    rvTbody.addEventListener("click", function(e){
+      var btn = e.target.closest("button[data-act]");
+      if (!btn) return;
+      if (btn.getAttribute("data-act") === "practice") openPractice();
+      else toast("已打开解析（示例）");
+    });
+  }
+})();
+</script>
 <script src="assets/js/data.js?v=1795420906"></script>
 <script src="assets/js/site.js?v=1795420906"></script>
 <script src="assets/js/api.js?v=1795420906"></script>

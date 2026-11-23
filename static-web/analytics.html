@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>学情分析 · 致壹 智能教育工作台</title>
-<link rel="stylesheet" href="assets/css/site.css?v=1795420906">
+<link rel="stylesheet" href="assets/css/site.css?v=1795468000">
 </head>
 <body data-page="analytics">
 <div class="app">
@@ -15,7 +15,11 @@
 
       <div class="page-head">
         <div><h1>学情分析</h1><p class="sub" data-page-sub>把答疑、评审与实训数据汇总为可执行的教学决策（当前：消费者行为分析）</p></div>
-        <div class="right"><button class="btn" type="button" data-demo="已导出学情报告（示例）">导出报告</button></div>
+        <div class="right">
+          <button class="btn" type="button" data-demo="已导出学情报告（示例）">导出报告</button>
+          <a class="btn" href="lesson.html">带入备课本</a>
+          <button class="btn primary" type="button" data-demo="讲评课已生成（示例）">一键生成讲评课</button>
+        </div>
       </div>
 
       <div class="ctx">
@@ -53,12 +57,21 @@
 
           <div class="tabpane on" data-pane="points">
             <div class="bars">
-              <div class="bar-row"><div class="t"><b>参照群体影响</b><span>11 次</span></div><div class="bar"><i data-w="0" style="width:0"></i></div></div>
-              <div class="bar-row"><div class="t"><b>锚定效应</b><span>8 次</span></div><div class="bar"><i data-w="0" style="width:0"></i></div></div>
-              <div class="bar-row"><div class="t"><b>消费者态度</b><span>5 次</span></div><div class="bar"><i data-w="0" style="width:0"></i></div></div>
-              <div class="bar-row"><div class="t"><b>损失厌恶</b><span>3 次</span></div><div class="bar"><i data-w="0" style="width:0"></i></div></div>
+              <div class="bar-row clickable" data-ev="参照群体影响 · 11 次答疑：其中 9 条集中在「参照群体与意见领袖的区别」，2 条涉及「所属群体与向往群体」。主要学生：林小满、周予安。">
+                <div class="t"><b>参照群体影响</b><span>11 次</span></div><div class="bar"><i data-w="0" style="width:0"></i></div>
+              </div>
+              <div class="bar-row clickable" data-ev="锚定效应 · 8 次答疑：多与「原价 / 折扣价呈现」有关，学生能举例但难以说明机制，建议补一个对照案例。">
+                <div class="t"><b>锚定效应</b><span>8 次</span></div><div class="bar"><i data-w="0" style="width:0"></i></div>
+              </div>
+              <div class="bar-row clickable" data-ev="消费者态度 · 5 次答疑：3 条集中在态度三成分模型的应用，2 条涉及说服路径选择。">
+                <div class="t"><b>消费者态度</b><span>5 次</span></div><div class="bar"><i data-w="0" style="width:0"></i></div>
+              </div>
+              <div class="bar-row clickable" data-ev="损失厌恶 · 3 次答疑：均围绕「凑单 / 满减」场景，学生能识别现象，但对边际效用解释较弱。">
+                <div class="t"><b>损失厌恶</b><span>3 次</span></div><div class="bar"><i data-w="0" style="width:0"></i></div>
+              </div>
             </div>
-            <div class="rule" style="margin-top:14px">结论：参照群体影响占全部答疑的 41%，且多集中在「与意见领袖的区别」，适合作为下次课开场澄清点。</div>
+            <div class="evidence" data-evbox></div>
+            <div class="rule clickable" style="margin-top:14px" data-ev="结论依据：27 条答疑中 11 条为参照群体影响，占 41%；其中 9 条明确提到「与意见领袖混在一起」。建议下次课开场用两道选择题澄清。">结论：参照群体影响占全部答疑的 41%，且多集中在「与意见领袖的区别」，适合作为下次课开场澄清点。<span class="mini">（点击查看证据）</span></div>
           </div>
 
           <div class="tabpane" data-pane="errors">
@@ -77,12 +90,23 @@
 
           <div class="tabpane" data-pane="dims">
             <div class="bars">
-              <div class="bar-row"><div class="t"><b>理论理解</b><span>78 分</span></div><div class="bar"><i data-w="0" style="width:0"></i></div></div>
-              <div class="bar-row"><div class="t"><b>数据分析</b><span>71 分</span></div><div class="bar"><i data-w="0" style="width:0"></i></div></div>
-              <div class="bar-row"><div class="t"><b>方案设计</b><span>74 分</span></div><div class="bar"><i data-w="0" style="width:0"></i></div></div>
-              <div class="bar-row"><div class="t"><b>表达规范</b><span>82 分</span></div><div class="bar"><i data-w="0" style="width:0"></i></div></div>
-              <div class="bar-row"><div class="t"><b>协作沟通</b><span>76 分</span></div><div class="bar"><i data-w="0" style="width:0"></i></div></div>
+              <div class="bar-row clickable" data-ev="理论理解 78 分：评分依据为作业评审「理论应用」维度均分 23.4/30，扣分集中在概念边界表述。">
+                <div class="t"><b>理论理解</b><span>78 分</span></div><div class="bar"><i data-w="0" style="width:0"></i></div>
+              </div>
+              <div class="bar-row clickable" data-ev="数据分析 71 分：全部维度最低；实训 Excel 测算表完整率为 62%，主要问题是缺少敏感性分析。">
+                <div class="t"><b>数据分析</b><span>71 分</span></div><div class="bar"><i data-w="0" style="width:0"></i></div>
+              </div>
+              <div class="bar-row clickable" data-ev="方案设计 74 分：评审中「方案可行性」维度均分 18.5/25，普遍缺少成本测算与风险应对。">
+                <div class="t"><b>方案设计</b><span>74 分</span></div><div class="bar"><i data-w="0" style="width:0"></i></div>
+              </div>
+              <div class="bar-row clickable" data-ev="表达规范 82 分：最高维度；主要扣分为图表缺单位与引用不完整。">
+                <div class="t"><b>表达规范</b><span>82 分</span></div><div class="bar"><i data-w="0" style="width:0"></i></div>
+              </div>
+              <div class="bar-row clickable" data-ev="协作沟通 76 分：来自小组互评与汇报评分，差异主要体现在分工说明是否清晰。">
+                <div class="t"><b>协作沟通</b><span>76 分</span></div><div class="bar"><i data-w="0" style="width:0"></i></div>
+              </div>
             </div>
+            <div class="evidence" data-evbox></div>
             <div class="rule" style="margin-top:14px">数据分析是最低维度（71 分），与实训中 Excel 测算的完成度一致。</div>
           </div>
 
@@ -136,6 +160,27 @@
 /* 为条形图写入目标宽度 */
 document.querySelectorAll('[data-pane="points"] .bar > i').forEach(function(el,i){el.setAttribute('data-w',[92,66,42,25][i]);});
 document.querySelectorAll('[data-pane="dims"] .bar > i').forEach(function(el,i){el.setAttribute('data-w',[78,71,74,82,76][i]);});
+
+/* 点击柱状图 / 知识点 / 结论，查看证据（兼容 live.js 动态渲染的条形） */
+(function(){
+  document.querySelectorAll(".tabpane").forEach(function(pane){
+    var box = pane.querySelector("[data-evbox]");
+    if (!box) return;
+    pane.addEventListener("click", function(e){
+      var el = e.target.closest(".bar-row, .rule.clickable");
+      if (!el) return;
+      var ev = el.getAttribute("data-ev");
+      if (!ev){
+        var t = el.querySelector(".t");
+        var label = t && t.querySelector("b") ? t.querySelector("b").textContent : "";
+        var val = t && t.querySelector("span") ? t.querySelector("span").textContent : "";
+        ev = (label || "该项") + (val ? "（" + val + "）" : "") + "：数据来自当前课程近 30 天的答疑与评审记录，点击可查看原始证据（示例）。";
+      }
+      box.textContent = ev;
+      box.classList.add("on");
+    });
+  });
+})();
 </script>
 <script src="assets/js/data.js?v=1795420906"></script>
 <script src="assets/js/site.js?v=1795420906"></script>

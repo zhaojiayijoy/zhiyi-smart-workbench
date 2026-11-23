@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>AI 助手 · 致壹 智能教育工作台</title>
-<link rel="stylesheet" href="assets/css/site.css?v=1795420906">
+<link rel="stylesheet" href="assets/css/site.css?v=1795468000">
 </head>
 <body data-page="assistant">
 <div class="app">
@@ -110,9 +110,70 @@
 <script src="assets/js/live.js?v=1795420906"></script>
 <script>
 (function(){
-  if (window.__eduSendAssistant) return; // live.js 已接管助手对话（含非 live 回退）
   var chat = document.getElementById('chat');
+
+  function toast(msg){
+    if (window.Edu && Edu.toast) Edu.toast(msg);
+    else window.alert(msg);
+  }
+
+  function attach(bubble){
+    if (!bubble || bubble.querySelector('.msg-actions')) return;
+    var acts = document.createElement('div');
+    acts.className = 'msg-actions';
+    [['copy','复制'],['regen','重新生成'],['cite','查看引用'],['save','保存到课程'],['import','转为课堂导入']].forEach(function(p){
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.setAttribute('data-act', p[0]);
+      b.textContent = p[1];
+      acts.appendChild(b);
+    });
+    bubble.appendChild(acts);
+  }
+
+  function attachAll(){
+    if (!chat) return;
+    Array.prototype.forEach.call(chat.querySelectorAll('.msg.ai .bubble'), attach);
+  }
+  attachAll();
+
+  if (chat && window.MutationObserver){
+    new MutationObserver(function(muts){
+      for (var i = 0; i < muts.length; i++){
+        if (muts[i].addedNodes.length){ attachAll(); return; }
+      }
+    }).observe(chat, {childList:true, subtree:true});
+  }
+
+  if (chat){
+    chat.addEventListener('click', function(e){
+      var btn = e.target.closest('.msg-actions button');
+      if (!btn) return;
+      var bubble = btn.closest('.bubble');
+      var act = btn.getAttribute('data-act');
+
+      if (act === 'copy'){
+        var clone = bubble.cloneNode(true);
+        var acts = clone.querySelector('.msg-actions');
+        if (acts) acts.remove();
+        var text = (clone.textContent || '').trim();
+        if (navigator.clipboard && navigator.clipboard.writeText){
+          navigator.clipboard.writeText(text).then(function(){ toast('已复制回答'); }, function(){ toast('复制失败，请手动选择文本'); });
+        } else {
+          toast('已复制回答（示例）');
+        }
+        return;
+      }
+      if (act === 'regen') return toast('已重新生成（示例）');
+      if (act === 'cite') return toast('引用来源：教材第 6 章 P112-118；近 30 天答疑 11 条');
+      if (act === 'save') return toast('已保存到当前课程资料（示例）');
+      if (act === 'import') return toast('已转为课堂导入并带入备课本（示例）');
+    });
+  }
+
+  if (window.__eduSendAssistant) return; // live.js 已接管助手对话（含非 live 回退）
   var form = document.getElementById('composer');
+  if (!form) return;
   var ta = form.querySelector('textarea');
 
   function send(text){

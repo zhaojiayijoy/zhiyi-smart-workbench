@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>学生答疑 · 致壹 智能教育工作台</title>
-<link rel="stylesheet" href="assets/css/site.css?v=1795420906">
+<link rel="stylesheet" href="assets/css/site.css?v=1795468000">
 </head>
 <body data-page="tutor">
 <div class="app">
@@ -32,50 +32,39 @@
         <div class="kpi"><div class="label">高频知识点</div><div class="value" style="font-size:14px">参照群体影响</div><div class="foot">出现 11 次</div></div>
       </div>
 
-      <div class="card" style="margin-bottom:14px">
-        <div class="card-h">
-          <h2>答疑记录</h2>
-          <div class="right">
-            <select style="width:auto"><option>全部状态</option><option>AI 引导中</option><option>等待学生尝试</option><option>已解决</option><option>教师接管</option><option>需要关注</option></select>
-            <select style="width:auto"><option>全部知识点</option><option>参照群体</option><option>锚定效应</option><option>消费者态度</option><option>损失厌恶</option></select>
+      <div class="tutor-layout">
+        <div class="card tutor-list">
+          <div class="card-h"><h2>答疑列表</h2><div class="right"><span class="mini" id="tutorCount">4 条</span></div></div>
+          <div class="card-b" style="padding-top:8px">
+            <div class="tq on" data-name="林小满" data-status="AI 引导中"
+                 data-q="参照群体和意见领袖在决策中有什么区别？">
+              <div class="q">参照群体和意见领袖在决策中有什么区别？</div>
+              <div class="meta"><span>林小满</span><span>·</span><span>参照群体</span><span class="tag acc">AI 引导中</span></div>
+            </div>
+            <div class="tq" data-name="陈思远" data-status="已解决"
+                 data-q="为什么锚定效应会让原价显得更划算？">
+              <div class="q">为什么锚定效应会让原价显得更划算？</div>
+              <div class="meta"><span>陈思远</span><span>·</span><span>锚定效应</span><span class="tag ok">已解决</span></div>
+            </div>
+            <div class="tq" data-name="周予安" data-status="已解决"
+                 data-q="消费者态度三成分模型怎么应用到广告设计？">
+              <div class="q">消费者态度三成分模型怎么应用到广告设计？</div>
+              <div class="meta"><span>周予安</span><span>·</span><span>消费者态度</span><span class="tag ok">已解决</span></div>
+            </div>
+            <div class="tq" data-name="陈思远" data-status="等待学生尝试"
+                 data-q="损失厌恶能解释凑单行为吗？">
+              <div class="q">损失厌恶能解释凑单行为吗？</div>
+              <div class="meta"><span>陈思远</span><span>·</span><span>损失厌恶</span><span class="tag warn">等待学生尝试</span></div>
+            </div>
           </div>
         </div>
-        <div class="table-wrap">
-          <table>
-            <thead><tr><th>问题</th><th>学生</th><th>知识点</th><th>状态</th><th>可见范围</th><th>时间</th><th></th></tr></thead>
-            <tbody>
-              <tr>
-                <td>为什么锚定效应会让原价显得更划算？</td><td>陈思远</td><td>锚定效应</td>
-                <td><span class="tag ok">已解决</span></td><td><span class="tag acc">师生可见</span></td><td>11-21 20:14</td>
-                <td><button class="btn sm" type="button" data-demo="已打开答疑详情">打开</button></td>
-              </tr>
-              <tr>
-                <td>参照群体和意见领袖在决策中有什么区别？</td><td>林小满</td><td>参照群体</td>
-                <td><span class="tag acc">AI 引导中</span></td><td><span class="tag acc">师生可见</span></td><td>11-21 19:02</td>
-                <td><button class="btn sm" type="button" data-demo="已打开答疑详情">打开</button></td>
-              </tr>
-              <tr>
-                <td>消费者态度三成分模型怎么应用到广告设计？</td><td>周予安</td><td>消费者态度</td>
-                <td><span class="tag ok">已解决</span></td><td><span class="tag acc">师生可见</span></td><td>11-20 15:48</td>
-                <td><button class="btn sm" type="button" data-demo="已打开答疑详情">打开</button></td>
-              </tr>
-              <tr>
-                <td>损失厌恶能解释凑单行为吗？</td><td>陈思远</td><td>损失厌恶</td>
-                <td><span class="tag warn">等待学生尝试</span></td><td><span class="tag warn">教师可见</span></td><td>11-20 10:31</td>
-                <td><button class="btn sm" type="button" data-demo="已打开答疑详情">打开</button></td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
 
-      <div class="split">
         <div class="card">
-          <div class="card-h"><h2>问题详情</h2><div class="right"><span class="tag acc">AI 引导中</span></div></div>
+          <div class="card-h"><h2 id="tutorDetailTitle">林小满 的提问</h2><div class="right"><span class="tag acc" id="tutorDetailStatus">AI 引导中</span></div></div>
           <div class="card-b">
             <div class="msg me" style="margin-bottom:12px">
               <div class="who">陈</div>
-              <div class="bubble">老师，参照群体和意见领袖到底怎么区分？书上说意见领袖也属于参照群体，那为什么案例里要分开讲？</div>
+              <div class="bubble" id="tutorBubble">老师，参照群体和意见领袖到底怎么区分？书上说意见领袖也属于参照群体，那为什么案例里要分开讲？</div>
             </div>
             <div class="tabs">
               <button class="on" data-tab="hint">提示</button>
@@ -127,6 +116,28 @@
           </div>
         </div>
       </div>
+
+      <script>
+      (function(){
+        var items = Array.prototype.slice.call(document.querySelectorAll(".tq"));
+        var title = document.getElementById("tutorDetailTitle");
+        var status = document.getElementById("tutorDetailStatus");
+        var bubble = document.getElementById("tutorBubble");
+        if (!items.length || !title || !status || !bubble) return;
+
+        items.forEach(function(item){
+          item.addEventListener("click", function(){
+            items.forEach(function(o){ o.classList.remove("on"); });
+            item.classList.add("on");
+            title.textContent = item.getAttribute("data-name") + " 的提问";
+            var st = item.getAttribute("data-status");
+            status.textContent = st;
+            status.className = "tag " + (st === "已解决" ? "ok" : (st === "等待学生尝试" ? "warn" : "acc"));
+            bubble.textContent = item.getAttribute("data-q");
+          });
+        });
+      })();
+      </script>
 
     </main>
   </div>
