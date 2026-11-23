@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>一键备课 · 致壹 智能教育工作台</title>
-<link rel="stylesheet" href="assets/css/site.css?v=1795477000">
+<link rel="stylesheet" href="assets/css/site.css?v=1795481000">
 </head>
 <body data-page="lesson">
 <div class="app">
@@ -194,13 +194,65 @@
         <button class="btn primary" type="button" id="stickyGen">生成备课包</button>
       </div>
 
+      <div class="card" id="lessonVersions" data-versions style="margin-top:14px">
+        <div class="card-h"><h2>版本历史</h2><div class="right"><span class="mini ver-now" data-tpl="当前 {ver}">当前 v3</span><span class="mini">教师修改与 AI 重新生成均会留痕</span></div></div>
+        <div class="card-b">
+          <div class="ver-row current" data-ver="v3" data-kind="AI 重新生成">
+            <div class="ver-main"><div class="li-t">v3 · AI 重新生成</div><div class="li-s">11-22 16:40 · 依据最新学情与课程标准重新生成</div></div>
+            <span class="ver-tag on">当前</span>
+            <div class="ver-ops">
+              <button class="btn sm" type="button" data-vact="view">查看</button>
+              <button class="btn sm" type="button" data-vact="diff">比较</button>
+            </div>
+            <div class="ver-panel" hidden>
+              <div class="ver-snap"><b>版本快照</b><div class="mini">教案 5 环节 · 练习 4 题 · 量规 4 维度 · 双模型一致性 93%</div></div>
+              <div class="ver-diff">
+                <div class="del">− 练习 3：销售额同比计算</div>
+                <div class="add">+ 练习 3：满意度百分点判断</div>
+                <div class="add">+ 导入环节新增两道辨析选择题</div>
+              </div>
+            </div>
+          </div>
+          <div class="ver-row" data-ver="v2" data-kind="教师修改">
+            <div class="ver-main"><div class="li-t">v2 · 教师修改</div><div class="li-s">11-21 10:12 · 替换案例，补充图表阅读题</div></div>
+            <span class="ver-tag">教师修改</span>
+            <div class="ver-ops">
+              <button class="btn sm" type="button" data-vact="view">查看</button>
+              <button class="btn sm" type="button" data-vact="diff">比较</button>
+              <button class="btn sm" type="button" data-vact="restore">恢复</button>
+            </div>
+            <div class="ver-panel" hidden>
+              <div class="ver-snap"><b>版本快照</b><div class="mini">教案 5 环节 · 练习 4 题 · 量规 4 维度 · 双模型一致性 88%</div></div>
+              <div class="ver-diff">
+                <div class="del">− 案例：跨国饮料广告</div>
+                <div class="add">+ 案例：国产气泡水广告</div>
+                <div class="add">+ 练习 4：图表阅读（百分点）</div>
+              </div>
+            </div>
+          </div>
+          <div class="ver-row" data-ver="v1" data-kind="初始生成">
+            <div class="ver-main"><div class="li-t">v1 · 初始生成</div><div class="li-s">11-20 09:30 · 首次生成备课包</div></div>
+            <span class="ver-tag">初始生成</span>
+            <div class="ver-ops">
+              <button class="btn sm" type="button" data-vact="view">查看</button>
+              <button class="btn sm" type="button" data-vact="diff">比较</button>
+              <button class="btn sm" type="button" data-vact="restore">恢复</button>
+            </div>
+            <div class="ver-panel" hidden>
+              <div class="ver-snap"><b>版本快照</b><div class="mini">教案 4 环节 · 练习 3 题 · 量规 4 维度 · 双模型一致性 85%</div></div>
+              <div class="ver-diff"><div class="del">− 无更早版本可比较</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
     </main>
   </div>
 </div>
 
 <div class="toast"></div>
 <script src="assets/js/data.js?v=1795420906"></script>
-<script src="assets/js/site.js?v=1795473000"></script>
+<script src="assets/js/site.js?v=1795481000"></script>
 <script src="assets/js/api.js?v=1795420906"></script>
 <script src="assets/js/live.js?v=1795478000"></script>
 <script>

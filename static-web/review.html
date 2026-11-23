@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>作业评审 · 致壹 智能教育工作台</title>
-<link rel="stylesheet" href="assets/css/site.css?v=1795477000">
+<link rel="stylesheet" href="assets/css/site.css?v=1795481000">
 </head>
 <body data-page="review">
 <div class="app">
@@ -153,6 +153,57 @@
         </div>
       </div>
 
+      <div class="card" id="rubricVersions" data-versions style="margin-top:14px">
+        <div class="card-h"><h2>评分标准版本历史</h2><div class="right"><span class="mini ver-now" data-tpl="当前 {ver}">当前 v3</span><span class="mini">评分标准调整会记录在案</span></div></div>
+        <div class="card-b">
+          <div class="ver-row current" data-ver="v3" data-kind="教师修改">
+            <div class="ver-main"><div class="li-t">v3 · 教师修改</div><div class="li-s">11-21 15:20 · 提高「证据引用」权重，新增反例辨析维度</div></div>
+            <span class="ver-tag on">当前</span>
+            <div class="ver-ops">
+              <button class="btn sm" type="button" data-vact="view">查看</button>
+              <button class="btn sm" type="button" data-vact="diff">比较</button>
+            </div>
+            <div class="ver-panel" hidden>
+              <div class="ver-snap"><b>版本快照</b><div class="mini">5 维度 / 100 分：结构 20 · 洞察 25 · 证据 30 · 反例 10 · 表达 15</div></div>
+              <div class="ver-diff">
+                <div class="del">− 证据引用 20 分</div>
+                <div class="add">+ 证据引用 30 分</div>
+                <div class="add">+ 新增「反例辨析 10 分」</div>
+              </div>
+            </div>
+          </div>
+          <div class="ver-row" data-ver="v2" data-kind="AI 重新生成">
+            <div class="ver-main"><div class="li-t">v2 · AI 重新生成</div><div class="li-s">11-19 11:00 · 按课程标准与本次作业目标重新生成量规</div></div>
+            <span class="ver-tag">AI 重新生成</span>
+            <div class="ver-ops">
+              <button class="btn sm" type="button" data-vact="view">查看</button>
+              <button class="btn sm" type="button" data-vact="diff">比较</button>
+              <button class="btn sm" type="button" data-vact="restore">恢复</button>
+            </div>
+            <div class="ver-panel" hidden>
+              <div class="ver-snap"><b>版本快照</b><div class="mini">4 维度 / 100 分：结构 25 · 洞察 30 · 证据 20 · 表达 25</div></div>
+              <div class="ver-diff">
+                <div class="del">− 维度：格式规范</div>
+                <div class="add">+ 维度：证据引用</div>
+              </div>
+            </div>
+          </div>
+          <div class="ver-row" data-ver="v1" data-kind="初始生成">
+            <div class="ver-main"><div class="li-t">v1 · 初始生成</div><div class="li-s">11-18 09:40 · 首次生成评分量规</div></div>
+            <span class="ver-tag">初始生成</span>
+            <div class="ver-ops">
+              <button class="btn sm" type="button" data-vact="view">查看</button>
+              <button class="btn sm" type="button" data-vact="diff">比较</button>
+              <button class="btn sm" type="button" data-vact="restore">恢复</button>
+            </div>
+            <div class="ver-panel" hidden>
+              <div class="ver-snap"><b>版本快照</b><div class="mini">4 维度 / 100 分：格式 25 · 结构 25 · 内容 30 · 表达 20</div></div>
+              <div class="ver-diff"><div class="del">− 无更早版本可比较</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
     </main>
   </div>
 </div>
@@ -238,7 +289,7 @@
 })();
 </script>
 <script src="assets/js/data.js?v=1795420906"></script>
-<script src="assets/js/site.js?v=1795473000"></script>
+<script src="assets/js/site.js?v=1795481000"></script>
 <script src="assets/js/api.js?v=1795420906"></script>
 <script src="assets/js/live.js?v=1795478000"></script>
 </body>

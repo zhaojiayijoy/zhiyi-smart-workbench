@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>创建实训 · 致壹 智能教育工作台</title>
-<link rel="stylesheet" href="assets/css/site.css?v=1795477000">
+<link rel="stylesheet" href="assets/css/site.css?v=1795481000">
 </head>
 <body data-page="training">
 <div class="app">
@@ -385,13 +385,53 @@
       })();
       </script>
 
+      <div class="card" id="trainVersions" data-versions style="margin-top:14px">
+        <div class="card-h"><h2>版本历史</h2><div class="right"><span class="mini ver-now" data-tpl="当前 {ver}">当前 v2</span><span class="mini">任务包与评分量规的修改均可追溯</span></div></div>
+        <div class="card-b">
+          <div class="ver-row current" data-ver="v2" data-kind="AI 重新生成">
+            <div class="ver-main"><div class="li-t">v2 · AI 重新生成</div><div class="li-s">11-22 09:10 · 按「财务测算」模板重新生成角色与交付物</div></div>
+            <span class="ver-tag on">当前</span>
+            <div class="ver-ops">
+              <button class="btn sm" type="button" data-vact="view">查看</button>
+              <button class="btn sm" type="button" data-vact="diff">比较</button>
+            </div>
+            <div class="ver-panel" hidden>
+              <div class="ver-snap"><b>版本快照</b><div class="mini">角色：财务分析助理（3 人） · 交付物：Excel / Word / PPT · 量规 4 维度</div></div>
+              <div class="ver-diff">
+                <div class="del">− 交付物：促销海报（设计稿）</div>
+                <div class="add">+ 交付物：Excel 三表模型（假设 / 利润 / 现金流）</div>
+                <div class="add">+ 量规新增「敏感性分析 20 分」</div>
+              </div>
+            </div>
+          </div>
+          <div class="ver-row" data-ver="v1" data-kind="教师修改">
+            <div class="ver-main"><div class="li-t">v1 · 教师修改</div><div class="li-s">11-20 16:40 · 调整评分量规权重</div></div>
+            <span class="ver-tag">教师修改</span>
+            <div class="ver-ops">
+              <button class="btn sm" type="button" data-vact="view">查看</button>
+              <button class="btn sm" type="button" data-vact="diff">比较</button>
+              <button class="btn sm" type="button" data-vact="restore">恢复</button>
+            </div>
+            <div class="ver-panel" hidden>
+              <div class="ver-snap"><b>版本快照</b><div class="mini">角色：营销助理（4 人） · 交付物：Excel / Word / PPT · 量规 4 维度</div></div>
+              <div class="ver-diff">
+                <div class="del">− 模型准确性 30 分</div>
+                <div class="add">+ 模型准确性 35 分</div>
+                <div class="del">− 汇报表达 25 分</div>
+                <div class="add">+ 汇报表达 20 分</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
     </main>
   </div>
 </div>
 
 <div class="toast"></div>
 <script src="assets/js/data.js?v=1795420906"></script>
-<script src="assets/js/site.js?v=1795473000"></script>
+<script src="assets/js/site.js?v=1795481000"></script>
 <script src="assets/js/api.js?v=1795420906"></script>
 <script src="assets/js/live.js?v=1795478000"></script>
 </body>

@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>学生空间 · 致壹 智能教育工作台</title>
-<link rel="stylesheet" href="assets/css/site.css?v=1795477000">
+<link rel="stylesheet" href="assets/css/site.css?v=1795481000">
 </head>
 <body data-page="student" data-mode="student">
 <div class="app">
@@ -176,19 +176,20 @@
                 <option value="">全部状态</option>
                 <option value="todo">待巩固</option>
                 <option value="done">已订正</option>
+                <option value="solid">已巩固</option>
               </select>
               <span class="mini" id="rvCount">4 题</span>
               <span style="flex:1"></span>
-              <button class="btn primary" type="button" id="rvStart">开始连续复习（2 题）</button>
+              <button class="btn primary" type="button" id="rvStart">开始连续复习</button>
             </div>
             <div class="table-wrap">
               <table>
-                <thead><tr><th>题目</th><th>知识点</th><th>我的错因</th><th>状态</th><th>操作</th></tr></thead>
+                <thead><tr><th>题目</th><th>知识点</th><th>掌握度</th><th>最近错误</th><th>状态</th><th>操作</th></tr></thead>
                 <tbody id="rvTbody">
-                  <tr data-point="参照群体" data-state="done"><td>判断「同学都在买」属于哪种影响</td><td>参照群体</td><td>与意见领袖混淆</td><td><span class="tag ok">已订正</span></td><td><button class="btn sm" type="button" data-act="explain">看解析</button></td></tr>
-                  <tr data-point="锚定效应" data-state="todo"><td>分析满减门槛的锚定作用</td><td>锚定效应</td><td>只答结论未给证据</td><td><span class="tag warn">待巩固</span></td><td><button class="btn sm" type="button" data-act="practice">去巩固</button></td></tr>
-                  <tr data-point="消费者态度" data-state="todo"><td>广告态度三成分标注</td><td>消费者态度</td><td>情感与行为意向混淆</td><td><span class="tag warn">待巩固</span></td><td><button class="btn sm" type="button" data-act="practice">去巩固</button></td></tr>
-                  <tr data-point="数据分析" data-state="done"><td>百分点与百分比的区别</td><td>数据分析</td><td>单位表述错误</td><td><span class="tag ok">已订正</span></td><td><button class="btn sm" type="button" data-act="explain">看解析</button></td></tr>
+                  <tr data-point="参照群体" data-state="done" data-mastery="72"><td><div>判断「同学都在买」属于哪种影响</div><div class="mini">错因：与意见领袖混淆</div></td><td>参照群体</td><td><div class="bar" style="width:64px;display:inline-block;vertical-align:middle"><i data-w="72" style="width:72%"></i></div> <span class="mini">72%</span></td><td class="mini">11-20 20:14</td><td><span class="tag ok">已订正</span></td><td><button class="btn sm" type="button" data-act="explain">看解析</button><button class="btn sm" type="button" data-act="similar">同类题</button></td></tr>
+                  <tr data-point="锚定效应" data-state="todo" data-mastery="58"><td><div>分析满减门槛的锚定作用</div><div class="mini">错因：只答结论未给证据</div></td><td>锚定效应</td><td><div class="bar" style="width:64px;display:inline-block;vertical-align:middle"><i data-w="58" style="width:58%"></i></div> <span class="mini">58%</span></td><td class="mini">11-22 19:05</td><td><span class="tag warn">待巩固</span></td><td><button class="btn sm primary" type="button" data-act="practice">去巩固</button><button class="btn sm" type="button" data-act="similar">同类题</button></td></tr>
+                  <tr data-point="消费者态度" data-state="todo" data-mastery="46"><td><div>广告态度三成分标注</div><div class="mini">错因：情感与行为意向混淆</div></td><td>消费者态度</td><td><div class="bar" style="width:64px;display:inline-block;vertical-align:middle"><i data-w="46" style="width:46%"></i></div> <span class="mini">46%</span></td><td class="mini">11-22 19:30</td><td><span class="tag warn">待巩固</span></td><td><button class="btn sm primary" type="button" data-act="practice">去巩固</button><button class="btn sm" type="button" data-act="similar">同类题</button></td></tr>
+                  <tr data-point="数据分析" data-state="done" data-mastery="85"><td><div>百分点与百分比的区别</div><div class="mini">错因：单位表述错误</div></td><td>数据分析</td><td><div class="bar" style="width:64px;display:inline-block;vertical-align:middle"><i data-w="85" style="width:85%"></i></div> <span class="mini">85%</span></td><td class="mini">11-18 21:02</td><td><span class="tag ok">已订正</span></td><td><button class="btn sm" type="button" data-act="explain">看解析</button><button class="btn sm" type="button" data-act="similar">同类题</button></td></tr>
                 </tbody>
               </table>
             </div>
@@ -325,6 +326,8 @@
     var rvPoint = document.getElementById("rvPoint");
     var rvState = document.getElementById("rvState");
     var rvCount = document.getElementById("rvCount");
+    var rvProgText = document.getElementById("rvProgText");
+    var rvProgBar = document.getElementById("rvProgBar");
 
     function applyRv(){
       var p = rvPoint ? rvPoint.value : "";
@@ -341,6 +344,18 @@
     if (rvState) rvState.addEventListener("change", applyRv);
     applyRv();
 
+    function updateProg(){
+      var total = rvRows.length, done = 0, solid = 0;
+      rvRows.forEach(function(tr){
+        var s = tr.getAttribute("data-state");
+        if (s !== "todo") done++;
+        if (s === "solid") solid++;
+      });
+      if (rvProgText) rvProgText.textContent = done + " / " + total + " 题已订正" + (solid ? " · " + solid + " 个知识点已巩固" : "");
+      if (rvProgBar && total) rvProgBar.style.width = Math.round(done / total * 100) + "%";
+    }
+    updateProg();
+
     var practice = document.getElementById("practice");
     var pracQ = document.getElementById("pracQ");
     var pracOpts = document.getElementById("pracOpts");
@@ -350,21 +365,44 @@
     var pracNext = document.getElementById("pracNext");
     var pracClose = document.getElementById("pracClose");
 
+    var streak = {};
     var bank = [
-      { q: "分析满减门槛的锚定作用：为什么「原价 ¥299，现价 ¥199」比直接标 ¥199 更容易被接受？",
+      { point: "锚定效应",
+        q: "分析满减门槛的锚定作用：为什么「原价 ¥299，现价 ¥199」比直接标 ¥199 更容易被接受？",
         opts: ["因为 199 看起来更低", "因为原价成为参照锚点，让现价显得便宜", "因为满减一定更划算", "因为消费者不会计算差价"],
         ans: 1,
         ev: "正确答案：B。原价 ¥299 是锚点，消费者以它为参照判断现价，差值被感知为收益。这属于锚定效应，而非真实的成本差异。" },
-      { q: "广告态度三成分标注：「这个广告让我觉得很温暖」属于态度中的哪个成分？",
+      { point: "锚定效应",
+        q: "「原价 ¥599，限时 ¥399」的呈现方式主要利用了哪种效应？",
+        opts: ["损失厌恶", "锚定效应", "从众效应", "曝光效应"],
+        ans: 1,
+        ev: "正确答案：B。先给出高原价作为参照锚点，再展示现价，使现价显得更划算。" },
+      { point: "消费者态度",
+        q: "广告态度三成分标注：「这个广告让我觉得很温暖」属于态度中的哪个成分？",
         opts: ["认知成分", "情感成分", "行为成分", "以上都不是"],
         ans: 1,
-        ev: "正确答案：B。情感成分指向情绪体验；认知是信念判断，行为是行动倾向。" }
+        ev: "正确答案：B。情感成分指向情绪体验；认知是信念判断，行为是行动倾向。" },
+      { point: "消费者态度",
+        q: "「我认为这个品牌值得信赖」属于态度中的哪个成分？",
+        opts: ["认知成分", "情感成分", "行为成分", "以上都不是"],
+        ans: 0,
+        ev: "正确答案：A。信赖是一种信念判断，属于认知成分；情感指向感受，行为指向购买意向。" },
+      { point: "参照群体",
+        q: "「同学都在用，所以我也想买」主要受哪种影响？",
+        opts: ["意见领袖", "参照群体", "锚定效应", "损失厌恶"],
+        ans: 1,
+        ev: "正确答案：B。同学是参照群体，个体通过与他人比较形成购买意愿，而非因为其专业影响力。" },
+      { point: "数据分析",
+        q: "满意度从 62% 提升到 68%，正确表述是？",
+        opts: ["提升 6%", "提升 6 个百分点", "提升 9.7%", "下降 6 个百分点"],
+        ans: 1,
+        ev: "正确答案：B。两个百分比指标相减，差值用「百分点」表述；「提升 6%」会被理解为相对增幅。" }
     ];
-    var idx = 0, picked = -1;
+    var queue = [], curPoint = "", idx = 0, picked = -1;
 
     function renderQ(){
-      var item = bank[idx];
-      pracProg.textContent = "第 " + (idx + 1) + " / " + bank.length + " 题";
+      var item = queue[idx];
+      pracProg.textContent = "第 " + (idx + 1) + " / " + queue.length + " 题";
       pracQ.textContent = item.q;
       pracOpts.innerHTML = "";
       picked = -1;
@@ -392,52 +430,75 @@
       pracNext.hidden = true;
     }
 
-    function openPractice(){
+    function openPractice(point){
       if (!practice) return;
+      curPoint = point || "";
+      queue = curPoint ? bank.filter(function(b){ return b.point === curPoint; }) : bank.slice();
+      if (!queue.length) queue = bank.slice();
       idx = 0;
       practice.hidden = false;
       renderQ();
       practice.scrollIntoView({ behavior: "smooth", block: "center" });
     }
 
+    function markSolid(point){
+      var tr = null;
+      rvRows.forEach(function(r){ if (r.getAttribute("data-point") === point) tr = r; });
+      if (!tr || tr.getAttribute("data-state") === "solid") return;
+      tr.setAttribute("data-state", "solid");
+      if (tr.cells[4]) tr.cells[4].innerHTML = '<span class="tag ok">已巩固</span>';
+      applyRv();
+      updateProg();
+      toast("「" + point + "」连续答对 2 次，已标记为已巩固");
+    }
+
     function finish(){
       pracProg.textContent = "已完成";
-      pracQ.textContent = "本轮复习完成：" + bank.length + " / " + bank.length + " 题已作答。";
+      pracQ.textContent = "本轮复习完成：" + queue.length + " / " + queue.length + " 题已作答。";
       pracOpts.innerHTML = "";
-      pracFb.textContent = "连续复习记录已保存（示例）。可以退出后按需继续下一轮。";
+      pracFb.textContent = "连续复习记录已保存（示例）。同一知识点连续答对 2 次会自动标记为「已巩固」。";
       pracFb.classList.add("on");
       pracSubmit.hidden = true;
       pracNext.hidden = true;
     }
 
     if (pracSubmit) pracSubmit.addEventListener("click", function(){
-      var item = bank[idx];
-      pracFb.textContent = item.ev + (picked === item.ans ? "" : "（你的选择与答案不一致，建议再看一次题干。）");
+      var item = queue[idx];
+      var ok = picked === item.ans;
+      pracFb.textContent = item.ev + (ok ? "" : "（你的选择与答案不一致，建议再看一次题干。）");
       pracFb.classList.add("on");
       pracSubmit.disabled = true;
       pracNext.hidden = false;
+      if (ok){
+        streak[item.point] = (streak[item.point] || 0) + 1;
+        if (streak[item.point] >= 2) markSolid(item.point);
+      } else {
+        streak[item.point] = 0;
+      }
     });
     if (pracNext) pracNext.addEventListener("click", function(){
       idx++;
-      if (idx >= bank.length) finish();
+      if (idx >= queue.length) finish();
       else renderQ();
     });
     if (pracClose) pracClose.addEventListener("click", function(){ if (practice) practice.hidden = true; });
 
     var rvStart = document.getElementById("rvStart");
-    if (rvStart) rvStart.addEventListener("click", openPractice);
+    if (rvStart) rvStart.addEventListener("click", function(){ openPractice(); });
 
     rvTbody.addEventListener("click", function(e){
       var btn = e.target.closest("button[data-act]");
       if (!btn) return;
-      if (btn.getAttribute("data-act") === "practice") openPractice();
+      var tr = btn.closest("tr");
+      var act = btn.getAttribute("data-act");
+      if (act === "practice" || act === "similar") openPractice(tr ? tr.getAttribute("data-point") : "");
       else toast("已打开解析（示例）");
     });
   }
 })();
 </script>
 <script src="assets/js/data.js?v=1795420906"></script>
-<script src="assets/js/site.js?v=1795473000"></script>
+<script src="assets/js/site.js?v=1795481000"></script>
 <script src="assets/js/api.js?v=1795420906"></script>
 <script src="assets/js/live.js?v=1795478000"></script>
 </body>

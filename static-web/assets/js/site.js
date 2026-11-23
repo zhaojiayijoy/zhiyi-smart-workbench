@@ -634,6 +634,65 @@
     });
   }
 
+  /* 版本历史：查看 / 比较差异 / 恢复旧版本 */
+  function initVersions() {
+    Array.prototype.forEach.call(document.querySelectorAll("[data-versions]"), function (root) {
+      var now = root.querySelector(".ver-now");
+      root.addEventListener("click", function (e) {
+        var btn = e.target.closest("[data-vact]");
+        if (!btn) return;
+        var row = btn.closest(".ver-row");
+        if (!row) return;
+        var act = btn.getAttribute("data-vact");
+
+        if (act === "restore") {
+          if (!window.confirm("恢复到 " + row.getAttribute("data-ver") + " 后，当前内容将被替换。确定继续？")) return;
+          Array.prototype.forEach.call(root.querySelectorAll(".ver-row"), function (r) {
+            var isCur = r === row;
+            r.classList.toggle("current", isCur);
+            var old = r.querySelector('[data-vact="restore"]');
+            if (isCur) {
+              if (old) old.remove();
+            } else if (!old) {
+              var b = document.createElement("button");
+              b.type = "button";
+              b.className = "btn sm";
+              b.setAttribute("data-vact", "restore");
+              b.textContent = "恢复";
+              var ops = r.querySelector(".ver-ops");
+              if (ops) ops.appendChild(b);
+            }
+            var tag = r.querySelector(".ver-tag");
+            if (tag) {
+              tag.textContent = isCur ? "当前" : r.getAttribute("data-kind");
+              tag.classList.toggle("on", isCur);
+            }
+          });
+          if (now) {
+            var saved = now.getAttribute("data-tpl") || "当前 {ver}";
+            now.textContent = saved.replace("{ver}", row.getAttribute("data-ver"));
+          }
+          toast("已恢复到 " + row.getAttribute("data-ver"));
+          return;
+        }
+
+        var panel = row.querySelector(".ver-panel");
+        if (!panel) return;
+        var snap = panel.querySelector(".ver-snap");
+        var diff = panel.querySelector(".ver-diff");
+        var mode = act === "diff" ? "diff" : "view";
+        if (panel.getAttribute("data-mode") === mode && !panel.hidden) {
+          panel.hidden = true;
+          return;
+        }
+        panel.setAttribute("data-mode", mode);
+        panel.hidden = false;
+        if (snap) snap.hidden = mode === "diff";
+        if (diff) diff.hidden = mode !== "diff";
+      });
+    });
+  }
+
   document.addEventListener("DOMContentLoaded", function () {
     if (!window.EDU) return;
     buildSidebar();
@@ -649,5 +708,6 @@
     fillCourseFields();
     Edu.onCourseChange(function () { fillCourseFields(); renderTopCourseSummary(); });
     initLive();
+    initVersions();
   });
 })();

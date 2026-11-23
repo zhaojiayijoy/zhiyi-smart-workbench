@@ -315,6 +315,20 @@ tbody tr:focus-visible,.tq:focus-visible{outline:2px solid var(--accent);outline
 .cite-box li a:hover{color:var(--accent);border-bottom-color:var(--accent-line)}
 .cite-box .cite-meta{display:flex;gap:6px 14px;flex-wrap:wrap;margin-top:8px;padding-top:8px;border-top:1px dashed var(--line);font-size:11px;color:var(--text-3)}
 .msg .cite-box{background:var(--panel);margin-top:8px}
+/* 版本历史 */
+.ver-row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:8px;background:var(--panel-2)}
+.ver-row:last-child{margin-bottom:0}
+.ver-row.current{border-color:var(--accent-line);background:var(--accent-soft)}
+.ver-main{flex:1;min-width:180px}
+.ver-main .li-s{font-size:11.5px;color:var(--text-3);margin-top:3px}
+.ver-ops{display:flex;gap:6px}
+.ver-tag{font-size:10.5px;padding:1px 8px;border-radius:20px;border:1px solid var(--line);color:var(--text-3);white-space:nowrap}
+.ver-tag.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.ver-panel{flex-basis:100%;border-top:1px dashed var(--line);margin-top:8px;padding-top:8px;font-size:12px}
+.ver-diff{display:grid;gap:3px;margin-top:6px}
+.ver-diff>div{padding:3px 8px;border-radius:5px}
+.ver-diff .add{background:#E9F2EA;color:#2F6B4F}
+.ver-diff .del{background:#FBEDEA;color:#9C4033}
 .hero{border:1px solid var(--line);border-radius:14px;background:radial-gradient(120% 140% at 0% 0%,#EFE7D8 0%,var(--panel) 55%,var(--panel) 100%);box-shadow:var(--shadow);padding:26px 26px 22px;margin-bottom:16px}
 .hero h1{font-size:23px;letter-spacing:-.5px}
 .hero p{color:var(--text-2);margin:6px 0 14px;max-width:620px}
