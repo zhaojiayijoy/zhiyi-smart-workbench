@@ -249,7 +249,12 @@
       (checks.ok ? '<span class="tag ok">校验通过</span>' : '<span class="tag warn">校验未通过</span>');
     out.querySelector(".card-h h2").textContent = pkg.topic || "备课包";
     var right = out.querySelector(".card-h .right");
-    if (right) right.innerHTML = headTags + '<span class="tag">待教师审核</span>';
+    if (right) right.innerHTML = '<button class="btn sm ghost" type="button" id="lessonCite">引用依据</button>' + headTags + '<span class="tag">待教师审核</span>';
+    var citeBtn = out.querySelector("#lessonCite");
+    if (citeBtn) citeBtn.addEventListener("click", function () {
+      var box = out.querySelector("#lessonCiteBox");
+      if (box) box.hidden = !box.hidden;
+    });
 
     function list(arr) { return (arr || []).map(function (x) { return "<li>" + h(x) + "</li>"; }).join(""); }
     var steps = (lp.steps || []).map(function (s, i) {

@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>AI 助手 · 致壹 智能教育工作台</title>
-<link rel="stylesheet" href="assets/css/site.css?v=1795476000">
+<link rel="stylesheet" href="assets/css/site.css?v=1795477000">
 </head>
 <body data-page="assistant">
 <div class="app">
@@ -107,7 +107,7 @@
 <script src="assets/js/data.js?v=1795420906"></script>
 <script src="assets/js/site.js?v=1795473000"></script>
 <script src="assets/js/api.js?v=1795420906"></script>
-<script src="assets/js/live.js?v=1795475000"></script>
+<script src="assets/js/live.js?v=1795478000"></script>
 <script>
 (function(){
   var chat = document.getElementById('chat');
@@ -117,11 +117,24 @@
     else window.alert(msg);
   }
 
-  function attach(bubble){
+  function citeHtml(){
+    return '<div class="cite-box" hidden>' +
+      '<div class="cite-h"><b>引用依据</b><span class="mini">生成于 2026-11-23 10:20</span></div>' +
+      '<ul>' +
+        '<li><span class="k">教材</span><a href="files.html">消费者行为学（第5版）· 第 6 章 P112-118</a></li>' +
+        '<li><span class="k">课件</span><a href="files.html">第6次课-消费者态度.pptx · 第 12-18 页</a></li>' +
+        '<li><span class="k">数据</span><a href="files.html">学情前测问卷.csv · 字段 question / tag / score</a></li>' +
+      '</ul>' +
+      '<div class="cite-meta"><span>生成模型：智谱 GLM-4</span><span>审核模型：智谱 GLM-4-Air</span><span>生成时间：2026-11-23 10:20</span></div>' +
+    '</div>';
+  }
+
+  function attach(bubble, skipCite){
     if (!bubble || bubble.querySelector('.msg-actions')) return;
+    if (!skipCite && !bubble.querySelector('.cite-box')) bubble.insertAdjacentHTML('beforeend', citeHtml());
     var acts = document.createElement('div');
     acts.className = 'msg-actions';
-    [['copy','复制'],['regen','重新生成'],['cite','查看引用'],['save','保存到课程'],['import','转为课堂导入']].forEach(function(p){
+    [['copy','复制'],['regen','重新生成'],['cite','查看引用'],['save','保存到课程'],['import','转为课堂导入'],['drill','转为课后练习']].forEach(function(p){
       var b = document.createElement('button');
       b.type = 'button';
       b.setAttribute('data-act', p[0]);
@@ -133,7 +146,9 @@
 
   function attachAll(){
     if (!chat) return;
-    Array.prototype.forEach.call(chat.querySelectorAll('.msg.ai .bubble'), attach);
+    Array.prototype.forEach.call(chat.querySelectorAll('.msg.ai .bubble'), function(b, i){
+      attach(b, i === 0 && !b.querySelector('.msg-actions'));
+    });
   }
   attachAll();
 
@@ -165,9 +180,17 @@
         return;
       }
       if (act === 'regen') return toast('已重新生成（示例）');
-      if (act === 'cite') return toast('引用来源：教材第 6 章 P112-118；近 30 天答疑 11 条');
+      if (act === 'cite'){
+        var box = bubble.querySelector('.cite-box');
+        if (box){
+          box.hidden = !box.hidden;
+          if (!box.hidden) box.scrollIntoView({behavior:'smooth',block:'nearest'});
+        }
+        return;
+      }
       if (act === 'save') return toast('已保存到当前课程资料（示例）');
       if (act === 'import') return toast('已转为课堂导入并带入备课本（示例）');
+      if (act === 'drill') return toast('已转为课后练习，加入学生练习列表（示例）');
     });
   }
 

@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>学情分析 · 致壹 智能教育工作台</title>
-<link rel="stylesheet" href="assets/css/site.css?v=1795476000">
+<link rel="stylesheet" href="assets/css/site.css?v=1795477000">
 </head>
 <body data-page="analytics">
 <div class="app">
@@ -201,6 +201,12 @@ document.querySelectorAll('[data-pane="dims"] .bar > i').forEach(function(el,i){
       }
       box.textContent = ev;
       box.classList.add("on");
+      if (!box.querySelector(".cite-box")) box.insertAdjacentHTML("beforeend",
+        '<div class="cite-box" style="margin-top:8px"><div class="cite-h"><b>引用依据</b><span class="mini">生成于 2026-11-23 10:20</span></div><ul>' +
+        '<li><span class="k">教材</span><span>消费者行为学（第5版）· 第 6 章 P112-118</span></li>' +
+        '<li><span class="k">课件</span><span>第5次课-参照群体与决策.pptx · 第 8-15 页</span></li>' +
+        '<li><span class="k">数据</span><span>学情前测问卷.csv · 字段 question / tag / score</span></li></ul>' +
+        '<div class="cite-meta"><span>生成模型：智谱 GLM-4</span><span>审核模型：智谱 GLM-4-Air</span><span>生成时间：2026-11-23 10:20</span></div></div>');
     });
   });
 })();
@@ -243,6 +249,6 @@ document.querySelectorAll('[data-pane="dims"] .bar > i').forEach(function(el,i){
 <script src="assets/js/data.js?v=1795420906"></script>
 <script src="assets/js/site.js?v=1795473000"></script>
 <script src="assets/js/api.js?v=1795420906"></script>
-<script src="assets/js/live.js?v=1795475000"></script>
+<script src="assets/js/live.js?v=1795478000"></script>
 </body>
 </html>
