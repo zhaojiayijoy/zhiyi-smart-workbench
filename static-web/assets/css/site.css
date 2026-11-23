@@ -288,6 +288,19 @@ tbody tr:focus-visible,.tq:focus-visible{outline:2px solid var(--accent);outline
 .quick b{display:block;font-size:13px;font-weight:600;color:#000}
 .quick span{font-size:11px;color:#000}
 .quick a{color:#000}
+/* 首页：下一节课与最近工作 */
+.next-lesson{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap}
+.next-lesson .nl-t{font-size:15px;font-weight:650}
+.next-lesson .nl-meta{font-size:12px;color:var(--text-3);margin-top:4px}
+.next-lesson .nl-tags{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-top:8px}
+.next-lesson .nl-tags .pill{font-size:11px;padding:2px 9px;border-radius:20px;background:var(--accent-soft);border:1px solid var(--accent-line);color:var(--accent)}
+.recent-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-top:14px}
+.recent-grid a.list-item{text-decoration:none;color:inherit}
+.recent-grid a.list-item:hover .li-t{color:var(--accent)}
+.recent-grid .li-s{font-size:11.5px;color:var(--text-3)}
+.recent-grid .li-t{font-size:12.5px;font-weight:600;transition:color .12s}
+@media (max-width:1080px){.recent-grid{grid-template-columns:1fr}}
+@media (max-width:680px){.next-lesson{align-items:flex-start}}
 .hero{border:1px solid var(--line);border-radius:14px;background:radial-gradient(120% 140% at 0% 0%,#EFE7D8 0%,var(--panel) 55%,var(--panel) 100%);box-shadow:var(--shadow);padding:26px 26px 22px;margin-bottom:16px}
 .hero h1{font-size:23px;letter-spacing:-.5px}
 .hero p{color:var(--text-2);margin:6px 0 14px;max-width:620px}

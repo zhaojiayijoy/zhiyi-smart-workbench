@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>工作台首页 · 致壹 智能教育工作台</title>
-<link rel="stylesheet" href="assets/css/site.css?v=1795473000">
+<link rel="stylesheet" href="assets/css/site.css?v=1795474000">
 </head>
 <body data-page="index">
 <div class="app">
@@ -15,7 +15,7 @@
 
       <section class="hero">
         <h1>今天要完成哪项教学任务？</h1>
-        <p data-page-sub>所有内容都会关联到当前课程「消费者行为分析」。</p>
+        <p>所有内容都会关联到当前课程 <b data-fill="course.name">—</b>。</p>
 
         <form class="composer" id="homeComposer">
           <textarea placeholder="输入课题、上传资料，或描述你要完成的教学任务。" rows="3"></textarea>
@@ -47,6 +47,72 @@
         </div>
       </div>
 
+      <div class="card" id="nextLesson" style="margin-top:14px">
+        <div class="card-h"><h2>下一节课</h2><div class="right"><span class="tag acc" id="nextLessonTag">待排课</span></div></div>
+        <div class="card-b next-lesson">
+          <div>
+            <div class="nl-t" id="nextLessonTitle">尚未开始备课</div>
+            <div class="nl-meta"><b data-fill="course.name">—</b> · <span data-fill="course.classWithSize">—</span> · <span data-fill="course.totalHours">—</span></div>
+            <div class="nl-tags">
+              <span class="pill" data-fill="course.progress">进度待完善</span>
+              <span class="pill">建议先看学情，再生成备课包</span>
+            </div>
+          </div>
+          <div class="row">
+            <a class="btn" href="analytics.html">查看学情</a>
+            <a class="btn" href="lesson.html">继续备课</a>
+          </div>
+        </div>
+      </div>
+
+      <div class="recent-grid">
+        <div class="card">
+          <div class="card-h"><h2>最近备课包</h2><div class="right"><a class="mini" href="lesson.html">全部</a></div></div>
+          <div class="card-b tight">
+            <a class="list-item" href="lesson.html">
+              <div class="li-ic">✦</div>
+              <div style="flex:1"><div class="li-t">第 5 次课：参照群体与消费者决策</div><div class="li-s">11-20 16:22 · 双模型一致性 92%</div></div>
+              <span class="tag ok">已审核</span>
+            </a>
+            <a class="list-item" href="lesson.html">
+              <div class="li-ic">✦</div>
+              <div style="flex:1"><div class="li-t">第 4 次课：知觉与学习</div><div class="li-s">11-13 15:08 · 双模型一致性 88%</div></div>
+              <span class="tag ok">已审核</span>
+            </a>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-h"><h2>最近实训任务</h2><div class="right"><a class="mini" href="training.html">全部</a></div></div>
+          <div class="card-b tight">
+            <a class="list-item" href="training.html">
+              <div class="li-ic">◈</div>
+              <div style="flex:1"><div class="li-t">双十一促销方案设计</div><div class="li-s">11-18 14:20 · 32 / 41 人已提交</div></div>
+              <span class="tag ok">已发布</span>
+            </a>
+            <a class="list-item" href="training.html">
+              <div class="li-ic">◈</div>
+              <div style="flex:1"><div class="li-t">竞品价格带分析（Excel）</div><div class="li-s">11-20 16:40 · 草稿</div></div>
+              <span class="tag warn">草稿</span>
+            </a>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-h"><h2>待评审作业</h2><div class="right"><a class="mini" href="review.html">全部</a></div></div>
+          <div class="card-b tight">
+            <a class="list-item" href="review.html">
+              <div class="li-ic">✓</div>
+              <div style="flex:1"><div class="li-t">4 份 AI 初评待教师复核</div><div class="li-s">最近提交 11-21 10:12</div></div>
+              <span class="tag warn">待处理</span>
+            </a>
+            <a class="list-item" href="review.html">
+              <div class="li-ic">✓</div>
+              <div style="flex:1"><div class="li-t">2 份已复核，待发布成绩</div><div class="li-s">复核完成 11-21 09:40</div></div>
+              <span class="tag acc">待发布</span>
+            </a>
+          </div>
+        </div>
+      </div>
+
     </main>
   </div>
 </div>
@@ -56,7 +122,7 @@
   <div class="modal">
     <div class="modal-h"><b>新建教学任务</b><button class="x" type="button" data-close-modal>×</button></div>
     <div class="modal-b">
-      <p class="sub" style="margin-bottom:12px" data-page-sub>选择要开始的教学环节。所有内容都会关联到当前课程「消费者行为分析」。</p>
+      <p class="sub" style="margin-bottom:12px">选择要开始的教学环节。所有内容都会关联到当前课程 <b data-fill="course.name">—</b>。</p>
       <div class="quick">
         <a href="lesson.html"><span class="qi">✦</span><span><b>一键备课</b><span>生成教案、课件与练习</span></span></a>
         <a href="training.html"><span class="qi">◈</span><span><b>创建实训</b><span>生成真实工作场景任务包</span></span></a>
@@ -71,7 +137,7 @@
 <script src="assets/js/data.js?v=1795420906"></script>
 <script src="assets/js/site.js?v=1795473000"></script>
 <script src="assets/js/api.js?v=1795420906"></script>
-<script src="assets/js/live.js?v=1795420906"></script>
+<script src="assets/js/live.js?v=1795475000"></script>
 <script>
 (function(){
   var form = document.getElementById('homeComposer');
@@ -87,6 +153,27 @@
     var n = e.target.files.length;
     if(n) alert('已选择 ' + n + ' 个文件（静态演示，不会实际上传）');
   });
+})();
+
+(function(){
+  function renderNext(){
+    var t = document.getElementById('nextLessonTitle');
+    var tag = document.getElementById('nextLessonTag');
+    if (!t) return;
+    var c = (window.Edu && Edu.getSelectedCourse) ? Edu.getSelectedCourse() : null;
+    if (c && c.currentSession && c.totalSessions){
+      var n = Math.min(Number(c.currentSession) + 1, Number(c.totalSessions));
+      t.textContent = '第 ' + n + ' 次课 · 待确定课题';
+      tag.textContent = '第 ' + n + ' / ' + c.totalSessions + ' 次课';
+    } else {
+      t.textContent = '下一节课待安排';
+      tag.textContent = '补全课程进度';
+    }
+  }
+  renderNext();
+  if (window.Edu && Edu.onCourseChange) Edu.onCourseChange(renderNext);
+  window.addEventListener('load', renderNext);
+  setTimeout(renderNext, 1500);
 })();
 </script>
 </body>

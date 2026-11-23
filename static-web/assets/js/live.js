@@ -112,7 +112,10 @@
         var box = document.querySelector(".card .card-b.tight");
         if (!box) return;
         rows = (rows || []).slice(0, 2);
-        if (!rows.length) { box.innerHTML = '<div class="mini">暂无备课包，去「一键备课」生成第一个。</div>'; return; }
+        if (!rows.length) {
+          box.innerHTML = '<div class="list-item"><div class="li-ic">✦</div><div style="flex:1"><div class="li-t">暂无备课包</div><div class="li-s">去「一键备课」生成第一个</div></div><a class="btn sm ghost" href="lesson.html">去生成</a></div>';
+          return;
+        }
         box.innerHTML = rows.map(function (r) {
           var ck = (r.checks && r.checks.consistency) ? " · 一致性检查完成" : "";
           return '<div class="list-item"><div class="li-ic">✦</div><div style="flex:1"><div class="li-t">' + h(r.topic) +
