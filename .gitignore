@@ -3,6 +3,9 @@ __pycache__/
 *.pyc
 *.pyo
 
+# 日志
+*.log
+
 # 本地数据 & 临时
 .data/
 .trae/
