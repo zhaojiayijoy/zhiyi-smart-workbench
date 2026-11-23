@@ -15,7 +15,7 @@
 
       <div class="page-head">
         <div><h1>作业评审</h1><p class="sub" data-page-sub>AI 给出分维度评分证据，教师复核后发布（当前：消费者行为分析）</p></div>
-        <div class="right"><span class="tag warn">4 份待复核</span><span class="tag ok">37 份已发布</span></div>
+        <div class="right" id="reviewHeadTags"><span class="tag warn">4 份待复核</span><span class="tag ok">37 份已发布</span></div>
       </div>
 
       <div class="ctx">
@@ -62,7 +62,7 @@
 
       <div class="split" style="margin-bottom:14px">
         <div class="card">
-          <div class="card-h"><h2>学生提交</h2><div class="right"><span class="mini">3 份</span></div></div>
+          <div class="card-h"><h2>学生提交</h2><div class="right"><span class="mini" id="reviewSubmitCount">3 份</span></div></div>
           <div class="table-wrap">
             <table>
               <thead><tr><th>学生</th><th>文件</th><th>总分</th><th>状态</th></tr></thead>
@@ -83,16 +83,16 @@
             </table>
           </div>
           <div class="card-b" style="border-top:1px solid var(--line)">
-            <div class="mini">正在查看：<b style="color:var(--text)">陈思远 · 促销方案.docx</b></div>
+            <div class="mini">正在查看：<b id="reviewViewing" style="color:var(--text)">陈思远 · 促销方案.docx</b></div>
           </div>
         </div>
 
         <div class="card">
-          <div class="card-h"><h2>分维度评分证据</h2><div class="right"><span class="tag acc">AI 初评 86.5</span></div></div>
+          <div class="card-h"><h2>分维度评分证据</h2><div class="right"><span class="tag acc" id="reviewAiScore">AI 初评 86.5</span></div></div>
           <div class="table-wrap">
             <table>
               <thead><tr><th>维度</th><th>得分</th><th>依据 / 扣分原因</th><th>位置</th><th>采纳</th></tr></thead>
-              <tbody>
+              <tbody id="reviewEvidenceTb">
                 <tr>
                   <td>理论应用</td><td><b>27</b>/30</td>
                   <td class="wrap">准确使用锚定效应与损失厌恶解释满减门槛设计<div class="mini">扣分：参照群体部分仅一句带过</div></td>
@@ -146,7 +146,7 @@
               <button class="btn" type="submit" data-confirm="保存后该学生成绩将按终评计入课程，确定保存？">保存教师终评</button>
               <button class="btn" type="button" data-demo="已退回给学生修改">退回修改</button>
               <button class="btn ghost" type="button" data-demo="已标记为需人工检查">需要人工进一步检查</button>
-              <span class="mini">总计 <b>86.5</b> / 100</span>
+              <span class="mini">总计 <b id="reviewFinalTotal">86.5</b> / 100</span>
             </div>
           </form>
           <div class="rule" id="finalOut" hidden style="margin-top:12px">教师终评已保存（静态演示）。真实版本会记录修改原因，并将结果同步到学生端。</div>
@@ -289,8 +289,8 @@
 })();
 </script>
 <script src="assets/js/data.js?v=1795420906"></script>
-<script src="assets/js/site.js?v=1795481000"></script>
+<script src="assets/js/site.js?v=1795490000"></script>
 <script src="assets/js/api.js?v=1795420906"></script>
-<script src="assets/js/live.js?v=1795478000"></script>
+<script src="assets/js/live.js?v=1795490000"></script>
 </body>
 </html>

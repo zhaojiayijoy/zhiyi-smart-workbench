@@ -582,23 +582,23 @@
       if (c) {
         switch (key) {
           case "name": val = c.name || "—"; break;
-          case "class": val = c.class || "—"; break;
-          case "className": val = c.class || "—"; break;
+          case "class": val = c.class || "待完善"; break;
+          case "className": val = c.class || "待完善"; break;
           case "classSize": val = c.classSize ? c.classSize + " 人" : ""; break;
-          case "classWithSize": val = c.class + (c.classSize ? "（" + c.classSize + " 人）" : ""); break;
+          case "classWithSize": val = c.class ? (c.class + (c.classSize ? "（" + c.classSize + " 人）" : "")) : "待完善"; break;
           case "totalHours": val = c.totalHours ? c.totalHours + " 课时" : "未填写课时"; break;
-          case "hours": val = c.totalHours ? c.totalHours + " 课时" : ""; break;
-          case "textbook": val = c.textbook || "—"; break;
+          case "hours": val = c.totalHours ? c.totalHours + " 课时" : "待完善"; break;
+          case "textbook": val = c.textbook || "待完善"; break;
           case "progress":
             if (c.currentSession && c.totalSessions) val = "第 " + c.currentSession + " 次课 / 共 " + c.totalSessions + " 次";
             else val = "进度待完善"; break;
           case "resourceCount": val = (c.resourceCount || 0) + " 份"; break;
-          case "note": val = c.note || "—"; break;
-          case "objectives": val = (c.objectives || "—").replace(/\n/g, "<br>"); html = true; break;
-          case "key": val = c.key || "—"; break;
-          case "diff": val = c.diff || "—"; break;
-          case "desc": val = c.desc || "—"; break;
-          default: val = c[key] || "—"; break;
+          case "note": val = c.note || "待完善"; break;
+          case "objectives": val = (c.objectives || "待完善").replace(/\n/g, "<br>"); html = true; break;
+          case "key": val = c.key || "待完善"; break;
+          case "diff": val = c.diff || "待完善"; break;
+          case "desc": val = c.desc || "待完善"; break;
+          default: val = c[key] || "待完善"; break;
         }
       } else {
         val = "—";
@@ -638,6 +638,16 @@
   function initVersions() {
     Array.prototype.forEach.call(document.querySelectorAll("[data-versions]"), function (root) {
       var now = root.querySelector(".ver-now");
+      if (typeof Edu.isLive === "function" && Edu.isLive()) {
+        var right = root.querySelector(".card-h .right");
+        if (right && !right.querySelector(".live-demo-tag")) {
+          var tag = document.createElement("span");
+          tag.className = "tag live-demo-tag";
+          tag.textContent = "演示";
+          tag.title = "版本历史为本地演示，恢复不会持久化到后端";
+          right.insertBefore(tag, right.firstChild);
+        }
+      }
       root.addEventListener("click", function (e) {
         var btn = e.target.closest("[data-vact]");
         if (!btn) return;
@@ -672,7 +682,7 @@
             var saved = now.getAttribute("data-tpl") || "当前 {ver}";
             now.textContent = saved.replace("{ver}", row.getAttribute("data-ver"));
           }
-          toast("已恢复到 " + row.getAttribute("data-ver"));
+          toast("已恢复到 " + row.getAttribute("data-ver") + (typeof Edu.isLive === "function" && Edu.isLive() ? "（演示：未持久化）" : ""));
           return;
         }
 

@@ -86,7 +86,7 @@
               </div>
             </div>
             <div class="evidence" data-evbox></div>
-            <div class="rule clickable" style="margin-top:14px" data-ev="结论依据：27 条答疑中 11 条为参照群体影响，占 41%；其中 9 条明确提到「与意见领袖混在一起」。建议下次课开场用两道选择题澄清。">结论：参照群体影响占全部答疑的 41%，且多集中在「与意见领袖的区别」，适合作为下次课开场澄清点。<span class="mini">（点击查看证据）</span></div>
+            <div class="rule clickable" id="pointsConclusion" style="margin-top:14px" data-ev="结论依据：27 条答疑中 11 条为参照群体影响，占 41%；其中 9 条明确提到「与意见领袖混在一起」。建议下次课开场用两道选择题澄清。">结论：参照群体影响占全部答疑的 41%，且多集中在「与意见领袖的区别」，适合作为下次课开场澄清点。<span class="mini">（点击查看证据）</span></div>
           </div>
 
           <div class="tabpane" data-pane="errors">
@@ -130,7 +130,7 @@
               </div>
             </div>
             <div class="evidence" data-evbox></div>
-            <div class="rule" style="margin-top:14px">数据分析是最低维度（71 分），与实训中 Excel 测算的完成度一致。</div>
+            <div class="rule" id="dimsConclusion" style="margin-top:14px">数据分析是最低维度（71 分），与实训中 Excel 测算的完成度一致。</div>
           </div>
 
           <div class="tabpane" data-pane="supports">
@@ -143,7 +143,7 @@
         </div>
       </div>
 
-      <div class="card" style="margin-bottom:14px">
+      <div class="card" id="masteryCard" style="margin-bottom:14px">
         <div class="card-h"><h2>班级知识点掌握</h2><div class="right"><span class="mini">41 名学生 · 更新于 11-22 18:00</span></div></div>
         <div class="table-wrap">
           <table>
@@ -160,10 +160,10 @@
 
       <div class="split">
         <div class="card" id="actionCenter">
-          <div class="card-h"><h2>下一课行动中心</h2><div class="right"><span class="tag acc">第 6 次课</span></div></div>
+          <div class="card-h"><h2>下一课行动中心</h2><div class="right"><span class="tag acc" id="actionLessonTag">第 6 次课</span></div></div>
           <div class="card-b">
             <h3>本节课薄弱知识点</h3>
-            <div class="stack" style="gap:6px;margin-bottom:10px">
+            <div class="stack" id="weakStack" style="gap:6px;margin-bottom:10px">
               <div class="rule clickable" data-ev="参照群体与意见领袖混淆：27 条答疑中 11 条提到，课堂选择题正确率 54%。">① 参照群体 vs 意见领袖混淆 <span class="tag warn">41%</span></div>
               <div class="rule clickable" data-ev="态度三成分：41 份作业中有 8 份把「情感」与「行为意向」混为一谈。">② 态度三成分边界不清 <span class="tag warn">32%</span></div>
               <div class="rule clickable" data-ev="图表阅读：约 21% 的作业把「百分点」写成「%」。">③ 图表阅读（百分比 / 百分点） <span class="tag warn">21%</span></div>
@@ -171,14 +171,14 @@
             <div class="evidence" data-evbox id="actionEv"></div>
             <div class="hr"></div>
             <h3>建议讲评时间</h3>
-            <p class="mini" style="margin:0 0 12px">第 6 次课开场 20 分钟（09:00-09:20）：先用两道选择题澄清概念，再进入新知。</p>
+            <p class="mini" id="reviewTime" style="margin:0 0 12px">第 6 次课开场 20 分钟（09:00-09:20）：先用两道选择题澄清概念，再进入新知。</p>
             <h3>补偿练习</h3>
-            <div class="stack" style="gap:6px;margin-bottom:12px">
+            <div class="stack" id="remedialStack" style="gap:6px;margin-bottom:12px">
               <div class="rule">辨析题 2 道：判断「同学都在买」与「博主推荐」分别属于哪种影响。</div>
               <div class="rule">图表题 1 道：满意度 62%→68%，写出正确表述并说明理由。</div>
             </div>
             <h3>课堂追问</h3>
-            <div class="stack" style="gap:6px;margin-bottom:14px">
+            <div class="stack" id="questionStack" style="gap:6px;margin-bottom:14px">
               <div class="rule">如果博主不是专家，还算意见领袖吗？</div>
               <div class="rule">「同学都在买」和「博主推荐」同时出现时，哪个作用更强？</div>
               <div class="rule">62% 到 68%，是提升 6% 还是 6 个百分点？</div>
@@ -236,7 +236,7 @@ document.querySelectorAll('[data-pane="dims"] .bar > i').forEach(function(el,i){
         '<li><span class="k">教材</span><span>消费者行为学（第5版）· 第 6 章 P112-118</span></li>' +
         '<li><span class="k">课件</span><span>第5次课-参照群体与决策.pptx · 第 8-15 页</span></li>' +
         '<li><span class="k">数据</span><span>学情前测问卷.csv · 字段 question / tag / score</span></li></ul>' +
-        '<div class="cite-meta"><span>生成模型：智谱 GLM-4</span><span>审核模型：智谱 GLM-4-Air</span><span>生成时间：2026-11-23 10:20</span></div></div>');
+        '<div class="cite-meta"><span>生成模型：' + (window.__eduModel || "智谱 GLM-4") + '</span><span>审核模型：' + (window.__eduModel || "智谱 GLM-4-Air") + '</span><span>生成时间：2026-11-23 10:20</span></div></div>');
     });
   });
 })();
@@ -290,8 +290,8 @@ document.querySelectorAll('[data-pane="dims"] .bar > i').forEach(function(el,i){
 })();
 </script>
 <script src="assets/js/data.js?v=1795420906"></script>
-<script src="assets/js/site.js?v=1795481000"></script>
+<script src="assets/js/site.js?v=1795490000"></script>
 <script src="assets/js/api.js?v=1795420906"></script>
-<script src="assets/js/live.js?v=1795478000"></script>
+<script src="assets/js/live.js?v=1795490000"></script>
 </body>
 </html>

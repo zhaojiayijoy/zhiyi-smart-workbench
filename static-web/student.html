@@ -271,7 +271,7 @@
   /* 2. 教师反馈：整卡可点击 + 未读标记 + 筛选 + 分页 */
   var fbList = document.getElementById("fbList");
   if (fbList){
-    var fbCards = Array.prototype.slice.call(fbList.querySelectorAll(".fb"));
+    function allFb(){ return Array.prototype.slice.call(fbList.querySelectorAll(".fb")); }
     var fbFilter = document.getElementById("fbFilter");
     var fbCount = document.getElementById("fbCount");
     var fbPageEl = document.getElementById("fbPage");
@@ -281,13 +281,13 @@
 
     function renderFb(){
       var f = fbFilter ? fbFilter.value : "";
-      var pool = fbCards.filter(function(c){
+      var pool = allFb().filter(function(c){
         var read = c.getAttribute("data-read") === "1";
         return !f || (f === "read" && read) || (f === "unread" && !read);
       });
       var pages = Math.max(1, Math.ceil(pool.length / PER));
       if (fbPage > pages) fbPage = pages;
-      fbCards.forEach(function(c){ c.style.display = "none"; });
+      allFb().forEach(function(c){ c.style.display = "none"; });
       pool.slice((fbPage - 1) * PER, fbPage * PER).forEach(function(c){ c.style.display = ""; });
       if (fbCount) fbCount.textContent = "共 " + pool.length + " 条";
       if (fbPageEl) fbPageEl.textContent = (pool.length ? fbPage : 0) + " / " + pages;
@@ -322,7 +322,7 @@
   /* 3. 错题回顾：筛选 + 连续复习流程 */
   var rvTbody = document.getElementById("rvTbody");
   if (rvTbody){
-    var rvRows = Array.prototype.slice.call(rvTbody.querySelectorAll("tr"));
+    function allRv(){ return Array.prototype.slice.call(rvTbody.querySelectorAll("tr")); }
     var rvPoint = document.getElementById("rvPoint");
     var rvState = document.getElementById("rvState");
     var rvCount = document.getElementById("rvCount");
@@ -333,7 +333,7 @@
       var p = rvPoint ? rvPoint.value : "";
       var s = rvState ? rvState.value : "";
       var shown = 0;
-      rvRows.forEach(function(tr){
+      allRv().forEach(function(tr){
         var ok = (!p || tr.getAttribute("data-point") === p) && (!s || tr.getAttribute("data-state") === s);
         tr.style.display = ok ? "" : "none";
         if (ok) shown++;
@@ -345,8 +345,8 @@
     applyRv();
 
     function updateProg(){
-      var total = rvRows.length, done = 0, solid = 0;
-      rvRows.forEach(function(tr){
+      var total = allRv().length, done = 0, solid = 0;
+      allRv().forEach(function(tr){
         var s = tr.getAttribute("data-state");
         if (s !== "todo") done++;
         if (s === "solid") solid++;
@@ -498,8 +498,8 @@
 })();
 </script>
 <script src="assets/js/data.js?v=1795420906"></script>
-<script src="assets/js/site.js?v=1795481000"></script>
+<script src="assets/js/site.js?v=1795490000"></script>
 <script src="assets/js/api.js?v=1795420906"></script>
-<script src="assets/js/live.js?v=1795478000"></script>
+<script src="assets/js/live.js?v=1795490000"></script>
 </body>
 </html>
