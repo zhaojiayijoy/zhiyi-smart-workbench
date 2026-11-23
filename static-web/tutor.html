@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>学生答疑 · 致壹 智能教育工作台</title>
+<link rel="stylesheet" href="assets/css/site.css?v=1795420906">
+</head>
+<body data-page="tutor">
+<div class="app">
+  <aside class="sidebar"></aside>
+  <div class="main">
+    <header class="topbar"></header>
+    <main class="content">
+
+      <div class="page-head">
+        <div><h1>学生答疑</h1><p class="sub">先给提示，再指出卡点，最后才给完整解析</p></div>
+        <div class="right"><a class="btn primary" href="#newAsk">＋ 新建答疑</a></div>
+      </div>
+
+      <div class="grid g4" style="margin-bottom:14px">
+        <div class="kpi"><div class="label">答疑记录</div><div class="value">27</div><div class="foot">近 30 天</div></div>
+        <div class="kpi ok"><div class="label">已解决</div><div class="value">21</div><div class="foot">解决率 78%</div></div>
+        <div class="kpi warn"><div class="label">需要关注</div><div class="value">4</div><div class="foot">连续两次未解决</div></div>
+        <div class="kpi"><div class="label">高频知识点</div><div class="value" style="font-size:14px">参照群体影响</div><div class="foot">出现 11 次</div></div>
+      </div>
+
+      <div class="card" style="margin-bottom:14px">
+        <div class="card-h">
+          <h2>答疑记录</h2>
+          <div class="right">
+            <select style="width:auto"><option>全部状态</option><option>AI 引导中</option><option>等待学生尝试</option><option>已解决</option><option>教师接管</option><option>需要关注</option></select>
+            <select style="width:auto"><option>全部知识点</option><option>参照群体</option><option>锚定效应</option><option>消费者态度</option><option>损失厌恶</option></select>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>问题</th><th>学生</th><th>知识点</th><th>状态</th><th>可见范围</th><th>时间</th><th></th></tr></thead>
+            <tbody>
+              <tr>
+                <td>为什么锚定效应会让原价显得更划算？</td><td>陈思远</td><td>锚定效应</td>
+                <td><span class="tag ok">已解决</span></td><td><span class="tag acc">师生可见</span></td><td>11-21 20:14</td>
+                <td><button class="btn sm" type="button" data-demo="已打开答疑详情">打开</button></td>
+              </tr>
+              <tr>
+                <td>参照群体和意见领袖在决策中有什么区别？</td><td>林小满</td><td>参照群体</td>
+                <td><span class="tag acc">AI 引导中</span></td><td><span class="tag acc">师生可见</span></td><td>11-21 19:02</td>
+                <td><button class="btn sm" type="button" data-demo="已打开答疑详情">打开</button></td>
+              </tr>
+              <tr>
+                <td>消费者态度三成分模型怎么应用到广告设计？</td><td>周予安</td><td>消费者态度</td>
+                <td><span class="tag ok">已解决</span></td><td><span class="tag acc">师生可见</span></td><td>11-20 15:48</td>
+                <td><button class="btn sm" type="button" data-demo="已打开答疑详情">打开</button></td>
+              </tr>
+              <tr>
+                <td>损失厌恶能解释凑单行为吗？</td><td>陈思远</td><td>损失厌恶</td>
+                <td><span class="tag warn">等待学生尝试</span></td><td><span class="tag warn">教师可见</span></td><td>11-20 10:31</td>
+                <td><button class="btn sm" type="button" data-demo="已打开答疑详情">打开</button></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="split">
+        <div class="card">
+          <div class="card-h"><h2>问题详情</h2><div class="right"><span class="tag acc">AI 引导中</span></div></div>
+          <div class="card-b">
+            <div class="msg me" style="margin-bottom:12px">
+              <div class="who">陈</div>
+              <div class="bubble">老师，参照群体和意见领袖到底怎么区分？书上说意见领袖也属于参照群体，那为什么案例里要分开讲？</div>
+            </div>
+            <div class="tabs">
+              <button class="on" data-tab="hint">提示</button>
+              <button data-tab="stuck">卡点</button>
+              <button data-tab="full">完整解析</button>
+            </div>
+            <div class="tabpane on" data-pane="hint">
+              <div class="rule">先想一想：如果一个人只是「被比较」，他会不会主动传播信息？把这两个动作分开，你就能找到区别了。</div>
+            </div>
+            <div class="tabpane" data-pane="stuck">
+              <div class="rule">你的卡点在于把「所属关系」和「影响力来源」混在一起。参照群体强调比较与归属，意见领袖强调信息与说服。</div>
+            </div>
+            <div class="tabpane" data-pane="full">
+              <div class="rule">
+                <b>1. 参照群体</b>：个体用来比较或作为行为标准的群体，可以是所属群体，也可以是向往群体。<br>
+                <b>2. 意见领袖</b>：在特定领域具有专业性或影响力、能改变他人态度的人，属于一种特殊的参照对象。<br>
+                <b>3. 关系</b>：意见领袖是参照群体中的「高影响节点」；前者回答「跟谁比」，后者回答「听谁的」。<br>
+                <b>4. 案例中的应用</b>：美妆博主的推荐（意见领袖）与同学都在用（参照群体）往往同时出现，需要分别说明作用机制。
+              </div>
+              <div class="form-actions" style="margin-top:12px">
+                <button class="btn" type="button" data-demo="已标记为已解决">标记已解决</button>
+                <button class="btn ghost" type="button" data-demo="已转教师接管">转教师接管</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card" id="newAsk">
+          <div class="card-h"><h2>新建答疑</h2><div class="right"><span class="mini">支持上传题目截图</span></div></div>
+          <div class="card-b">
+            <form data-sim="#askOut" data-msg="答疑已创建（示例）">
+              <div class="field"><label>学生问题 *</label><textarea required style="min-height:84px" placeholder="粘贴学生原问题，保留原始表述"></textarea></div>
+              <div class="grid g2">
+                <div class="field"><label>关联知识点</label><select><option>参照群体</option><option>锚定效应</option><option>消费者态度</option><option>损失厌恶</option><option>其他</option></select></div>
+                <div class="field"><label>可见范围</label><select><option>师生可见</option><option>教师可见</option><option>学生可见</option></select></div>
+              </div>
+              <div class="field"><label>上传题目</label><input type="file"></div>
+              <div class="field">
+                <label>引导方式</label>
+                <div class="checks">
+                  <label class="chk on"><input type="checkbox" checked>先给提示</label>
+                  <label class="chk on"><input type="checkbox" checked>指出卡点</label>
+                  <label class="chk"><input type="checkbox">直接给完整解析</label>
+                </div>
+              </div>
+              <div class="form-actions"><button class="btn primary" type="submit">创建答疑</button><button class="btn" type="reset">清空</button></div>
+            </form>
+            <div class="rule" id="askOut" hidden style="margin-top:12px">答疑已创建（静态演示）。真实版本会把记录写入本地数据库，并按「提示 → 卡点 → 解析」顺序展示。</div>
+          </div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+</div>
+
+<div class="toast"></div>
+<script src="assets/js/data.js?v=1795420906"></script>
+<script src="assets/js/site.js?v=1795420906"></script>
+<script src="assets/js/api.js?v=1795420906"></script>
+<script src="assets/js/live.js?v=1795420906"></script>
+</body>
+</html>

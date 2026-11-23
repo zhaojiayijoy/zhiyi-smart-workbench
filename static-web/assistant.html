@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>AI 助手 · 致壹 智能教育工作台</title>
+<link rel="stylesheet" href="assets/css/site.css?v=1795420906">
+</head>
+<body data-page="assistant">
+<div class="app">
+  <aside class="sidebar"></aside>
+  <div class="main">
+    <header class="topbar"></header>
+    <main class="content">
+
+      <div class="page-head">
+        <div><h1>AI 助手</h1><p class="sub">结合当前课程资料与学情回答问题，生成内容需教师确认</p></div>
+        <div class="right"><button class="btn" type="button" data-demo="已新建对话">新建对话</button></div>
+      </div>
+
+      <div class="split">
+        <div class="card" style="display:flex;flex-direction:column;min-height:560px">
+          <div class="card-h"><h2>对话</h2><div class="right"><span class="tag acc">已加载 6 份课程资料</span></div></div>
+          <div class="card-b" style="flex:1">
+            <div class="chat" id="chat">
+              <div class="msg ai">
+                <div class="who">AI</div>
+                <div class="bubble">你好，李老师。我已读取「消费者行为分析」的 6 份资料和近 30 天学情。你可以让我：
+                  <ul>
+                    <li>把某个知识点改写成 5 分钟课堂导入</li>
+                    <li>根据错误类型生成一组针对性练习</li>
+                    <li>对比两版教案的差异并给出修改建议</li>
+                  </ul>
+                </div>
+              </div>
+              <div class="msg me">
+                <div class="who">李</div>
+                <div class="bubble">帮我把「参照群体 vs 意见领袖」设计成一个 5 分钟的课堂导入。</div>
+              </div>
+              <div class="msg ai">
+                <div class="who">AI</div>
+                <div class="bubble">
+                  <b>5 分钟导入：一条弹幕引发的争论</b>
+                  <ul>
+                    <li>0-1 分钟：展示两条弹幕「同学都在买」与「博主推荐必入」。</li>
+                    <li>1-3 分钟：请学生判断哪条是参照群体影响、哪条是意见领袖影响。</li>
+                    <li>3-4 分钟：追问「如果博主不是专家，还算意见领袖吗？」引发认知冲突。</li>
+                    <li>4-5 分钟：给出定义，留一个悬念——两者会同时出现吗？</li>
+                  </ul>
+                  <span class="mini">依据：教材第 6 章 P112-118；学情显示该知识点答疑 11 次。</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="card-b" style="border-top:1px solid var(--line);padding-top:12px">
+            <div class="checks" style="margin-bottom:8px">
+              <button class="chk" type="button" data-prompt="生成一组区分参照群体与意见领袖的练习题">生成练习</button>
+              <button class="chk" type="button" data-prompt="把第 6 次课的教案压缩成 45 分钟版本">压缩教案</button>
+              <button class="chk" type="button" data-prompt="总结近 30 天学情中最需要干预的三个问题">总结学情</button>
+            </div>
+            <form class="composer" id="composer">
+              <textarea placeholder="输入问题，Enter 发送，Shift+Enter 换行" rows="2"></textarea>
+              <button class="btn primary" type="submit">发送</button>
+            </form>
+            <div class="mini" style="margin-top:6px">静态演示：回复为内置示例，不会调用任何模型服务。</div>
+          </div>
+        </div>
+
+        <div class="stack">
+          <div class="card">
+            <div class="card-h"><h2>当前上下文</h2></div>
+            <div class="card-b">
+              <div class="grid g2" style="gap:10px">
+                <div><span class="k mini">课程</span><div style="font-weight:600">消费者行为分析</div></div>
+                <div><span class="k mini">班级</span><div>市场营销 24-1</div></div>
+                <div><span class="k mini">课次</span><div>第 5 次 / 共 8 次</div></div>
+                <div><span class="k mini">模型</span><div>智谱 GLM-4</div></div>
+              </div>
+              <div class="hr"></div>
+              <div class="checks">
+                <label class="chk on"><input type="checkbox" checked>教材正文</label>
+                <label class="chk on"><input type="checkbox" checked>课程标准</label>
+                <label class="chk on"><input type="checkbox" checked>学情数据</label>
+                <label class="chk"><input type="checkbox">案例集</label>
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-h"><h2>使用提示</h2></div>
+            <div class="card-b">
+              <div class="stack" style="gap:8px">
+                <div class="rule">回答会标注依据来源，便于核对。</div>
+                <div class="rule">涉及成绩或评价时，需教师复核后使用。</div>
+                <div class="rule">所有对话仅保存在本地。</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+</div>
+
+<div class="toast"></div>
+<script src="assets/js/data.js?v=1795420906"></script>
+<script src="assets/js/site.js?v=1795420906"></script>
+<script src="assets/js/api.js?v=1795420906"></script>
+<script src="assets/js/live.js?v=1795420906"></script>
+<script>
+(function(){
+  if (window.__eduSendAssistant) return; // live.js 已接管助手对话（含非 live 回退）
+  var chat = document.getElementById('chat');
+  var form = document.getElementById('composer');
+  var ta = form.querySelector('textarea');
+
+  function send(text){
+    if(!text.trim()) return;
+    var me = document.createElement('div');
+    me.className = 'msg me';
+    me.innerHTML = '<div class="who">李</div><div class="bubble"></div>';
+    me.querySelector('.bubble').textContent = text;
+    chat.appendChild(me);
+    ta.value = '';
+    var ai = document.createElement('div');
+    ai.className = 'msg ai';
+    ai.innerHTML = '<div class="who">AI</div><div class="bubble"><span class="spin"></span> 正在结合课程资料整理…</div>';
+    chat.appendChild(ai);
+    ai.scrollIntoView({behavior:'smooth',block:'end'});
+    setTimeout(function(){
+      ai.querySelector('.bubble').innerHTML =
+        '<b>示例回复</b><br>已结合当前课程资料与近 30 天学情整理出草案。静态版本仅展示交互效果；在真实版本中，这里会返回带引用来源的结果，并支持一键写入备课包。';
+      ai.scrollIntoView({behavior:'smooth',block:'end'});
+    }, 900);
+  }
+
+  form.addEventListener('submit', function(e){
+    e.preventDefault();
+    send(ta.value);
+  });
+  ta.addEventListener('keydown', function(e){
+    if(e.key === 'Enter' && !e.shiftKey){ e.preventDefault(); send(ta.value); }
+  });
+  document.querySelectorAll('[data-prompt]').forEach(function(b){
+    b.addEventListener('click', function(){ send(b.getAttribute('data-prompt')); });
+  });
+
+  var q = new URLSearchParams(location.search).get('q');
+  if(q) send(q);
+})();
+</script>
+</body>
+</html>

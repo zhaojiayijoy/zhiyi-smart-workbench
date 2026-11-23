@@ -1,0 +1,17 @@
+# Python 3.9 及以上（本机验证版本：3.9.13 / Windows）
+pandas>=2.0,<3.0
+numpy>=1.24
+openpyxl>=3.1
+xlrd>=2.0              # 读取旧版 .xls 必需（ALLOWED_EXT 含 .xls）
+langchain>=0.3,<0.4
+langchain-core>=0.3,<0.4
+langchain-openai>=0.2,<0.3
+langchain-community>=0.3,<0.4
+streamlit>=1.40,<2     # 代码用到 st.dialog / st.container(key=) / Material 图标
+matplotlib>=3.7
+python-dotenv>=1.0
+pydantic>=2.0
+tabulate>=0.9
+requests>=2.31        # 智谱文件解析 API
+python-docx>=1.1      # 生成 Word 备课包 / 实训任务单 / 评审报告
+python-pptx>=0.6      # 生成 PPT 课件 / 实训说明

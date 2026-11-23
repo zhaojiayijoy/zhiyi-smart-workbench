@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>任务中心 · 致壹 智能教育工作台</title>
+<link rel="stylesheet" href="assets/css/site.css?v=1795420906">
+</head>
+<body data-page="tasks">
+<div class="app">
+  <aside class="sidebar"></aside>
+  <div class="main">
+    <header class="topbar"></header>
+    <main class="content">
+
+      <div class="page-head">
+        <div><h1>任务中心</h1><p class="sub">备课、实训、评审与答疑的执行记录</p></div>
+        <div class="right"><button class="btn primary" type="button" data-go="index.html">＋ 新建教学任务</button></div>
+      </div>
+
+      <div class="grid g4" style="margin-bottom:14px">
+        <div class="kpi"><div class="label">进行中</div><div class="value">3</div><div class="foot">2 个实训 + 1 次评审</div></div>
+        <div class="kpi warn"><div class="label">待处理</div><div class="value">5</div><div class="foot">4 份作业 + 1 条答疑</div></div>
+        <div class="kpi ok"><div class="label">已完成</div><div class="value">18</div><div class="foot">近 30 天</div></div>
+        <div class="kpi"><div class="label">累计参与学生</div><div class="value">96</div><div class="foot">3 个班级</div></div>
+      </div>
+
+      <div class="card" style="margin-bottom:14px">
+        <div class="card-h">
+          <h2>全部任务</h2>
+          <div class="right">
+            <select style="width:auto"><option>全部类型</option><option>备课</option><option>实训</option><option>评审</option><option>答疑</option></select>
+            <select style="width:auto"><option>全部状态</option><option>进行中</option><option>待处理</option><option>已完成</option></select>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>任务</th><th>类型</th><th>课程</th><th>状态</th><th>进度</th><th>更新时间</th><th></th></tr></thead>
+            <tbody>
+              <tr>
+                <td><b>双十一促销方案设计</b></td><td>实训</td><td>消费者行为分析</td><td><span class="tag ok">进行中</span></td>
+                <td style="min-width:150px"><div class="progress"><i style="width:78%"></i></div><span class="mini">32 / 41 人已提交</span></td>
+                <td>11-21 22:05</td><td><a class="btn sm ghost" href="training.html">查看</a></td>
+              </tr>
+              <tr>
+                <td><b>促销方案作业评审</b></td><td>评审</td><td>消费者行为分析</td><td><span class="tag warn">待处理</span></td>
+                <td style="min-width:150px"><div class="progress"><i style="width:90%"></i></div><span class="mini">37 / 41 份已发布</span></td>
+                <td>11-21 21:40</td><td><a class="btn sm ghost" href="review.html">查看</a></td>
+              </tr>
+              <tr>
+                <td><b>第 6 次课备课包</b></td><td>备课</td><td>消费者行为分析</td><td><span class="tag">待审核</span></td>
+                <td style="min-width:150px"><div class="progress"><i style="width:100%"></i></div><span class="mini">5 个输出物已生成</span></td>
+                <td>11-22 08:10</td><td><a class="btn sm ghost" href="lesson.html">查看</a></td>
+              </tr>
+              <tr>
+                <td><b>消费者访谈与洞察报告</b></td><td>实训</td><td>消费者行为分析</td><td><span class="tag ok">已完成</span></td>
+                <td style="min-width:150px"><div class="progress"><i style="width:100%"></i></div><span class="mini">38 / 41 人已提交</span></td>
+                <td>11-18 17:20</td><td><a class="btn sm ghost" href="training.html">查看</a></td>
+              </tr>
+              <tr>
+                <td><b>竞品价格带分析（Excel）</b></td><td>实训</td><td>数字营销实训</td><td><span class="tag">草稿</span></td>
+                <td style="min-width:150px"><div class="progress"><i style="width:15%"></i></div><span class="mini">任务包已生成</span></td>
+                <td>11-20 16:40</td><td><a class="btn sm ghost" href="training.html">编辑</a></td>
+              </tr>
+              <tr>
+                <td><b>参照群体答疑跟进</b></td><td>答疑</td><td>消费者行为分析</td><td><span class="tag warn">待处理</span></td>
+                <td style="min-width:150px"><div class="progress"><i style="width:50%"></i></div><span class="mini">1 条等待教师接管</span></td>
+                <td>11-21 19:02</td><td><a class="btn sm ghost" href="tutor.html">查看</a></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="split">
+        <div class="card">
+          <div class="card-h"><h2>最近活动</h2></div>
+          <div class="card-b tight">
+            <div class="list-item"><div class="li-ic">✦</div><div style="flex:1"><div class="li-t">生成第 6 次课备课包</div><div class="li-s">今天 08:10 · 双模型一致性 93%</div></div></div>
+            <div class="list-item"><div class="li-ic">✓</div><div style="flex:1"><div class="li-t">发布 3 份作业终评</div><div class="li-s">昨天 21:40 · 平均 85.2 分</div></div></div>
+            <div class="list-item"><div class="li-ic">◌</div><div style="flex:1"><div class="li-t">新增 2 条答疑记录</div><div class="li-s">昨天 20:14 · 参照群体 / 锚定效应</div></div></div>
+            <div class="list-item"><div class="li-ic">◈</div><div style="flex:1"><div class="li-t">更新实训任务草稿</div><div class="li-s">11-20 16:40 · 竞品价格带分析</div></div></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-h"><h2>本周待办</h2><div class="right"><span class="tag warn">5 项</span></div></div>
+          <div class="card-b">
+            <div class="stack" style="gap:8px">
+              <div class="rule">审核第 6 次课备课包并发布</div>
+              <div class="rule">复核 4 份待确认的作业终评</div>
+              <div class="rule">接管 1 条「参照群体」答疑</div>
+              <div class="rule">检查 9 名重点支持学生的学习计划</div>
+              <div class="rule">发布本周拓展任务（7 人）</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+</div>
+
+<div class="toast"></div>
+<div class="modal-mask" id="modalNewTask">
+  <div class="modal">
+    <div class="modal-h"><b>新建教学任务</b><button class="x" type="button" data-close-modal>×</button></div>
+    <div class="modal-b">
+      <p class="sub" style="margin-bottom:12px">选择要开始的教学环节，内容会自动关联当前课程。</p>
+      <div class="quick">
+        <a href="lesson.html"><span class="qi">✦</span><span><b>一键备课</b><span>生成教案、课件与练习</span></span></a>
+        <a href="training.html"><span class="qi">◈</span><span><b>创建实训</b><span>生成真实工作场景任务包</span></span></a>
+        <a href="tutor.html"><span class="qi">◌</span><span><b>学生答疑</b><span>记录或回答学生问题</span></span></a>
+        <a href="review.html"><span class="qi">✓</span><span><b>作业评审</b><span>上传提交并开始评审</span></span></a>
+      </div>
+    </div>
+    <div class="modal-f"><button class="btn" type="button" data-close-modal>关闭</button></div>
+  </div>
+</div>
+
+<script src="assets/js/data.js?v=1795420906"></script>
+<script src="assets/js/site.js?v=1795420906"></script>
+<script src="assets/js/api.js?v=1795420906"></script>
+<script src="assets/js/live.js?v=1795420906"></script>
+</body>
+</html>

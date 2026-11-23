@@ -1,0 +1,20 @@
+# Streamlit 运行配置（无需在命令行重复传参）
+# 监听 0.0.0.0 才能被同网段其他电脑访问；只允许本机访问时改为 "127.0.0.1"。
+# 也可用环境变量临时覆盖：STREAMLIT_SERVER_ADDRESS / STREAMLIT_SERVER_PORT
+
+[server]
+address = "0.0.0.0"
+port = 8501
+headless = true
+fileWatcherType = "none"
+
+[browser]
+gatherUsageStats = false
+
+[theme]
+base = "light"
+primaryColor = "#365B4C"
+backgroundColor = "#F5F1E8"
+secondaryBackgroundColor = "#FFFCF6"
+textColor = "#25322D"
+font = "sans serif"

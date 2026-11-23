@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>设置 · 致壹 智能教育工作台</title>
+<link rel="stylesheet" href="assets/css/site.css?v=1795420906">
+</head>
+<body data-page="settings">
+<div class="app">
+  <aside class="sidebar"></aside>
+  <div class="main">
+    <header class="topbar"></header>
+    <main class="content">
+
+      <div class="page-head">
+        <div><h1>设置</h1><p class="sub">外观、模型服务、数据与高级选项</p></div>
+        <div class="right"><span class="tag">本地运行</span></div>
+      </div>
+
+      <div class="card">
+        <div class="card-b" style="padding-bottom:6px">
+          <div class="tabs">
+            <button class="on" data-tab="look">外观</button>
+            <button data-tab="model">模型服务</button>
+            <button data-tab="privacy">数据与隐私</button>
+            <button data-tab="advanced">高级设置</button>
+          </div>
+
+          <div class="tabpane on" data-pane="look">
+            <div class="grid g2">
+              <div>
+                <h3>主题</h3>
+                <div class="checks" style="margin-bottom:14px">
+                  <label class="chk on"><input type="checkbox" checked>亮色</label>
+                  <label class="chk"><input type="checkbox">暗色</label>
+                </div>
+                <div class="field"><label>界面字号</label><select><option>标准（13.5px）</option><option>紧凑（12.5px）</option><option>宽松（14.5px）</option></select></div>
+                <div class="field"><label>侧栏默认状态</label><select><option>展开</option><option>收起</option></select></div>
+                <div class="form-actions"><button class="btn primary" type="button" data-demo="外观设置已保存（示例）">保存</button></div>
+              </div>
+              <div>
+                <h3>预览</h3>
+                <div class="rule" style="margin-bottom:10px">正文示例：参照群体对消费者决策的影响，通常通过比较与规范两条路径发生。</div>
+                <div class="rule">教学提示：先让学生判断「跟谁比」还是「听谁的」，再引入定义。</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="tabpane" data-pane="model">
+            <div class="grid g2">
+              <div>
+                <div class="field"><label>服务商</label><select id="cfg_provider"><option value="zhipu" selected>智谱 AI（OpenAI 兼容）</option><option value="custom">自定义 OpenAI 兼容接口</option></select></div>
+                <div class="field"><label>Base URL</label><input id="cfg_base_url" type="text" value="https://open.bigmodel.cn/api/paas/v4"></div>
+                <div class="field"><label>API Key</label><input id="cfg_api_key" type="password" placeholder="sk-..."></div>
+                <div class="field"><label>默认模型</label>
+                  <select id="cfg_model">
+                    <optgroup label="智谱最新旗舰（推荐）">
+                      <option value="glm-5.3">glm-5.3（旗舰，复杂推理，128K输出）</option>
+                      <option value="glm-5.2">glm-5.2</option>
+                      <option value="glm-5.1">glm-5.1</option>
+                      <option value="glm-5-turbo">glm-5-turbo（极速）</option>
+                      <option value="glm-5">glm-5</option>
+                    </optgroup>
+                    <optgroup label="智谱 4.x 系列">
+                      <option value="glm-4.7">glm-4.7</option>
+                      <option value="glm-4.7-flash">glm-4.7-flash</option>
+                      <option value="glm-4.7-flashx">glm-4.7-flashx</option>
+                      <option value="glm-4.6">glm-4.6</option>
+                      <option value="glm-4.5-air">glm-4.5-air（轻量）</option>
+                      <option value="glm-4.5-airx">glm-4.5-airx</option>
+                      <option value="glm-4.5-flash">glm-4.5-flash（96K输出）</option>
+                      <option value="glm-4-flash-250414">glm-4-flash-250414</option>
+                      <option value="glm-4-flashx-250414">glm-4-flashx-250414</option>
+                    </optgroup>
+                  </select>
+                </div>
+              </div>
+              <div>
+                <div class="field"><label>审核模型</label>
+                  <select id="cfg_review_model">
+                    <option value="glm-4-flash-250414">glm-4-flash-250414（快速审核）</option>
+                    <option value="glm-4.5-air">glm-4.5-air（轻量）</option>
+                    <option value="glm-5.3">glm-5.3（高精度）</option>
+                  </select>
+                </div>
+                <div class="field"><label>温度 temperature</label><input id="cfg_temperature" type="number" value="0.4" step="0.1" min="0" max="1"></div>
+                <div class="field"><label>核采样 top_p</label><input id="cfg_top_p" type="number" value="0.95" step="0.01" min="0.01" max="1"></div>
+                <div class="field"><label>最大输出 max_tokens</label><input id="cfg_max_tokens" type="number" value="4096" step="256" min="1024" max="131072"></div>
+                <div class="field"><label>深度思考 thinking</label>
+                  <select id="cfg_thinking">
+                    <option value="disabled" selected>关闭（默认）</option>
+                    <option value="enabled">开启</option>
+                  </select>
+                </div>
+                <div class="field"><label>推理强度 reasoning_effort</label>
+                  <select id="cfg_reasoning_effort">
+                    <option value="max" selected>max（最强）</option>
+                    <option value="high">high</option>
+                    <option value="medium">medium</option>
+                    <option value="low">low</option>
+                  </select>
+                </div>
+                <div class="form-actions">
+                  <button class="btn primary" type="button" id="cfg_test">测试连接</button>
+                  <button class="btn" type="button" id="cfg_save">保存</button>
+                </div>
+              </div>
+            </div>
+            <div class="form-note" style="margin-top:10px">参数含义：temperature 控制随机性（0=确定性，1=创造性）；top_p 控制候选范围；max_tokens 限制输出长度；thinking 开启深度推理（仅 glm-5.x 支持）；reasoning_effort 调节推理强度。</div>
+          </div>
+
+          <div class="tabpane" data-pane="privacy">
+            <div class="grid g2">
+              <div>
+                <h3>本地数据</h3>
+                <div class="rule" style="margin-bottom:10px">数据目录：<b>./.data</b><br>数据库：<b>workbench.db</b><br>导出目录：<b>./exports</b></div>
+                <div class="mini">所有课程、资料、评审记录均保存在本机，不上传云端。</div>
+              </div>
+              <div>
+                <h3>数据操作</h3>
+                <div class="form-actions" style="flex-wrap:wrap;margin-top:2px">
+                  <button class="btn" type="button" data-demo="已导出数据备份（示例）">导出备份</button>
+                  <button class="btn" type="button" data-demo="已清理临时文件（示例）">清理临时文件</button>
+                  <button class="btn" type="button" data-demo="演示环境不允许删除数据">删除全部数据</button>
+                </div>
+                <div class="field" style="margin-top:14px">
+                  <label>学生数据可见性默认值</label>
+                  <select><option>教师可见</option><option>师生可见</option><option>学生可见</option></select>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="tabpane" data-pane="advanced">
+            <div class="grid g2">
+              <div>
+                <div class="field"><label>并发生成数量</label><input type="number" value="2"></div>
+                <div class="field"><label>单次资料上限（MB）</label><input type="number" value="50"></div>
+                <div class="field"><label>日志级别</label><select><option>INFO</option><option>WARNING</option><option>DEBUG</option></select></div>
+              </div>
+              <div>
+                <div class="field"><label>默认开启双模型一致性检查</label>
+                  <div class="checks" style="padding-top:4px"><label class="chk on"><input type="checkbox" checked>开启</label></div>
+                </div>
+                <div class="field"><label>导出格式偏好</label><select><option>Word + PPT + Excel</option><option>仅 Word</option><option>仅 PDF</option></select></div>
+                <div class="form-actions"><button class="btn primary" type="button" data-demo="高级设置已保存（示例）">保存</button></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top:14px">
+        <div class="card-h"><h2>关于</h2></div>
+        <div class="card-b">
+          <div class="grid g3">
+            <div><span class="k mini">版本</span><div>静态演示版 v1.0</div></div>
+            <div><span class="k mini">对应应用</span><div>致壹 智能教育工作台</div></div>
+            <div><span class="k mini">运行方式</span><div>纯静态 HTML / CSS / JS</div></div>
+          </div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+</div>
+
+<div class="toast"></div>
+<script src="assets/js/data.js?v=1795420906"></script>
+<script src="assets/js/site.js?v=1795420906"></script>
+<script src="assets/js/api.js?v=1795420906"></script>
+<script src="assets/js/live.js?v=1795420906"></script>
+</body>
+</html>

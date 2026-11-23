@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>作业评审 · 致壹 智能教育工作台</title>
+<link rel="stylesheet" href="assets/css/site.css?v=1795420906">
+</head>
+<body data-page="review">
+<div class="app">
+  <aside class="sidebar"></aside>
+  <div class="main">
+    <header class="topbar"></header>
+    <main class="content">
+
+      <div class="page-head">
+        <div><h1>作业评审</h1><p class="sub">AI 给出分维度评分证据，教师复核后发布</p></div>
+        <div class="right"><span class="tag warn">4 份待复核</span><span class="tag ok">37 份已发布</span></div>
+      </div>
+
+      <div class="card" style="margin-bottom:14px">
+        <div class="card-h"><h2>上传学生提交</h2><div class="right"><span class="mini">支持多文件 · docx / pdf / pptx</span></div></div>
+        <div class="card-b">
+          <form data-sim="#reviewOut" data-msg="已开始评审（示例）">
+            <div class="grid g2">
+              <div class="field" style="grid-column:span 2"><label>学生提交文件</label><input type="file" multiple></div>
+              <div class="field"><label>学生姓名</label><input type="text" placeholder="例如：陈思远"></div>
+              <div class="field"><label>匿名编号</label><input type="text" placeholder="例如：S-017"></div>
+              <div class="field"><label>班级</label><input type="text" value="市场营销 24-1"></div>
+              <div class="field"><label>评分量规</label><select><option>洞察报告量规（4 维度 / 100 分）</option><option>促销方案量规（4 维度 / 100 分）</option><option>自定义量规</option></select></div>
+            </div>
+            <div class="form-actions">
+              <button class="btn primary" type="submit">开始评审</button>
+              <button class="btn" type="reset">清空</button>
+              <span class="mini">评审结果需教师逐项确认后才计入成绩。</span>
+            </div>
+          </form>
+          <div class="rule" id="reviewOut" hidden style="margin-top:12px">已创建评审任务（静态演示）。真实版本会解析提交内容，并生成可追溯的评分证据。</div>
+        </div>
+      </div>
+
+      <div class="split" style="margin-bottom:14px">
+        <div class="card">
+          <div class="card-h"><h2>学生提交</h2><div class="right"><span class="mini">3 份</span></div></div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>学生</th><th>文件</th><th>总分</th><th>状态</th></tr></thead>
+              <tbody>
+                <tr>
+                  <td><b>陈思远</b><div class="mini">S-017</div></td><td>促销方案.docx</td><td>86.5</td>
+                  <td><span class="tag ok">已发布</span></td>
+                </tr>
+                <tr>
+                  <td><b>林小满</b><div class="mini">S-023</div></td><td>定价策略分析.docx</td><td>78</td>
+                  <td><span class="tag warn">待复核</span></td>
+                </tr>
+                <tr>
+                  <td><b>周予安</b><div class="mini">S-031</div></td><td>渠道调研报告.docx</td><td>91</td>
+                  <td><span class="tag ok">已发布</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="card-b" style="border-top:1px solid var(--line)">
+            <div class="mini">正在查看：<b style="color:var(--text)">陈思远 · 促销方案.docx</b></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-h"><h2>分维度评分证据</h2><div class="right"><span class="tag acc">AI 初评 86.5</span></div></div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>维度</th><th>得分</th><th>依据 / 扣分原因</th><th>位置</th><th>采纳</th></tr></thead>
+              <tbody>
+                <tr>
+                  <td>理论应用</td><td><b>27</b>/30</td>
+                  <td class="wrap">准确使用锚定效应与损失厌恶解释满减门槛设计<div class="mini">扣分：参照群体部分仅一句带过</div></td>
+                  <td>P3</td><td><input type="checkbox" checked></td>
+                </tr>
+                <tr>
+                  <td>数据支撑</td><td><b>22</b>/25</td>
+                  <td class="wrap">引用前测问卷中的价格敏感度分布<div class="mini">扣分：未说明样本量，图表缺少单位</div></td>
+                  <td>表 1</td><td><input type="checkbox" checked></td>
+                </tr>
+                <tr>
+                  <td>方案可行性</td><td><b>19</b>/25</td>
+                  <td class="wrap">给出三档满减与库存联动规则<div class="mini">扣分：缺少成本测算，毛利风险未评估</div></td>
+                  <td>P6</td><td><input type="checkbox" checked></td>
+                </tr>
+                <tr>
+                  <td>表达规范</td><td><b>18.5</b>/20</td>
+                  <td class="wrap">结构清晰，术语使用规范<div class="mini">扣分：个别段落口语化</div></td>
+                  <td>全文</td><td><input type="checkbox" checked></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-h"><h2>教师复核与终评</h2><div class="right"><span class="mini">终评以教师确认为准</span></div></div>
+        <div class="card-b">
+          <form data-sim="#finalOut" data-msg="教师终评已保存（示例）">
+            <div class="grid g4">
+              <div class="field"><label>理论应用</label><input type="number" value="27" max="30"></div>
+              <div class="field"><label>数据支撑</label><input type="number" value="22" max="25"></div>
+              <div class="field"><label>方案可行性</label><input type="number" value="19" max="25"></div>
+              <div class="field"><label>表达规范</label><input type="number" value="18.5" max="20"></div>
+            </div>
+            <div class="grid g2">
+              <div class="field"><label>终评评语</label><textarea style="min-height:80px">方案结构完整，理论应用到位。建议补充成本测算与样本说明，使结论更可信。</textarea></div>
+              <div>
+                <div class="field"><label>修改原因（若调整 AI 评分）</label><input type="text" placeholder="例如：数据支撑扣分过重，已上调 2 分"></div>
+                <div class="field"><label>处理结果</label>
+                  <select>
+                    <option>通过并发布</option>
+                    <option>退回修改</option>
+                    <option>需要人工进一步检查</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+            <div class="form-actions">
+              <button class="btn primary" type="submit">保存教师终评</button>
+              <button class="btn" type="button" data-demo="已退回给学生修改">退回修改</button>
+              <button class="btn ghost" type="button" data-demo="已标记为需人工检查">需要人工进一步检查</button>
+              <span class="mini">总计 <b>86.5</b> / 100</span>
+            </div>
+          </form>
+          <div class="rule" id="finalOut" hidden style="margin-top:12px">教师终评已保存（静态演示）。真实版本会记录修改原因，并将结果同步到学生端。</div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+</div>
+
+<div class="toast"></div>
+<script src="assets/js/data.js?v=1795420906"></script>
+<script src="assets/js/site.js?v=1795420906"></script>
+<script src="assets/js/api.js?v=1795420906"></script>
+<script src="assets/js/live.js?v=1795420906"></script>
+</body>
+</html>

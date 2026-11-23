@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>课程项目 · 致壹 智能教育工作台</title>
+<link rel="stylesheet" href="assets/css/site.css?v=1795420906">
+</head>
+<body data-page="courses">
+<div class="app">
+  <aside class="sidebar"></aside>
+  <div class="main">
+    <header class="topbar"></header>
+    <main class="content">
+
+      <div class="page-head">
+        <div><h1>课程项目</h1><p class="sub" id="pageSub">课程是备课、答疑、实训与学情分析共用的上下文</p></div>
+        <div class="right"><a class="btn primary" href="#newCourse">＋ 新建课程项目</a></div>
+      </div>
+
+      <div class="ctx" id="ctxBar">
+        <div><span class="k">当前课程</span><b data-fill="course.name">—</b></div>
+        <div><span class="k">班级</span><b data-fill="course.class">—</b></div>
+        <div><span class="k">课时</span><b data-fill="course.totalHours">—</b></div>
+        <div><span class="k">进度</span><b data-fill="course.progress">—</b></div>
+        <div><span class="k">课程资料</span><b data-fill="course.resourceCount">—</b></div>
+      </div>
+
+      <div class="grid g6" style="margin-bottom:14px">
+        <div class="kpi"><div class="label">课程资料</div><div class="value" id="kpiFiles">—</div><div class="foot">教材 / 标准 / 案例 / 课件</div></div>
+        <div class="kpi"><div class="label">最近备课包</div><div class="value" style="font-size:14px">第 5 次课</div><div class="foot">11-20 16:22 · 已审核</div></div>
+        <div class="kpi"><div class="label">实训任务</div><div class="value">3</div><div class="foot">2 个已发布</div></div>
+        <div class="kpi warn"><div class="label">待评审作业</div><div class="value">4</div><div class="foot">AI 已生成评分证据</div></div>
+        <div class="kpi"><div class="label">高频薄弱知识点</div><div class="value" style="font-size:14px">参照群体影响</div><div class="foot">答疑出现 11 次</div></div>
+        <div class="kpi"><div class="label">下一课建议</div><div class="value" style="font-size:14px">消费者态度与说服</div><div class="foot">第 6 次课</div></div>
+      </div>
+
+      <div class="card" style="margin-bottom:14px" id="currentCourseCard">
+        <div class="card-h"><h2>课程基本信息</h2><div class="right"><span class="tag acc">当前</span></div></div>
+        <div class="card-b" id="currentCourseBody">
+          <div class="grid g3">
+            <div><span class="k mini">课程名称</span><div style="font-weight:600" data-fill="course.name">—</div></div>
+            <div><span class="k mini">授课班级或对象</span><div data-fill="course.classWithSize">—</div></div>
+            <div><span class="k mini">课时</span><div data-fill="course.totalHours">—</div></div>
+            <div><span class="k mini">教材 / 课程标准版本</span><div data-fill="course.textbook">—</div></div>
+            <div><span class="k mini">当前教学进度</span><div data-fill="course.progress">—</div></div>
+            <div><span class="k mini">课程备注</span><div data-fill="course.note">—</div></div>
+          </div>
+          <div class="hr"></div>
+          <div class="grid g3">
+            <div><span class="k mini">课程学习目标</span><div style="font-size:12.5px;color:var(--text-2)" data-fill="course.objectives">—</div></div>
+            <div><span class="k mini">重点</span><div style="font-size:12.5px;color:var(--text-2)" data-fill="course.key">—</div></div>
+            <div><span class="k mini">难点</span><div style="font-size:12.5px;color:var(--text-2)" data-fill="course.diff">—</div></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-bottom:14px" id="newCourse">
+        <div class="card-h"><h2>＋ 新建课程项目</h2><div class="right"><span class="mini">带 * 为必填</span></div></div>
+        <div class="card-b">
+          <form id="newCourseForm" novalidate>
+            <h3>课程基本信息</h3>
+            <div class="grid g3">
+              <div class="field"><label>课程名称 *</label><input type="text" id="nf_name" name="courseName" required placeholder="例如：消费者行为分析"></div>
+              <div class="field"><label>授课班级或对象 *</label><input type="text" id="nf_class" name="className" required placeholder="例如：市场营销 24-1"></div>
+              <div class="field unit-field"><label>课时 *</label><input type="number" id="nf_hours" name="totalHours" min="1" required placeholder="请输入数字"><span class="unit-suffix">课时</span></div>
+            </div>
+            <div class="grid g3">
+              <div class="field unit-field"><label>班级人数</label><input type="number" id="nf_size" name="classSize" min="1" placeholder=""><span class="unit-suffix">人</span></div>
+              <div class="field"><label>教材 / 课程标准版本</label><input type="text" id="nf_textbook" name="textbook" placeholder="例如：第 5 版"></div>
+              <div class="field unit-field"><label>课程总课次</label><input type="number" id="nf_totalSessions" name="totalSessions" min="1" placeholder=""><span class="unit-suffix">次课</span></div>
+            </div>
+            <div class="grid g2">
+              <div class="field"><label>课程描述（可选）</label><input type="text" id="nf_desc" name="desc" placeholder="一句话说明课程定位"></div>
+              <div class="field"><label>课程备注（可选）</label><input type="text" id="nf_note" name="note" placeholder="授课时间、场地等"></div>
+            </div>
+
+            <h3 style="margin-top:6px">教学目标</h3>
+            <div class="field"><label>课程学习目标 *</label><textarea id="nf_objectives" name="objectives" required placeholder="知识目标、能力目标、素养目标，可分行填写"></textarea></div>
+            <div class="grid g2">
+              <div class="field"><label>重点</label><input type="text" id="nf_key" name="key" placeholder="例如：消费者决策模型"></div>
+              <div class="field"><label>难点</label><input type="text" id="nf_diff" name="diff" placeholder="例如：情境因素对决策的干扰"></div>
+            </div>
+
+            <h3 style="margin-top:6px">当前教学进度</h3>
+            <div class="field">
+              <label>当前教学进度 <span style="color:var(--text-3);font-weight:400">（当前课次不能大于总课次）</span></label>
+              <div class="pair-input">
+                <span style="color:var(--text-3);font-size:12.5px">第</span>
+                <input type="number" id="nf_currentSession" name="currentSession" min="1" placeholder="">
+                <span style="color:var(--text-3);font-size:12.5px">次课 / 共</span>
+                <input type="number" id="nf_totalSessions2" placeholder="">
+                <span style="color:var(--text-3);font-size:12.5px">次课</span>
+              </div>
+            </div>
+
+            <div class="form-actions">
+              <button class="btn primary" type="submit">创建课程项目</button>
+              <button class="btn" type="reset" id="nfReset">取消</button>
+              <span class="mini">创建后会自动成为当前课程，并用于备课与学情分析。</span>
+            </div>
+          </form>
+          <div id="draftPreviewBar" class="draft-bar" hidden>
+            <span class="dot"></span>
+            <span>草稿预览：<b id="draftPreviewText">—</b></span>
+          </div>
+          <div class="rule" id="courseCreated" hidden style="margin-top:12px">
+            课程项目已创建。现在这门课程已设为当前课程，并可用于备课与学情分析。
+          </div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-bottom:14px">
+        <div class="card-h"><h2>全部课程</h2><div class="right"><span class="mini" id="allCourseCount">—</span></div></div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>课程</th><th>班级</th><th>课时</th><th>进度</th><th>资料</th><th>操作</th></tr></thead>
+            <tbody id="allCoursesTbody"><!-- 由脚本动态渲染 --></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="split">
+        <div class="card">
+          <div class="card-h"><h2>课程资料</h2><div class="right"><a class="btn sm ghost" href="files.html">查看全部</a></div></div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>文件</th><th>类型</th><th>可见</th><th>加入</th></tr></thead>
+              <tbody>
+                <tr><td>消费者行为学（第5版）.pdf</td><td>教材</td><td><span class="tag acc">师生</span></td><td>11-02</td></tr>
+                <tr><td>课程标准-消费者行为分析.docx</td><td>标准</td><td><span class="tag warn">教师</span></td><td>11-02</td></tr>
+                <tr><td>学情前测问卷.csv</td><td>表格</td><td><span class="tag warn">教师</span></td><td>11-05</td></tr>
+                <tr><td>本土品牌案例集.pdf</td><td>案例</td><td><span class="tag acc">师生</span></td><td>11-08</td></tr>
+                <tr><td>第5次课-参照群体.pptx</td><td>课件</td><td><span class="tag acc">师生</span></td><td>11-18</td></tr>
+                <tr><td>作业模板-洞察报告.docx</td><td>模板</td><td><span class="tag acc">师生</span></td><td>11-19</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-h"><h2>关联记录</h2><div class="right"><span class="mini">近 30 天</span></div></div>
+          <div class="card-b tight">
+            <div class="list-item"><div class="li-ic">✦</div><div style="flex:1"><div class="li-t">备课包：第 5 次课 参照群体</div><div class="li-s">11-20 16:22</div></div><a class="btn sm ghost" href="lesson.html">查看</a></div>
+            <div class="list-item"><div class="li-ic">◈</div><div style="flex:1"><div class="li-t">实训：双十一促销方案设计</div><div class="li-s">11-18 14:20 · 已发布</div></div><a class="btn sm ghost" href="training.html">查看</a></div>
+            <div class="list-item"><div class="li-ic">✓</div><div style="flex:1"><div class="li-t">作业评审：促销方案（41 份）</div><div class="li-s">11-21 21:40 · 37 已发布</div></div><a class="btn sm ghost" href="review.html">查看</a></div>
+            <div class="list-item"><div class="li-ic">◔</div><div style="flex:1"><div class="li-t">学情分析：参照群体影响偏高</div><div class="li-s">11-21 22:10</div></div><a class="btn sm ghost" href="analytics.html">查看</a></div>
+          </div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+</div>
+
+<div class="toast"></div>
+<script src="assets/js/data.js?v=1795420906"></script>
+<script src="assets/js/site.js?v=1795420906"></script>
+<script src="assets/js/api.js?v=1795420906"></script>
+<script src="assets/js/live.js?v=1795420906"></script>
+<script>
+/* ===== courses.html 页面专属逻辑 ===== */
+(function(){
+  "use strict";
+
+  var $ = function(id){ return document.getElementById(id); };
+  var form = $("newCourseForm");
+
+  /** 取当前课程列表（Live API 覆盖演示数据后也自动生效） */
+  function list(){ return (Edu.state.courses && Edu.state.courses.length) ? Edu.state.courses : (window.EDU.courses || []); }
+
+  /** 把表单里的所有值收集成一个课程对象，数字字段清洗后存数字 */
+  function collectForm(){
+    var hours = Edu.normalizeNumber(form.nf_hours.value);
+    var size = Edu.normalizeNumber(form.nf_size.value);
+    var totalSess = Edu.normalizeNumber(form.nf_totalSessions.value)
+                 || Edu.normalizeNumber(form.nf_totalSessions2.value);
+    var curSess = Edu.normalizeNumber(form.nf_currentSession.value);
+    return {
+      name: (form.nf_name.value || "").trim(),
+      class: (form.nf_class.value || "").trim(),
+      classSize: size,
+      totalHours: hours,
+      totalSessions: totalSess,
+      currentSession: curSess,
+      textbook: (form.nf_textbook.value || "").trim(),
+      desc: (form.nf_desc.value || "").trim(),
+      note: (form.nf_note.value || "").trim(),
+      objectives: (form.nf_objectives.value || "").trim(),
+      key: (form.nf_key.value || "").trim(),
+      diff: (form.nf_diff.value || "").trim(),
+      resourceCount: 0
+    };
+  }
+
+  /** 校验：课程名非空；当前课次 ≤ 总课次 */
+  function validateDraft(d){
+    var errors = [];
+    if (!d.name) errors.push("课程名称不能为空");
+    if (!d.class) errors.push("班级不能为空");
+    if (d.currentSession && d.totalSessions && d.currentSession > d.totalSessions)
+      errors.push("当前课次不能大于总课次");
+    return errors;
+  }
+
+  /** 更新顶部草稿预览条 + 顶栏课程摘要 */
+  function refreshDraft(){
+    var d = collectForm();
+    if (d.name || d.class || d.totalHours){
+      Edu.state.draftCourse = d;
+      var bar = $("draftPreviewBar");
+      var txt = $("draftPreviewText");
+      var parts = [];
+      if (d.name) parts.push(d.name);
+      if (d.class) parts.push(d.class);
+      if (d.totalHours) parts.push(d.totalHours + "课时");
+      txt.textContent = parts.join(" · ") || "尚未填写任何内容";
+      bar.hidden = false;
+    } else {
+      Edu.state.draftCourse = null;
+      $("draftPreviewBar").hidden = true;
+    }
+    Edu.renderTopCourseSummary && Edu.renderTopCourseSummary();
+  }
+
+  /** 重写 data-fill：因为我们新增了 classWithSize、textbook、note、objectives、key、diff 等字段 */
+  function enhancedFill(){
+    var c = Edu.getSelectedCourse();
+    document.querySelectorAll("[data-fill]").forEach(function(el){
+      var key = el.getAttribute("data-fill");
+      if (!c) { el.textContent = "—"; return; }
+      if (key === "course.classWithSize"){
+        el.textContent = c.class + (c.classSize ? "（" + c.classSize + " 人）" : "");
+      } else if (key === "course.name"){
+        el.textContent = c.name || "—";
+      } else if (key === "course.class"){
+        el.textContent = c.class || "—";
+      } else if (key === "course.totalHours"){
+        el.textContent = c.totalHours ? c.totalHours + " 课时" : "未填写";
+      } else if (key === "course.progress"){
+        if (c.currentSession && c.totalSessions) el.textContent = "第 " + c.currentSession + " 次课 / 共 " + c.totalSessions + " 次";
+        else el.textContent = "进度待完善";
+      } else if (key === "course.resourceCount"){
+        el.textContent = (c.resourceCount || 0) + " 份";
+      } else if (key === "course.textbook"){
+        el.textContent = c.textbook || "—";
+      } else if (key === "course.note"){
+        el.textContent = c.note || "—";
+      } else if (key === "course.objectives"){
+        el.innerHTML = (c.objectives || "—").replace(/\n/g, "<br>");
+      } else if (key === "course.key"){
+        el.textContent = c.key || "—";
+      } else if (key === "course.diff"){
+        el.textContent = c.diff || "—";
+      }
+    });
+    // KPI 里的资料数量也同步
+    if ($("kpiFiles")) $("kpiFiles").textContent = (c && c.resourceCount) || 0;
+  }
+
+  /** 重绘全部课程表格 */
+  function renderAllCourses(){
+    var tbody = $("allCoursesTbody");
+    var data = list();
+    $("allCourseCount").textContent = data.length + " 门";
+    $("pageSub").textContent = data.length + " 门课程 · 课程是备课、答疑、实训与学情分析共用的上下文";
+    if (!data.length){
+      tbody.innerHTML = '<tr><td colspan="6" class="mini" style="padding:14px 0;text-align:center">还没有任何课程 · 到上方新建第一个</td></tr>';
+      return;
+    }
+    tbody.innerHTML = data.map(function(c){
+      var hours = c.totalHours ? c.totalHours + " 课时" : "—";
+      var prog = (c.currentSession && c.totalSessions) ? "第 " + c.currentSession + " 次 / 共 " + c.totalSessions + " 次" : "—";
+      return '<tr data-course-id="' + c.id + '">' +
+        '<td><b>' + c.name + '</b></td>' +
+        '<td>' + (c.class || "") + '</td>' +
+        '<td>' + hours + '</td>' +
+        '<td>' + prog + '</td>' +
+        '<td>' + (c.resourceCount || 0) + ' 份</td>' +
+        '<td><button class="btn sm" type="button" data-switch-course="' + c.id + '">切换</button></td>' +
+      '</tr>';
+    }).join("");
+  }
+
+  /** 绑定：全部课程表格的切换按钮 + 表单实时草稿 + 表单提交 */
+  function bindLocal(){
+    // 表格行切换（事件委托）
+    document.addEventListener("click", function(e){
+      var b = e.target.closest("[data-switch-course]");
+      if (!b) return;
+      var id = b.getAttribute("data-switch-course");
+      Edu.selectCourse(id);
+      enhancedFill();
+      toast("已切换到「" + (Edu.getSelectedCourse().name || "") + "」");
+    });
+
+    // 表单实时草稿（input 事件）
+    form.addEventListener("input", function(){ refreshDraft(); });
+
+    // 重置按钮也清草稿
+    form.addEventListener("reset", function(){
+      setTimeout(function(){
+        Edu.state.draftCourse = null;
+        $("draftPreviewBar").hidden = true;
+        Edu.renderTopCourseSummary();
+      }, 50);
+    });
+
+    // 表单提交
+    form.addEventListener("submit", function(e){
+      e.preventDefault();
+      var d = collectForm();
+      var errs = validateDraft(d);
+      if (errs.length){
+        toast(errs[0]);
+        return;
+      }
+      // 生成新课程
+      var newId = "c" + Date.now();
+      var newCourse = Object.assign({}, d, { id: newId });
+
+      // Live 模式 → 调后端 API 创建
+      if (Edu.isLive() && window.EduAPI && EduAPI.courses && typeof EduAPI.courses.create === "function"){
+        EduAPI.courses.create(newCourse).then(function(c){
+          // 后端返回新 id 的完整对象
+          var created = c || Object.assign({}, newCourse);
+          // 刷新课程列表
+          return EduAPI.courses.list().then(function(list){
+            Edu.state.courses = list || [];
+            finishCreate(created);
+          });
+        }).catch(function(err){
+          toast("创建课程失败：" + (err.message || err));
+        });
+      } else {
+        // 演示模式 → 加到本地列表
+        if (!Edu.state.courses.length) Edu.state.courses = list();
+        Edu.state.courses.push(newCourse);
+        // 同步到 EDU.courses（如果演示源还在）
+        if (window.EDU && Array.isArray(window.EDU.courses) && window.EDU.courses.length && Edu.state.courses[0] === window.EDU.courses[0]){
+          window.EDU.courses = Edu.state.courses;
+        }
+        finishCreate(newCourse);
+      }
+    });
+  }
+
+  /** 创建成功后的收尾 */
+  function finishCreate(newCourse){
+    Edu.selectCourse(newCourse.id);
+    // 刷新顶栏下拉选项
+    var pick = document.querySelector("#coursePick");
+    if (pick){
+      var opt = document.createElement("option");
+      opt.value = newCourse.id;
+      opt.textContent = newCourse.name + " · " + (newCourse.class || "");
+      pick.appendChild(opt);
+      pick.value = newCourse.id;
+    }
+    // 清空表单
+    form.reset();
+    // 隐藏草稿预览
+    Edu.state.draftCourse = null;
+    $("draftPreviewBar").hidden = true;
+    // 成功提示
+    $("courseCreated").hidden = false;
+    $("courseCreated").textContent = "✅ 课程「" + newCourse.name + "」已创建并设为当前课程。";
+    toast("课程已创建：" + newCourse.name);
+    // 刷新所有派生视图
+    enhancedFill();
+    renderAllCourses();
+    if (Edu.renderTopCourseSummary) Edu.renderTopCourseSummary();
+  }
+
+  // 页面加载后初始化
+  document.addEventListener("DOMContentLoaded", function(){
+    enhancedFill();
+    renderAllCourses();
+    bindLocal();
+    // 课程切换 → 重新填数据
+    Edu.onCourseChange(function(){ enhancedFill(); });
+    // Live API 课程列表加载后 → 重绘表格
+    Edu.onCourseChange(function(){
+      if (Edu.isLive() && Edu.state.courses.length) renderAllCourses();
+    });
+  });
+})();
+</script>
+</body>
+</html>

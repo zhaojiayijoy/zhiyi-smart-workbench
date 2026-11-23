@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>工作台首页 · 致壹 智能教育工作台</title>
+<link rel="stylesheet" href="assets/css/site.css?v=1795420906">
+</head>
+<body data-page="index">
+<div class="app">
+  <aside class="sidebar"></aside>
+  <div class="main">
+    <header class="topbar"></header>
+    <main class="content">
+
+      <section class="hero">
+        <h1>今天要完成哪项教学任务？</h1>
+        <p>从备课到答疑、实训和评价，统一在同一门课程中完成。</p>
+
+        <form class="composer" id="homeComposer">
+          <textarea placeholder="输入课题、上传资料，或描述你要完成的教学任务。" rows="3"></textarea>
+          <button class="btn primary" type="submit">发送</button>
+        </form>
+
+        <div class="row" style="margin-top:10px;flex-wrap:wrap">
+          <label class="btn sm" style="cursor:pointer">添加附件<input type="file" multiple hidden></label>
+          <span class="mini">单个文件不超过 200MB · CSV / DOCX / PDF / PPTX / PNG / MD</span>
+        </div>
+        <div class="row" style="margin-top:10px;flex-wrap:wrap">
+          <a class="btn sm" href="files.html">课程资料 · projects</a>
+          <a class="btn sm" href="files.html">本地文件</a>
+          <a class="btn sm" href="assistant.html">DeepSeek</a>
+        </div>
+      </section>
+
+      <div class="card">
+        <div class="card-h"><h2>教学功能</h2><div class="right"><span class="mini">选择一项开始</span></div></div>
+        <div class="card-b">
+          <div class="quick">
+            <a href="lesson.html"><span class="qi">✦</span><span><b>一键备课</b><span>生成教案、PPT、练习和评分标准</span></span></a>
+            <a href="training.html"><span class="qi">◈</span><span><b>创建实训</b><span>生成 Word、Excel、PPT 实训任务</span></span></a>
+            <a href="tutor.html"><span class="qi">◌</span><span><b>学生答疑</b><span>提供引导式提示并汇总错因</span></span></a>
+            <a href="review.html"><span class="qi">✓</span><span><b>作业评审</b><span>AI 初评、证据定位和教师复核</span></span></a>
+            <a href="files.html"><span class="qi">▤</span><span><b>课程资源</b><span>管理教材、课件、案例和学生资料</span></span></a>
+            <a href="analytics.html"><span class="qi">◔</span><span><b>学情分析</b><span>查看薄弱知识点和下一课建议</span></span></a>
+          </div>
+        </div>
+      </div>
+
+      <div class="split" style="margin-top:14px">
+        <div class="card">
+          <div class="card-h"><h2>最近备课包</h2><div class="right"><a class="btn sm ghost" href="lesson.html">全部历史</a></div></div>
+          <div class="card-b tight">
+            <div class="list-item"><div class="li-ic">✦</div><div style="flex:1"><div class="li-t">第 5 次课：参照群体与消费者决策</div><div class="li-s">11-20 16:22 · 双模型一致性 92%</div></div><span class="tag ok">已审核</span></div>
+            <div class="list-item"><div class="li-ic">✦</div><div style="flex:1"><div class="li-t">第 4 次课：知觉与学习</div><div class="li-s">11-13 15:08 · 双模型一致性 88%</div></div><span class="tag ok">已审核</span></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-h"><h2>待处理</h2><div class="right"><a class="btn sm ghost" href="tasks.html">任务中心</a></div></div>
+          <div class="card-b">
+            <div class="stack" style="gap:8px">
+              <div class="rule">4 份作业等待教师复核后发布</div>
+              <div class="rule">1 条「参照群体」答疑需要教师接管</div>
+              <div class="rule">第 6 次课备课包已生成，待审核</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+</div>
+
+<div class="toast"></div>
+<div class="modal-mask" id="modalNewTask">
+  <div class="modal">
+    <div class="modal-h"><b>新建教学任务</b><button class="x" type="button" data-close-modal>×</button></div>
+    <div class="modal-b">
+      <p class="sub" style="margin-bottom:12px">选择要开始的教学环节。所有内容都会关联到当前课程「消费者行为分析」。</p>
+      <div class="quick">
+        <a href="lesson.html"><span class="qi">✦</span><span><b>一键备课</b><span>生成教案、课件与练习</span></span></a>
+        <a href="training.html"><span class="qi">◈</span><span><b>创建实训</b><span>生成真实工作场景任务包</span></span></a>
+        <a href="tutor.html"><span class="qi">◌</span><span><b>学生答疑</b><span>记录或回答学生问题</span></span></a>
+        <a href="review.html"><span class="qi">✓</span><span><b>作业评审</b><span>上传提交并开始评审</span></span></a>
+      </div>
+    </div>
+    <div class="modal-f"><button class="btn" type="button" data-close-modal>关闭</button></div>
+  </div>
+</div>
+
+<script src="assets/js/data.js?v=1795420906"></script>
+<script src="assets/js/site.js?v=1795420906"></script>
+<script src="assets/js/api.js?v=1795420906"></script>
+<script src="assets/js/live.js?v=1795420906"></script>
+<script>
+(function(){
+  var form = document.getElementById('homeComposer');
+  form.addEventListener('submit', function(e){
+    e.preventDefault();
+    var text = form.querySelector('textarea').value.trim();
+    location.href = 'assistant.html' + (text ? '?q=' + encodeURIComponent(text) : '');
+  });
+  form.querySelector('textarea').addEventListener('keydown', function(e){
+    if(e.key === 'Enter' && !e.shiftKey){ e.preventDefault(); form.dispatchEvent(new Event('submit')); }
+  });
+  form.parentElement.querySelector('input[type=file]').addEventListener('change', function(e){
+    var n = e.target.files.length;
+    if(n) alert('已选择 ' + n + ' 个文件（静态演示，不会实际上传）');
+  });
+})();
+</script>
+</body>
+</html>
