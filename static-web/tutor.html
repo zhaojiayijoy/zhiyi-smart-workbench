@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>学生答疑 · 致壹 智能教育工作台</title>
-<link rel="stylesheet" href="assets/css/site.css?v=1795468000">
+<link rel="stylesheet" href="assets/css/site.css?v=1795470000">
 </head>
 <body data-page="tutor">
 <div class="app">
@@ -110,7 +110,7 @@
                   <label class="chk"><input type="checkbox">直接给完整解析</label>
                 </div>
               </div>
-              <div class="form-actions"><button class="btn primary" type="submit">创建答疑</button><button class="btn" type="reset">清空</button></div>
+              <div class="form-actions"><button class="btn" type="submit">创建答疑</button><button class="btn" type="reset">清空</button></div>
             </form>
             <div class="rule" id="askOut" hidden style="margin-top:12px">答疑已创建（静态演示）。真实版本会把记录写入本地数据库，并按「提示 → 卡点 → 解析」顺序展示。</div>
           </div>
@@ -126,6 +126,10 @@
         if (!items.length || !title || !status || !bubble) return;
 
         items.forEach(function(item){
+          item.tabIndex = 0;
+          item.addEventListener("keydown", function(e){
+            if (e.key === "Enter" || e.key === " "){ e.preventDefault(); item.click(); }
+          });
           item.addEventListener("click", function(){
             items.forEach(function(o){ o.classList.remove("on"); });
             item.classList.add("on");
@@ -145,7 +149,7 @@
 
 <div class="toast"></div>
 <script src="assets/js/data.js?v=1795420906"></script>
-<script src="assets/js/site.js?v=1795420906"></script>
+<script src="assets/js/site.js?v=1795471000"></script>
 <script src="assets/js/api.js?v=1795420906"></script>
 <script src="assets/js/live.js?v=1795420906"></script>
 </body>

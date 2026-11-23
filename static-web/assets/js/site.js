@@ -394,6 +394,16 @@
 
   /* ---------- 表单模拟 ---------- */
   function initSim() {
+    // 二次确认：发布、保存等不可逆操作，先确认再执行（捕获阶段，避免被 live 逻辑绕过）
+    document.addEventListener("click", function (e) {
+      var c = e.target.closest("[data-confirm]");
+      if (!c) return;
+      if (!window.confirm(c.getAttribute("data-confirm"))) {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+      }
+    }, true);
+
     document.addEventListener("submit", function (e) {
       var form = e.target.closest("form[data-sim]");
       if (!form) return;
@@ -401,23 +411,77 @@
       e.preventDefault();
       var btn = form.querySelector('[type="submit"]');
       var target = document.querySelector(form.getAttribute("data-sim"));
-      var lab = btn ? btn.innerHTML : "";
-      if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spin"></span> 处理中…'; }
-      setTimeout(function () {
-        if (btn) { btn.disabled = false; btn.innerHTML = lab; }
-        if (target) {
+      if (btn && !btn.dataset.label) btn.dataset.label = btn.innerHTML;
+
+      function fail() {
+        if (btn) { btn.disabled = false; btn.innerHTML = btn.dataset.label; }
+        var box = form.querySelector(".form-error");
+        if (!box) {
+          box = document.createElement("div");
+          box.className = "state is-denied form-error";
+          box.innerHTML = '<div class="state-ic">!</div><div><b>生成失败</b><span>目标结果不存在或服务暂时不可用。</span></div>' +
+            '<div class="state-actions"><button class="btn sm" type="button">重试</button></div>';
+          form.appendChild(box);
+          box.querySelector("button").addEventListener("click", function () {
+            box.parentNode.removeChild(box);
+            form.requestSubmit();
+          });
+        }
+      }
+      if (!target) return fail();
+
+      // AI 生成中的进度状态（演示模式）
+      var gen = /生成|评审|分析/.test(btn ? btn.textContent : "");
+      var steps = gen ? [18, 52, 86, 100] : [0, 100];
+      var i = 0;
+      if (btn) btn.disabled = true;
+      function tick() {
+        if (btn) btn.innerHTML = '<span class="spin"></span> ' + (gen ? "生成中 " : "处理中 ") + steps[i] + "%";
+        i++;
+        if (i < steps.length) { setTimeout(tick, 420); return; }
+        setTimeout(function () {
+          if (btn) { btn.disabled = false; btn.innerHTML = btn.dataset.label; }
           target.hidden = false;
           target.scrollIntoView({ behavior: "smooth", block: "start" });
-        }
-        toast(form.getAttribute("data-msg") || "已完成");
-      }, 1000);
+          toast(form.getAttribute("data-msg") || "已完成");
+        }, 320);
+      }
+      tick();
     });
 
+    // 演示按钮：loading → 保存成功 toast
     document.addEventListener("click", function (e) {
       var b = e.target.closest("[data-demo]");
       if (!b) return;
       if (Edu.isLive()) return; // live 模式由 live.js 接管真实导出/保存
-      toast(b.getAttribute("data-demo"));
+      var label = b.innerHTML;
+      b.disabled = true;
+      b.innerHTML = '<span class="spin"></span> 处理中…';
+      setTimeout(function () {
+        b.disabled = false;
+        b.innerHTML = label;
+        toast(b.getAttribute("data-demo"));
+      }, 520);
+    });
+  }
+
+  /* ---------- 表格行键盘操作 ---------- */
+  function initKeyboard() {
+    function mark() {
+      document.querySelectorAll("tbody tr").forEach(function (tr) {
+        if (tr.querySelector("button, a.btn")) tr.tabIndex = 0;
+      });
+    }
+    mark();
+    document.addEventListener("click", function () { setTimeout(mark, 0); });
+    document.addEventListener("keydown", function (e) {
+      if (e.key !== "Enter" && e.key !== " ") return;
+      var tr = e.target.closest ? e.target.closest("tbody tr") : null;
+      if (!tr) return;
+      var tag = (e.target.tagName || "").toLowerCase();
+      if (tag === "button" || tag === "a" || tag === "input" || tag === "select" || tag === "textarea") return;
+      var btn = tr.querySelector("button, a.btn");
+      if (btn) { e.preventDefault(); btn.click(); }
     });
   }
 
@@ -579,6 +643,7 @@
     initGo();
     initModal();
     initSim();
+    initKeyboard();
     initBars();
     initChecks();
     initHashTabs();

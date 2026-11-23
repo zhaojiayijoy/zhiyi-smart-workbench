@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>学情分析 · 致壹 智能教育工作台</title>
-<link rel="stylesheet" href="assets/css/site.css?v=1795468000">
+<link rel="stylesheet" href="assets/css/site.css?v=1795470000">
 </head>
 <body data-page="analytics">
 <div class="app">
@@ -16,10 +16,17 @@
       <div class="page-head">
         <div><h1>学情分析</h1><p class="sub" data-page-sub>把答疑、评审与实训数据汇总为可执行的教学决策（当前：消费者行为分析）</p></div>
         <div class="right">
-          <button class="btn" type="button" data-demo="已导出学情报告（示例）">导出报告</button>
+          <button class="icon-btn" type="button" title="导出报告" aria-label="导出报告" data-demo="已导出学情报告（示例）">⤓</button>
           <a class="btn" href="lesson.html">带入备课本</a>
-          <button class="btn primary" type="button" data-demo="讲评课已生成（示例）">一键生成讲评课</button>
+          <button class="btn" type="button" data-demo="讲评课已生成（示例）">生成讲评课</button>
+          <button class="btn primary" type="button" data-demo="下一课方案已生成（示例）">生成下一课方案</button>
         </div>
+      </div>
+
+      <div class="state is-stale" id="staleNote" data-updated="2026-11-15" hidden>
+        <div class="state-ic">⏳</div>
+        <div><b>学情数据可能已过期</b><span id="staleText">上次更新已超过 7 天，讲评结论可能不再准确。</span></div>
+        <div class="state-actions"><button class="btn sm" type="button" data-demo="已重新分析学情（示例）">重新分析</button></div>
       </div>
 
       <div class="ctx">
@@ -35,7 +42,7 @@
           <div class="field" style="margin:0;min-width:150px"><label>时间范围</label><select><option>近 30 天</option><option>近 7 天</option><option>全部</option></select></div>
           <div class="field" style="margin:0;min-width:160px"><label>知识点</label><select><option>全部知识点</option><option>参照群体</option><option>锚定效应</option><option>消费者态度</option></select></div>
           <div class="field" style="margin:0;min-width:150px"><label>数据来源</label><select><option>全部来源</option><option>答疑</option><option>评审</option><option>实训</option></select></div>
-          <button class="btn primary" type="button" data-demo="筛选已应用">应用筛选</button>
+          <button class="btn" type="button" data-demo="筛选已应用">应用筛选</button>
         </div>
       </div>
 
@@ -68,6 +75,14 @@
               </div>
               <div class="bar-row clickable" data-ev="损失厌恶 · 3 次答疑：均围绕「凑单 / 满减」场景，学生能识别现象，但对边际效用解释较弱。">
                 <div class="t"><b>损失厌恶</b><span>3 次</span></div><div class="bar"><i data-w="0" style="width:0"></i></div>
+              </div>
+            </div>
+            <div class="state is-empty" data-barempty hidden>
+              <div class="state-ic">◌</div>
+              <div><b>暂无可用数据</b><span>当前课程还没有答疑或评审记录，生成后即可查看分布。</span></div>
+              <div class="state-actions">
+                <button class="btn sm" type="button" data-demo="已重新拉取数据（示例）">重新加载</button>
+                <a class="btn sm" href="lesson.html">先备课</a>
               </div>
             </div>
             <div class="evidence" data-evbox></div>
@@ -106,6 +121,14 @@
                 <div class="t"><b>协作沟通</b><span>76 分</span></div><div class="bar"><i data-w="0" style="width:0"></i></div>
               </div>
             </div>
+            <div class="state is-empty" data-barempty hidden>
+              <div class="state-ic">◌</div>
+              <div><b>暂无可用数据</b><span>当前课程还没有答疑或评审记录，生成后即可查看分布。</span></div>
+              <div class="state-actions">
+                <button class="btn sm" type="button" data-demo="已重新拉取数据（示例）">重新加载</button>
+                <a class="btn sm" href="lesson.html">先备课</a>
+              </div>
+            </div>
             <div class="evidence" data-evbox></div>
             <div class="rule" style="margin-top:14px">数据分析是最低维度（71 分），与实训中 Excel 测算的完成度一致。</div>
           </div>
@@ -132,7 +155,7 @@
               <div class="list-item"><div class="li-ic">10'</div><div><div class="li-t">收尾</div><div class="li-s">发布基础题与拓展题的分层作业</div></div></div>
             </div>
             <div class="form-actions" style="margin-top:12px">
-              <a class="btn primary" href="lesson.html">用这份方案去备课</a>
+              <a class="btn" href="lesson.html">用这份方案去备课</a>
             </div>
           </div>
         </div>
@@ -181,9 +204,44 @@ document.querySelectorAll('[data-pane="dims"] .bar > i').forEach(function(el,i){
     });
   });
 })();
+
+/* 数据过期：上次更新超过 7 天时给出提示 */
+(function(){
+  var note = document.getElementById("staleNote");
+  if (!note) return;
+  var up = new Date(note.getAttribute("data-updated") || "");
+  if (isNaN(up.getTime())) return;
+  var days = Math.floor((Date.now() - up.getTime()) / 86400000);
+  if (days > 7){
+    note.hidden = false;
+    document.getElementById("staleText").textContent =
+      "数据更新于 " + (up.getMonth() + 1) + "-" + up.getDate() + "，已 " + days + " 天未更新，讲评结论可能不再准确。";
+  }
+})();
+
+/* 无数据状态：条形区域为空时显示 */
+(function(){
+  function check(){
+    Array.prototype.forEach.call(document.querySelectorAll(".tabpane"), function(pane){
+      var bars = pane.querySelector(".bars");
+      var st = pane.querySelector("[data-barempty]");
+      if (!bars || !st) return;
+      var has = !!bars.querySelector(".bar-row");
+      bars.style.display = has ? "" : "none";
+      st.hidden = has;
+    });
+  }
+  check();
+  if (window.MutationObserver){
+    Array.prototype.forEach.call(document.querySelectorAll(".bars"), function(b){
+      new MutationObserver(check).observe(b, { childList: true });
+    });
+  }
+  setTimeout(check, 1200);
+})();
 </script>
 <script src="assets/js/data.js?v=1795420906"></script>
-<script src="assets/js/site.js?v=1795420906"></script>
+<script src="assets/js/site.js?v=1795471000"></script>
 <script src="assets/js/api.js?v=1795420906"></script>
 <script src="assets/js/live.js?v=1795420906"></script>
 </body>
