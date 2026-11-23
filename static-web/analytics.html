@@ -14,13 +14,20 @@
     <main class="content">
 
       <div class="page-head">
-        <div><h1>学情分析</h1><p class="sub">把答疑、评审与实训数据汇总为可执行的教学决策</p></div>
+        <div><h1>学情分析</h1><p class="sub" data-page-sub>把答疑、评审与实训数据汇总为可执行的教学决策（当前：消费者行为分析）</p></div>
         <div class="right"><button class="btn" type="button" data-demo="已导出学情报告（示例）">导出报告</button></div>
+      </div>
+
+      <div class="ctx">
+        <div><span class="k">当前课程</span><b data-fill="course.name">—</b></div>
+        <div><span class="k">授课对象</span><b data-fill="course.classWithSize">—</b></div>
+        <div><span class="k">进度</span><b data-fill="course.progress">—</b></div>
+        <div><span class="k">课程资料</span><b data-fill="course.resourceCount">—</b></div>
       </div>
 
       <div class="card" style="margin-bottom:14px">
         <div class="card-b" style="display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end">
-          <div class="field" style="margin:0;min-width:170px"><label>班级</label><select><option>市场营销 24-1</option><option>市场营销 24-2</option><option>电子商务 24-1</option></select></div>
+          <div class="field" style="margin:0;min-width:170px"><label>班级</label><select data-fill="course.class"><option>市场营销 24-1</option><option>市场营销 24-2</option><option>电子商务 24-1</option></select></div>
           <div class="field" style="margin:0;min-width:150px"><label>时间范围</label><select><option>近 30 天</option><option>近 7 天</option><option>全部</option></select></div>
           <div class="field" style="margin:0;min-width:160px"><label>知识点</label><select><option>全部知识点</option><option>参照群体</option><option>锚定效应</option><option>消费者态度</option></select></div>
           <div class="field" style="margin:0;min-width:150px"><label>数据来源</label><select><option>全部来源</option><option>答疑</option><option>评审</option><option>实训</option></select></div>

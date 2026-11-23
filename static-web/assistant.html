@@ -14,18 +14,18 @@
     <main class="content">
 
       <div class="page-head">
-        <div><h1>AI 助手</h1><p class="sub">结合当前课程资料与学情回答问题，生成内容需教师确认</p></div>
+        <div><h1>AI 助手</h1><p class="sub" data-page-sub>结合当前课程资料与学情回答问题（当前：消费者行为分析），生成内容需教师确认</p></div>
         <div class="right"><button class="btn" type="button" data-demo="已新建对话">新建对话</button></div>
       </div>
 
       <div class="split">
         <div class="card" style="display:flex;flex-direction:column;min-height:560px">
-          <div class="card-h"><h2>对话</h2><div class="right"><span class="tag acc">已加载 6 份课程资料</span></div></div>
+          <div class="card-h"><h2>对话</h2><div class="right"><span class="tag acc">已加载 <b data-fill="course.resourceCount">—</b> 课程资料</span></div></div>
           <div class="card-b" style="flex:1">
             <div class="chat" id="chat">
               <div class="msg ai">
                 <div class="who">AI</div>
-                <div class="bubble">你好，李老师。我已读取「消费者行为分析」的 6 份资料和近 30 天学情。你可以让我：
+                <div class="bubble">你好，李老师。我已读取「<b data-fill="course.name">—</b>」的课程资料和近 30 天学情。你可以让我：
                   <ul>
                     <li>把某个知识点改写成 5 分钟课堂导入</li>
                     <li>根据错误类型生成一组针对性练习</li>
@@ -71,9 +71,9 @@
             <div class="card-h"><h2>当前上下文</h2></div>
             <div class="card-b">
               <div class="grid g2" style="gap:10px">
-                <div><span class="k mini">课程</span><div style="font-weight:600">消费者行为分析</div></div>
-                <div><span class="k mini">班级</span><div>市场营销 24-1</div></div>
-                <div><span class="k mini">课次</span><div>第 5 次 / 共 8 次</div></div>
+                <div><span class="k mini">课程</span><div style="font-weight:600" data-fill="course.name">—</div></div>
+                <div><span class="k mini">班级</span><div data-fill="course.classWithSize">—</div></div>
+                <div><span class="k mini">进度</span><div data-fill="course.progress">—</div></div>
                 <div><span class="k mini">模型</span><div>智谱 GLM-4</div></div>
               </div>
               <div class="hr"></div>

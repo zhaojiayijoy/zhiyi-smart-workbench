@@ -14,12 +14,19 @@
     <main class="content">
 
       <div class="page-head">
-        <div><h1>创建实训</h1><p class="sub">用真实工作场景生成任务包，覆盖 Excel、Word、PPT 与数据分析要求</p></div>
+        <div><h1>创建实训</h1><p class="sub" data-page-sub>用真实工作场景生成任务包，覆盖 Excel、Word、PPT 与数据分析要求（当前：消费者行为分析）</p></div>
         <div class="right"><a class="btn" href="#taskList">任务列表</a></div>
       </div>
 
+      <div class="ctx">
+        <div><span class="k">当前课程</span><b data-fill="course.name">—</b></div>
+        <div><span class="k">授课对象</span><b data-fill="course.classWithSize">—</b></div>
+        <div><span class="k">课时</span><b data-fill="course.totalHours">—</b></div>
+        <div><span class="k">可用资料</span><b data-fill="course.resourceCount">—</b></div>
+      </div>
+
       <div class="card" style="margin-bottom:14px">
-        <div class="card-h"><h2>场景描述</h2><div class="right"><span class="tag acc">关联：消费者行为分析</span></div></div>
+        <div class="card-h"><h2>场景描述</h2><div class="right"><span class="tag acc">关联：<b data-fill="course.name">—</b></span></div></div>
         <div class="card-b">
           <form data-sim="#trainOut" data-msg="实训任务包已生成（示例）">
             <div class="field">

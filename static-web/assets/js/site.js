@@ -332,13 +332,16 @@
     document.addEventListener("click", function (e) {
       if (e.target.closest('[data-open-modal="new-task"]')) {
         // 动态显示当前课程名
-        var sub = mask.querySelector(".modal-b .sub");
+        var sub = mask.querySelector(".modal-b [data-page-sub], .modal-b .sub");
         if (sub) {
-          var cur = (currentCourses().filter(function (c) {
-            return String(c.id) === String(Edu.state.projectId);
-          })[0] || currentCourses()[0] || {});
-          var name = cur.name || "（未选课程）";
-          sub.innerHTML = '选择要开始的教学环节。所有内容都会关联到当前课程「' + name + '」。';
+          var cur = getSelectedCourse();
+          var name = cur ? (cur.name || "（未选课程）") : "（未选课程）";
+          // 如果已有 data-page-sub，则 fillCourseFields 已处理过；否则手动更新
+          if (sub.hasAttribute && sub.hasAttribute("data-page-sub")) {
+            // fillCourseFields 已自动更新，什么都不做
+          } else {
+            sub.textContent = '选择要开始的教学环节。所有内容都会关联到当前课程「' + name + '」。';
+          }
         }
         mask.classList.add("on");
         return;
@@ -463,20 +466,61 @@
     var c = getSelectedCourse();
     document.querySelectorAll("[data-fill]").forEach(function (el) {
       var v = el.getAttribute("data-fill");
-      if (v.indexOf("course.") === 0) {
-        var key = v.slice(7);
-        // 兼容新字段名（totalHours / currentSession / totalSessions）与旧字段名（hours / progress）
-        var val = null;
-        if (c) {
-          if (key === "hours" || key === "totalHours") val = c.totalHours ? (c.totalHours + " 课时") : "";
-          else if (key === "progress") {
+      if (v.indexOf("course.") !== 0) return;
+      var key = v.slice(7);
+      var val, html = false;
+      if (c) {
+        switch (key) {
+          case "name": val = c.name || "—"; break;
+          case "class": val = c.class || "—"; break;
+          case "className": val = c.class || "—"; break;
+          case "classSize": val = c.classSize ? c.classSize + " 人" : ""; break;
+          case "classWithSize": val = c.class + (c.classSize ? "（" + c.classSize + " 人）" : ""); break;
+          case "totalHours": val = c.totalHours ? c.totalHours + " 课时" : "未填写课时"; break;
+          case "hours": val = c.totalHours ? c.totalHours + " 课时" : ""; break;
+          case "textbook": val = c.textbook || "—"; break;
+          case "progress":
             if (c.currentSession && c.totalSessions) val = "第 " + c.currentSession + " 次课 / 共 " + c.totalSessions + " 次";
-            else val = "";
-          } else if (key === "class" || key === "className") val = c.class || "";
-          else val = c[key] || "";
+            else val = "进度待完善"; break;
+          case "resourceCount": val = (c.resourceCount || 0) + " 份"; break;
+          case "note": val = c.note || "—"; break;
+          case "objectives": val = (c.objectives || "—").replace(/\n/g, "<br>"); html = true; break;
+          case "key": val = c.key || "—"; break;
+          case "diff": val = c.diff || "—"; break;
+          case "desc": val = c.desc || "—"; break;
+          default: val = c[key] || "—"; break;
         }
-        if (val !== null) el.textContent = val;
+      } else {
+        val = "—";
       }
+      if (html) el.innerHTML = val;
+      else if (el.tagName === "INPUT" || el.tagName === "TEXTAREA") el.value = val;
+      else if (el.tagName === "SELECT") {
+        // select 里找匹配的 option，找不到就用 first option
+        var found = null;
+        Array.prototype.forEach.call(el.options, function (o) {
+          if (o.textContent === val || o.value === val) found = o.value;
+        });
+        if (found) el.value = found;
+        else if (el.options.length) el.options[0].textContent = val;
+      }
+      else el.textContent = val;
+    });
+
+    // 页面副标题动态化：所有 [data-page-sub] 元素里的课程引用统一替换
+    document.querySelectorAll("[data-page-sub]").forEach(function (sub) {
+      if (!c) return;
+      var name = c.name || "";
+      var text = sub.textContent;
+      // 1) 替换「xxx」包裹的课程名
+      text = text.replace(/「[^」]*」/g, "「" + name + "」");
+      // 2) 替换（当前：xxx）格式的课程引用
+      text = text.replace(/（当前：[^）]*）/g, "（当前：" + name + "）");
+      // 3) 兜底：如果还有写死的三个 demo 课程名，也替换掉
+      ["消费者行为分析", "市场营销基础", "数字营销实训"].forEach(function (demo) {
+        if (name && demo !== name) text = text.split(demo).join(name);
+      });
+      sub.textContent = text;
     });
   }
 
