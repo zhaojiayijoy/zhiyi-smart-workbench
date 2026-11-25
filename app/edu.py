@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import io
 import json
+import os
 import re
 import time
 from datetime import datetime
@@ -237,10 +238,34 @@ _PPT_REQUIRED_KINDS = {
 }
 
 
+_PPT_NOTES_MIN = 120
+_PPT_NOTES_MAX = 180
+# 只有这些页型的 notes 是教师讲稿（quiz 的 notes 存放答案，封面/板书无讲稿）
+_PPT_NOTES_KINDS = {"activity", "concept", "example", "homework", "summary"}
+
+
+def _ppt_slides(pkg: dict[str, Any]) -> list[dict[str, Any]]:
+    slides = ((pkg.get("ppt") or {}).get("slides")) or []
+    return [s for s in slides if isinstance(s, dict)]
+
+
+def ppt_notes_problems(pkg: dict[str, Any]) -> list[dict[str, Any]]:
+    """找出讲稿不在 120-180 字之间的页面（过短/超长都算问题）。"""
+    bad = []
+    for i, s in enumerate(_ppt_slides(pkg), 1):
+        kind = str(s.get("kind") or "").strip()
+        if kind not in _PPT_NOTES_KINDS:
+            continue
+        n = len(str(s.get("notes") or "").strip())
+        if n < _PPT_NOTES_MIN or n > _PPT_NOTES_MAX:
+            bad.append({"index": i, "kind": kind, "title": str(s.get("title") or ""),
+                        "length": n, "notes": str(s.get("notes") or "")})
+    return bad
+
+
 def ppt_structure_issues(pkg: dict[str, Any]) -> list[str]:
     """检查课件结构是否达标；返回问题列表，空列表表示通过。"""
-    slides = ((pkg.get("ppt") or {}).get("slides")) or []
-    slides = [s for s in slides if isinstance(s, dict)]
+    slides = _ppt_slides(pkg)
     issues: list[str] = []
     if len(slides) < 14:
         issues.append(f"课件只有 {len(slides)} 页，少于 14 页")
@@ -256,10 +281,18 @@ def ppt_structure_issues(pkg: dict[str, Any]) -> list[str]:
             and not 2 <= len(_as_list(s.get("bullets"))) <= 6]
     if thin:
         issues.append(f"有 {len(thin)} 页知识讲解页要点不在 2-6 条之间")
-    short = [s for s in slides if len(str(s.get("notes") or "")) < 80]
-    if short and len(short) > max(2, len(slides) // 3):
-        issues.append("多页讲稿过短（不足 80 字）")
+    notes_bad = ppt_notes_problems(pkg)
+    if notes_bad:
+        detail = "、".join(f"第{p['index']}页({p['length']}字)" for p in notes_bad[:5])
+        more = f" 等 {len(notes_bad)} 页" if len(notes_bad) > 5 else ""
+        issues.append(f"讲稿不在 120-180 字：{detail}{more}")
     return issues[:6]
+
+
+def ppt_quality(pkg: dict[str, Any]) -> tuple[int, int]:
+    """课件质量指标：(结构性问题的种类数, 讲稿不达标页数)，越小越好。"""
+    issues = [x for x in ppt_structure_issues(pkg) if not x.startswith("讲稿不在")]
+    return len(issues), len(ppt_notes_problems(pkg))
 
 
 def regenerate_ppt_only(pkg: dict[str, Any], topic: str, ctx: str,
@@ -309,6 +342,63 @@ teacher_action、student_action、notes。
     if isinstance(ppt, dict) and ppt.get("slides"):
         pkg["ppt"] = ppt
         pkg.setdefault("meta", {})["ppt_regenerated"] = True
+    return pkg
+
+
+def fix_ppt_notes(pkg: dict[str, Any], topic: str, ctx: str,
+                  problems: list[dict[str, Any]]) -> dict[str, Any]:
+    """只重写讲稿不达标的页面，可把过短的补足、过长的压缩到 120-180 字。"""
+    if not problems:
+        return pkg
+    slides = _ppt_slides(pkg)
+    rows = []
+    for p in problems:
+        s = slides[p["index"] - 1] if p["index"] - 1 < len(slides) else {}
+        bullets = "；".join(str(x) for x in _as_list(s.get("bullets"))[:5])
+        rows.append(
+            f"- 第{p['index']}页｜kind={p['kind']}｜标题：{p.get('title') or s.get('title') or ''}"
+            f"｜要点：{bullets or '无'}"
+            f"｜当前讲稿（{p['length']} 字）：{p['notes'] or '（空）'}"
+        )
+    human = f"""只重写下面这些页面的讲稿（notes），其余字段一律保持原意。
+
+课程上下文：
+{ctx}
+
+本次课题：{topic}
+
+需要重写的页面：
+{chr(10).join(rows)}
+
+要求：
+1. 每页讲稿严格控制在 120-180 个汉字（含标点不超过 200 字符），过短的补足细节，过长的压缩；
+2. 口语化，面向学生讲授，至少包含 1 处提问或互动、1 个具体例子或操作步骤；
+3. 讲稿必须与本页标题、要点一致，不要新增与本页无关的知识点；
+4. 只输出一个 JSON 对象：{{"notes": [{{"index": 1, "notes": "重写后的讲稿"}}]}}
+   index 必须与上面列出的页码一致，数组长度必须等于 {len(problems)}。"""
+    data = _json_call(_BASE_RULE, human)
+    items = data.get("notes") if isinstance(data, dict) else None
+    if not isinstance(items, list):
+        return pkg
+    by_index = {}
+    for it in items:
+        if not isinstance(it, dict):
+            continue
+        try:
+            idx = int(it.get("index"))
+        except (TypeError, ValueError):
+            continue
+        text = str(it.get("notes") or "").strip()
+        if idx and text:
+            by_index[idx] = text
+    for idx, text in by_index.items():
+        if 1 <= idx <= len(slides):
+            old = len(str(slides[idx - 1].get("notes") or "").strip())
+            new = len(text)
+            # 只有更接近 120-180 区间才覆盖，避免越改越差
+            if (_PPT_NOTES_MIN <= new <= _PPT_NOTES_MAX
+                    or abs(new - 150) < abs(old - 150)):
+                slides[idx - 1]["notes"] = text
     return pkg
 
 
@@ -375,7 +465,7 @@ def generate_lesson_package(project_id: int, topic: str, extra: str = "", *,
 3. concept/example 知识讲解页 4-8 页，每页 bullets 3-5 条、每条不超过 20 字，并给出 key_takeaway；
 4. 至少 2 页提供 table（课堂流程、对比表或量规表），headers 与 rows 要能直接排版；
 5. 确有图示价值时填写 visual，type 用 diagram/chart/photo，prompt 描述可画出的具体画面，否则填 none；
-6. notes 每页 120-180 字，口语化，写出提问、举例或互动；
+6. notes 每页 120-180 个汉字（少于 120 或超过 180 都算不合格），口语化，写出提问、举例或互动；
 7. homework 页按基础/提升/挑战三档分层布置；board 页给出主板书结构与分支要点。
 
 其他要求：45 分钟流程 5-7 个环节；每类题 2 道；评分标准总分 100。
@@ -390,20 +480,50 @@ out_of_scope、consistent、untraceable（true 表示存在无法追溯的资料
                     "review_model": review_model or "", "dual_check": bool(dual_check)}
     issues = ppt_structure_issues(data)
     if issues:
-        # 结构不达标时自动重生成一次课件，其余产物保持不变；只有变好才采纳
-        try:
-            retry = regenerate_ppt_only(data, topic, ctx, issues)
-            if isinstance(retry, dict) and isinstance(retry.get("ppt"), dict):
-                new_issues = ppt_structure_issues({**data, "ppt": retry["ppt"]})
-                if len(new_issues) <= len(issues):
-                    data["ppt"] = retry["ppt"]
-                    data["meta"]["ppt_regenerated"] = True
-                    data["meta"]["ppt_issues_before"] = issues
-                    data["meta"]["ppt_issues_after"] = new_issues
+        # 多轮重试：每轮针对剩余问题重写，直到达标或用尽次数；每轮记录在 meta
+        max_rounds = max(1, int(os.getenv("PPT_REGEN_MAX_ROUNDS", "3") or 3))
+        rounds: list[dict[str, Any]] = []
+        data["meta"]["ppt_issues_before"] = issues
+        for rnd in range(1, max_rounds + 1):
+            cur = ppt_structure_issues(data)
+            if not cur:
+                break
+            structural = [x for x in cur if not x.startswith("讲稿不在")]
+            notes_bad = ppt_notes_problems(data)
+            action = "ppt_rewrite" if structural else "notes_rewrite"
+            before_metric = ppt_quality(data)
+            entry: dict[str, Any] = {"round": rnd, "action": action,
+                                     "issues_before": cur,
+                                     "notes_bad_before": len(notes_bad)}
+            try:
+                if action == "ppt_rewrite":
+                    retry = regenerate_ppt_only(data, topic, ctx, cur)
+                    candidate = retry.get("ppt") if isinstance(retry, dict) else None
                 else:
-                    data["meta"]["ppt_regen_rejected"] = new_issues
-        except Exception as exc:  # noqa: BLE001 - 重生成失败不影响主流程
-            data["meta"]["ppt_regen_error"] = f"{exc.__class__.__name__}: {exc}"
+                    candidate = fix_ppt_notes(data, topic, ctx, notes_bad).get("ppt")
+                if not isinstance(candidate, dict):
+                    entry["error"] = "模型未返回可用课件"
+                    rounds.append(entry)
+                    break
+                after_metric = ppt_quality({**data, "ppt": candidate})
+                entry["metric_before"] = list(before_metric)
+                entry["metric_after"] = list(after_metric)
+                entry["issues_after"] = ppt_structure_issues({**data, "ppt": candidate})
+                if after_metric < before_metric:
+                    data["ppt"] = candidate
+                    entry["adopted"] = True
+                    rounds.append(entry)
+                    continue
+                entry["adopted"] = False
+                rounds.append(entry)
+                break  # 本轮没有改善，停止重试
+            except Exception as exc:  # noqa: BLE001 - 单轮失败不影响主流程
+                entry["error"] = f"{exc.__class__.__name__}: {exc}"
+                rounds.append(entry)
+                break
+        data["meta"]["ppt_regen_rounds"] = rounds
+        data["meta"]["ppt_regenerated"] = any(r.get("adopted") for r in rounds)
+        data["meta"]["ppt_issues_after"] = ppt_structure_issues(data)
     data["checks"] = lesson_checks(data)
     return data
 
@@ -867,7 +987,7 @@ def export_lesson_pptx(pkg: dict[str, Any], course: str) -> bytes:
             callout(s, f"合计约 {minutes} 分钟；每个环节的活动页见后文")
         footer(s)
 
-    def page_activity(row, step, idx):
+    def page_activity(row, step, idx, act_slide=None):
         s = prs.slides.add_slide(blank)
         header(s, f"{row.get('phase') or '课堂环节'}｜{row.get('time') or ''}",
                f"环节 {idx}")
@@ -881,8 +1001,11 @@ def export_lesson_pptx(pkg: dict[str, Any], course: str) -> bytes:
                  shape=MSO_SHAPE.ROUNDED_RECTANGLE)
             text(s, 10.35, 0.7, 2.3, 0.32, duration, 12, True, C_WHITE,
                  PP_ALIGN.CENTER)
-        teacher = str((step or {}).get("teacher") or row.get("activity") or "—")
-        student = str((step or {}).get("student") or "跟随活动完成任务，记录关键结论")
+        act = as_dict(act_slide)
+        teacher = str((step or {}).get("teacher") or act.get("teacher_action")
+                      or row.get("activity") or "—")
+        student = str((step or {}).get("student") or act.get("student_action")
+                      or "跟随活动完成任务，记录关键结论")
         rect(s, 0.62, 1.85, 5.75, 3.25, fill=C_LIGHT)
         text(s, 0.88, 1.98, 5.2, 0.3, "教师活动", 12, True, C_PRIMARY)
         text(s, 0.88, 2.4, 5.2, 2.5, teacher, 15, False, C_TEXT)
@@ -894,6 +1017,9 @@ def export_lesson_pptx(pkg: dict[str, Any], course: str) -> bytes:
         if step and step.get("design_intent"):
             text(s, 0.62, 5.88, 11.8, 0.5,
                  "设计意图：" + str(step.get("design_intent")), 11, False, C_MUTED)
+        notes = str(act.get("notes") or "").strip()
+        if notes:
+            s.notes_slide.notes_text_frame.text = notes
         footer(s)
 
     def page_content(slide_data, label):
@@ -1055,6 +1181,7 @@ def export_lesson_pptx(pkg: dict[str, Any], course: str) -> bytes:
 
     if flow:
         page_agenda(flow, steps)
+        act_slides = by_kind("activity")
         for i, row in enumerate(flow):
             matched = None
             for st in steps:
@@ -1065,7 +1192,8 @@ def export_lesson_pptx(pkg: dict[str, Any], course: str) -> bytes:
                     break
             if matched is None and i < len(steps):
                 matched = steps[i]
-            page_activity(row, matched, i + 1)
+            page_activity(row, matched, i + 1,
+                          act_slides[i] if i < len(act_slides) else None)
 
     handled = {"cover", "objectives", "agenda", "quiz", "homework", "summary", "board"}
     takeaways = []
