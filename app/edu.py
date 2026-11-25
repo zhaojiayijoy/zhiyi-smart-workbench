@@ -2001,6 +2001,132 @@ def export_next_docx(plan: dict[str, Any], course: str,
 
 
 # ---------------------------------------------------------------------------
+# 教学工具导出：评分量规 / 成绩汇总
+# ---------------------------------------------------------------------------
+RUBRIC_TEMPLATES: dict[str, dict[str, Any]] = {
+    "insight": {
+        "name": "洞察报告评分量规",
+        "rows": [
+            {"dimension": "数据准确性", "weight": 25,
+             "excellent": "数据来源清楚、口径一致，图表与结论完全对应",
+             "good": "数据基本准确，个别口径需说明",
+             "pass": "存在少量数据错误但不影响主要结论",
+             "fail": "数据错误较多或来源不明，结论无法支撑"},
+            {"dimension": "分析深度", "weight": 30,
+             "excellent": "能从现象到原因多层归因，有对比与验证",
+             "good": "有归因分析，深度基本到位",
+             "pass": "以描述为主，分析较浅",
+             "fail": "仅罗列数据，无分析"},
+            {"dimension": "结论可行性", "weight": 25,
+             "excellent": "结论明确、可执行，给出落地步骤与衡量指标",
+             "good": "结论较明确，措施基本可执行",
+             "pass": "结论笼统，缺少落地路径",
+             "fail": "结论空泛或与数据无关"},
+            {"dimension": "表达规范", "weight": 20,
+             "excellent": "结构清晰、术语规范、图文排版专业",
+             "good": "结构完整，表达较规范",
+             "pass": "能读懂，存在排版或表述问题",
+             "fail": "结构混乱，影响阅读"},
+        ],
+    },
+    "promotion": {
+        "name": "促销方案评分量规",
+        "rows": [
+            {"dimension": "目标与人群", "weight": 25,
+             "excellent": "目标可量化，人群画像清晰且有数据依据",
+             "good": "目标与人群基本明确",
+             "pass": "目标笼统，人群描述模糊",
+             "fail": "缺少目标或人群界定"},
+            {"dimension": "策略创意", "weight": 30,
+             "excellent": "策略有差异化，创意与课程知识点结合紧密",
+             "good": "策略合理，有一定创意",
+             "pass": "策略常规，创意不足",
+             "fail": "策略与目标不匹配"},
+            {"dimension": "预算与 ROI", "weight": 25,
+             "excellent": "预算拆分合理，ROI 测算完整且假设清楚",
+             "good": "有预算与 ROI 测算，个别假设需补充",
+             "pass": "预算粗略，缺少 ROI 测算",
+             "fail": "无预算或测算错误"},
+            {"dimension": "风险与合规", "weight": 20,
+             "excellent": "识别主要风险并给出预案，符合广告与促销法规",
+             "good": "风险识别基本完整",
+             "pass": "风险提及较少",
+             "fail": "存在明显合规风险"},
+        ],
+    },
+    "training": {
+        "name": "实训任务评分量规",
+        "rows": [
+            {"dimension": "执行规范", "weight": 25,
+             "excellent": "严格按任务书步骤执行，记录完整可追溯",
+             "good": "步骤基本规范，记录较完整",
+             "pass": "有漏步或记录不全",
+             "fail": "未按规范执行"},
+            {"dimension": "数据质量", "weight": 30,
+             "excellent": "数据完整、口径正确，异常值有说明",
+             "good": "数据基本完整，个别异常未说明",
+             "pass": "数据存在缺漏但不影响结论",
+             "fail": "数据大量缺失或错误"},
+            {"dimension": "交付完整", "weight": 25,
+             "excellent": "交付物齐全，格式符合要求，可直接使用",
+             "good": "交付物基本齐全，格式有小问题",
+             "pass": "缺少部分交付物",
+             "fail": "交付物严重缺失"},
+            {"dimension": "团队协作", "weight": 20,
+             "excellent": "分工明确、协作高效，过程有记录",
+             "good": "分工较明确，协作正常",
+             "pass": "协作一般，分工不清",
+             "fail": "基本无协作"},
+        ],
+    },
+}
+
+
+def export_rubric_docx(kind: str = "insight") -> bytes:
+    """导出评分量规模板（docx），kind: insight / promotion / training。"""
+    import docx
+    tpl = RUBRIC_TEMPLATES.get(kind) or RUBRIC_TEMPLATES["insight"]
+    d = docx.Document()
+    _docx_base_style(d)
+    d.add_heading(tpl["name"], 0)
+    d.add_paragraph(f"满分 100 分｜生成时间：{datetime.now():%Y-%m-%d %H:%M}")
+    t = d.add_table(rows=1, cols=6)
+    _docx_table_header(t, ["维度", "分值", "优秀", "良好", "合格", "待改进"])
+    for r in tpl["rows"]:
+        cells = t.add_row().cells
+        for c, k in zip(cells, ("dimension", "weight", "excellent", "good", "pass", "fail")):
+            c.text = str(r.get(k, ""))
+    d.add_heading("使用说明", 1)
+    d.add_paragraph("按维度逐项评分后累加总分；评「待改进」时需写明具体问题与改进建议，可直接作为学生反馈。")
+    buf = io.BytesIO()
+    d.save(buf)
+    return buf.getvalue()
+
+
+def export_grades_xlsx(rows: list[dict[str, Any]], class_name: str = "") -> bytes:
+    """导出成绩汇总（xlsx）。rows: student/file/ai_total/final_total/status/course。"""
+    from openpyxl import Workbook
+    from openpyxl.styles import Font
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "成绩汇总"
+    ws.append(["学生", "提交文件", "AI 初评", "教师终评", "状态", "课程"])
+    for c in ws[1]:
+        c.font = Font(bold=True)
+    for r in rows:
+        ws.append([r.get("student") or "", r.get("file") or "",
+                   r.get("ai_total"), r.get("final_total"),
+                   r.get("status_label") or r.get("status") or "", r.get("course") or ""])
+    if class_name:
+        ws.cell(row=ws.max_row + 2, column=1, value=f"班级：{class_name}")
+    for i, w in enumerate([16, 28, 10, 10, 12, 22], 1):
+        ws.column_dimensions[chr(64 + i)].width = w
+    buf = io.BytesIO()
+    wb.save(buf)
+    return buf.getvalue()
+
+
+# ---------------------------------------------------------------------------
 # 导出公共工具
 # ---------------------------------------------------------------------------
 def _docx_base_style(d) -> None:

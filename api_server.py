@@ -572,6 +572,7 @@ def gen_lesson(body: LessonIn) -> dict:
                              "dual_check": bool(body.dual_check),
                              "lesson_type": body.lesson_type,
                              "outputs": body.outputs or [], "created": _now(),
+                             "params": body.dict(),
                              "review_status": "待教师确认", "issues": []})
     _store_put("lessons", tid, {"project_id": body.project_id, "topic": body.topic,
                                 "pkg": pkg, "materials": materials, "version": "v1",
@@ -679,7 +680,8 @@ def gen_training(body: TrainingIn) -> dict:
 
 @app.get("/api/training/history")
 def training_history(project_id: Optional[int] = Query(None)) -> dict:
-    rows = [{"task_id": t, "scenario": v["scenario"], "ts": v["ts"]}
+    rows = [{"task_id": t, "scenario": v["scenario"], "ts": v["ts"],
+             "status": ((v.get("pkg") or {}).get("status") or "draft")}
             for t, v in _store_items("trainings", project_id)]
     return ok(rows)
 
@@ -1185,6 +1187,188 @@ def search_web(body: WebSearchIn) -> dict:
     if res.get("status") != "ok":
         return err(res.get("error", "搜索失败"), 400)
     return ok(res)
+
+
+# ---------------------------------------------------------------------------
+# 备课包：整包重生成 / 审核保存到课程资料
+# ---------------------------------------------------------------------------
+@app.post("/api/lesson/{tid}/regenerate-all")
+def regenerate_lesson_all(tid: int) -> dict:
+    """按首次生成时的参数整包重生成一版。"""
+    if not _store_get("lessons", tid):
+        raise HTTPException(404, "备课包不存在")
+    task = db.get_task(tid)
+    params = ((task or {}).get("meta") or {}).get("params") or {}
+    if not params:
+        raise HTTPException(400, "缺少原始生成参数，无法整包重生成")
+    try:
+        lesson_in = LessonIn(**params)
+    except Exception as e:
+        raise HTTPException(400, f"参数回放失败：{e}")
+    res = gen_lesson(lesson_in)
+    if not res.get("ok"):
+        return res
+    new_tid = (res.get("data") or {}).get("task_id")
+    old = db.get_task(tid)
+    if old and new_tid:
+        meta = old.get("meta") or {}
+        meta["review_status"] = f"已换新版（任务 {new_tid}）"
+        db.update_task(tid, meta=meta)
+    return res
+
+
+@app.post("/api/lesson/{tid}/approve")
+def approve_lesson(tid: int) -> dict:
+    """通过审核：把教案与课件导出成文件，存入当前课程资料。"""
+    item = _store_get("lessons", tid)
+    if not item:
+        raise HTTPException(404, "备课包不存在")
+    p = db.get_project(item["project_id"]) or {"name": "课程"}
+    topic = item.get("topic") or "备课包"
+    try:
+        docx_b = edu.export_lesson_docx(item["pkg"], p["name"])
+        pptx_b = edu.export_lesson_pptx(item["pkg"], p["name"])
+    except Exception as e:
+        return err(f"导出失败：{e.__class__.__name__}: {e}", 500)
+    specs = [("docx", f"{topic}_教案.docx", ".docx", "教案", docx_b),
+             ("pptx", f"{topic}_课件.pptx", ".pptx", "课件", pptx_b)]
+    saved = []
+    for _kind, name, ext, category, blob in specs:
+        fid = db.save_file(name=name, ext=ext, kind="lesson", content=blob,
+                           size=len(blob), project_id=item["project_id"],
+                           visibility="both", category=category,
+                           parsed_text=f"由备课包「{topic}」导出")
+        saved.append({"id": fid, "name": name, "size": len(blob)})
+    task = db.get_task(tid)
+    if task:
+        meta = task.get("meta") or {}
+        meta["review_status"] = "已通过"
+        db.update_task(tid, meta=meta)
+    return ok({"task_id": tid, "files": saved})
+
+
+# ---------------------------------------------------------------------------
+# 实训：发布 / 存草稿
+# ---------------------------------------------------------------------------
+class TrainingStatusIn(BaseModel):
+    status: str
+
+
+@app.post("/api/training/{tid}/status")
+def set_training_status(tid: int, body: TrainingStatusIn) -> dict:
+    if body.status not in ("draft", "published"):
+        raise HTTPException(400, "status 仅支持 draft / published")
+    item = _store_get("trainings", tid)
+    if not item:
+        raise HTTPException(404, "实训包不存在")
+    item["pkg"]["status"] = body.status
+    _store_put("trainings", tid, item)
+    task = db.get_task(tid)
+    if task:
+        meta = task.get("meta") or {}
+        meta["pkg"] = item["pkg"]
+        db.update_task(tid, meta=meta)
+    return ok({"task_id": tid, "status": body.status})
+
+
+# ---------------------------------------------------------------------------
+# 数据维护：备份 / 清理临时文件 / 清空全部数据
+# ---------------------------------------------------------------------------
+@app.get("/api/maintenance/backup")
+def export_backup() -> Response:
+    import io as _io
+    import zipfile
+    data_dir = CFG_ROOT / ".data"
+    buf = _io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
+        if db.DB_PATH.exists():
+            z.write(db.DB_PATH, "workbench.db")
+        for sub in ("uploads", "exports"):
+            root = data_dir / sub
+            if not root.exists():
+                continue
+            for f in root.rglob("*"):
+                if f.is_file():
+                    z.write(f, str(f.relative_to(data_dir)).replace("\\", "/"))
+    return _file_resp(buf.getvalue(),
+                      f"workbench_backup_{time.strftime('%Y%m%d_%H%M')}.zip",
+                      "application/zip")
+
+
+@app.post("/api/maintenance/cleanup")
+def cleanup_tmp() -> dict:
+    root = CFG_ROOT / ".data" / "tmp"
+    removed = freed = 0
+    if root.exists():
+        for f in root.rglob("*"):
+            if f.is_file():
+                try:
+                    freed += f.stat().st_size
+                    f.unlink()
+                    removed += 1
+                except OSError:
+                    pass
+    return ok({"removed": removed, "freed": freed})
+
+
+class ResetIn(BaseModel):
+    confirm: str = ""
+
+
+@app.post("/api/maintenance/reset")
+def reset_data(body: ResetIn) -> dict:
+    if body.confirm != "DELETE":
+        raise HTTPException(400, "需要 confirm=DELETE 才能删除全部数据")
+    db.reset_all()
+    removed = 0
+    for sub in ("uploads", "exports", "tmp"):
+        root = CFG_ROOT / ".data" / sub
+        if not root.exists():
+            continue
+        for f in root.rglob("*"):
+            if f.is_file():
+                try:
+                    f.unlink()
+                    removed += 1
+                except OSError:
+                    pass
+    for bucket in STORE:
+        STORE[bucket].clear()
+    return ok({"reset": True, "files_removed": removed})
+
+
+# ---------------------------------------------------------------------------
+# 教学工具：量规模板 / 成绩汇总
+# ---------------------------------------------------------------------------
+@app.get("/api/tools/rubric/export")
+def export_rubric(kind: str = Query("insight")) -> Response:
+    return _file_resp(edu.export_rubric_docx(kind), f"评分量规_{kind}.docx",
+                      "application/vnd.openxmlformats-officedocument.wordprocessingml.document")
+
+
+@app.get("/api/tools/grades/export")
+def export_grades(project_id: Optional[int] = Query(None),
+                  class_name: str = Query("")) -> Response:
+    labels = {"pending": "待复核", "published": "已发布", "returned": "已退回",
+              "manual": "需人工检查"}
+    rows = []
+    for _tid, item in _store_items("reviews", project_id):
+        review = item.get("review") or {}
+        status = item.get("status") or "pending"
+        rows.append({
+            "student": item.get("student") or "未填写",
+            "file": item.get("file_name") or "",
+            "ai_total": review.get("total"),
+            "final_total": item.get("final_total"),
+            "status": status,
+            "status_label": labels.get(status, status),
+            "course": (db.get_project(item.get("project_id")) or {}).get("name") or "",
+        })
+    if not rows:
+        raise HTTPException(400, "暂无评审记录可导出")
+    return _file_resp(edu.export_grades_xlsx(rows, class_name),
+                      f"成绩汇总_{time.strftime('%Y%m%d')}.xlsx",
+                      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
 
 
 if __name__ == "__main__":

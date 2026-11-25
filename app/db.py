@@ -613,3 +613,17 @@ def list_artifacts(kind: str, project_id: Optional[int] = None) -> list[tuple[st
 def delete_artifact(kind: str, ref: Any) -> None:
     with _conn() as c:
         c.execute("DELETE FROM artifacts WHERE kind=? AND ref=?", (kind, str(ref)))
+
+
+def reset_all() -> None:
+    """清空业务数据（项目 / 资料 / 任务 / 产物），保留表结构。"""
+    with _conn() as c:
+        c.execute("DELETE FROM files")
+        c.execute("DELETE FROM tasks")
+        c.execute("DELETE FROM artifacts")
+        c.execute("DELETE FROM projects")
+        try:
+            c.execute("DELETE FROM sqlite_sequence")
+        except sqlite3.OperationalError:
+            pass
+

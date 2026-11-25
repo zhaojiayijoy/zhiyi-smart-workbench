@@ -73,7 +73,18 @@
   var isStudent = document.body.getAttribute("data-mode") === "student";
 
   /* ---------- 全局课程状态（唯一真相源） ---------- */
+  function applyPrefs() {
+    var p = {};
+    try { p = JSON.parse(localStorage.getItem("edu.prefs") || "{}"); } catch (e) {}
+    var root = document.documentElement;
+    if (p.theme === "dark") root.setAttribute("data-theme", "dark");
+    else root.removeAttribute("data-theme");
+    root.style.setProperty("--edu-font", (p.fontSize || 13.5) + "px");
+  }
+  applyPrefs();
+
   window.Edu = window.Edu || {};
+  window.Edu.applyPrefs = applyPrefs;
   Edu.state = {
     live: false,
     selectedCourseId: null,  // 全局唯一课程标识

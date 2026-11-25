@@ -395,8 +395,24 @@
     bindBtn(out, "导出 Word", function () { window.open(API.lesson.exportUrl(taskId, "docx")); });
     bindBtn(out, "导出 PPT", function () { window.open(API.lesson.exportUrl(taskId, "pptx")); });
     bindBtn(out, "导出 Excel", function () { window.open(API.lesson.exportUrl(taskId, "xlsx")); });
-    bindBtn(out, "通过审核并保存", function () { notify("已保存（后端暂无发布端点，本地记录保留）"); });
-    bindBtn(out, "换一版", function () { notify("请修改上方参数后再次生成"); });
+    bindBtn(out, "通过审核并保存", function (e, b) {
+      if (!taskId) { notify("请先生成备课包"); return; }
+      busy(b, true, "保存中…");
+      API.lesson.approve(taskId).then(function (r) {
+        busy(b, false);
+        var names = (r.files || []).map(function (f) { return f.name; }).join("、");
+        notify("已通过审核，已存入课程资料：" + names);
+      }).catch(function (err) { busy(b, false); notify("保存失败：" + (err.message || err)); });
+    });
+    bindBtn(out, "换一版", function (e, b) {
+      if (!taskId) { notify("请先生成备课包"); return; }
+      busy(b, true, "重新生成中…");
+      API.lesson.regenerateAll(taskId).then(function (r) {
+        busy(b, false);
+        renderLesson(r.pkg, r.task_id);
+        notify("已按原参数生成新版备课包");
+      }).catch(function (err) { busy(b, false); notify("重生成失败：" + (err.message || err)); });
+    });
   }
 
   function initLesson() {
@@ -456,9 +472,11 @@
       if (b) { e.preventDefault(); var id = b.getAttribute("data-open-lesson"); API.lesson.get(id).then(function (pkg) { renderLesson(pkg, id); }).catch(function (err) { notify("打开失败：" + (err.message || err)); }); }
     });
     onLive(loadHistory);
+    // 从学情分析跳转过来时（lesson.html?task=123）直接打开对应备课包
+    var qt = new URLSearchParams(location.search).get("task");
+    if (qt) API.lesson.get(qt).then(function (pkg) { renderLesson(pkg, qt); })
+      .catch(function () { notify("未找到指定备课包"); });
   }
-
-  /* ---------------- training ---------------- */
   function renderTraining(pkg, taskId) {
     var out = $("#trainOut"); if (!out) return;
     out.querySelector(".card-h h2").textContent = "任务包：" + (pkg.title || "");
@@ -483,8 +501,20 @@
     out.hidden = false;
     out.scrollIntoView({ behavior: "smooth", block: "start" });
     bindBtn(out, "导出任务说明", function () { window.open(API.training.exportUrl(taskId, "docx")); });
-    bindBtn(out, "发布任务", function () { notify("已发布到学生空间（后端暂无发布端点）"); });
-    bindBtn(out, "保存草稿", function () { notify("已保存为草稿"); });
+    bindBtn(out, "发布任务", function (e, b) {
+      if (!taskId) { notify("请先生成实训任务包"); return; }
+      busy(b, true, "发布中…");
+      API.training.status(taskId, "published")
+        .then(function () { busy(b, false); notify("已发布到学生空间"); document.dispatchEvent(new CustomEvent("edu:training-changed")); })
+        .catch(function (err) { busy(b, false); notify("发布失败：" + (err.message || err)); });
+    });
+    bindBtn(out, "保存草稿", function (e, b) {
+      if (!taskId) { notify("请先生成实训任务包"); return; }
+      busy(b, true, "保存中…");
+      API.training.status(taskId, "draft")
+        .then(function () { busy(b, false); notify("已保存为草稿"); document.dispatchEvent(new CustomEvent("edu:training-changed")); })
+        .catch(function (err) { busy(b, false); notify("保存失败：" + (err.message || err)); });
+    });
   }
   function initTraining() {
     var form = $('form[data-sim="#trainOut"]');
@@ -511,7 +541,8 @@
         if (!tb) return;
         if (!rows.length) { tb.innerHTML = '<tr><td colspan="6" class="mini">暂无实训任务</td></tr>'; return; }
         tb.innerHTML = rows.map(function (r) {
-          return '<tr><td><b>' + h(r.scenario) + '</b></td><td><span class="tag">草稿</span></td><td>100</td><td>—</td><td>' + fmtTime(r.ts) + '</td>' +
+          var tag = r.status === "published" ? '<span class="tag ok">已发布</span>' : '<span class="tag">草稿</span>';
+          return '<tr><td><b>' + h(r.scenario) + '</b></td><td>' + tag + '</td><td>100</td><td>—</td><td>' + fmtTime(r.ts) + '</td>' +
             '<td><button class="btn sm" type="button" data-open-train="' + r.task_id + '">查看</button></td></tr>';
         }).join("");
       }).catch(function () {});
@@ -521,6 +552,7 @@
       if (b) { var id = b.getAttribute("data-open-train"); API.training.get(id).then(function (pkg) { renderTraining(pkg, id); }).catch(function (err) { notify("打开失败：" + (err.message || err)); }); }
     });
     onLive(loadHistory);
+    document.addEventListener("edu:training-changed", loadHistory);
   }
 
   /* ---------------- tutor ---------------- */
@@ -559,6 +591,15 @@
         })
         .catch(function (err) { busy(btn, false); notify("失败：" + (err.message || err)); });
     });
+    var TUTOR_LABEL = { ai: "AI 引导中", teacher: "教师接管", solved: "已解决" };
+    var currentTid = null;
+    function setTutorStatus(status) {
+      if (!currentTid) { notify("请先在左侧选择一条答疑记录"); return; }
+      API.tutor.status(currentTid, status).then(function () {
+        notify("状态已更新为：" + TUTOR_LABEL[status]);
+        loadTutor();
+      }).catch(function (err) { notify("更新失败：" + (err.message || err)); });
+    }
     function syncTutorDetail(item) {
       var title = document.getElementById("tutorDetailTitle");
       var status = document.getElementById("tutorDetailStatus");
@@ -582,23 +623,31 @@
         if (!list) return;
         var cnt = document.getElementById("tutorCount");
         if (cnt) cnt.textContent = threads.length + " 条";
-        var rows = threads.slice(0, 8);
+        var rows = qas.length ? qas.slice(0, 8).map(function (t) {
+          return { tid: t.id, question: t.prompt || (t.meta || {}).question || "(无问题)",
+                   ts: t.created_at, status: (t.meta || {}).status || "ai" };
+        }) : threads.slice(0, 8).map(function (r) {
+          return { tid: null, question: r.question, ts: r.ts, status: "ai" };
+        });
         if (!rows.length) {
           list.innerHTML = '<div class="mini" style="padding:14px 0">暂无答疑记录。学生提问后会出现在这里。</div>';
           var t = document.getElementById("tutorDetailTitle"), s = document.getElementById("tutorDetailStatus"), b = document.getElementById("tutorBubble");
           if (t) t.textContent = "暂无提问";
           if (s) { s.textContent = "—"; s.className = "tag"; }
           if (b) b.textContent = "暂无答疑内容。";
+          currentTid = null;
           return;
         }
         list.innerHTML = rows.map(function (r, i) {
           var q = r.question || "(无问题)";
-          return '<div class="tq' + (i === 0 ? " on" : "") + '" data-name="学生" data-status="AI 引导中" data-q="' + h(q) + '">' +
+          var label = TUTOR_LABEL[r.status] || TUTOR_LABEL.ai;
+          var cls = r.status === "solved" ? "ok" : (r.status === "teacher" ? "warn" : "acc");
+          return '<div class="tq' + (i === 0 ? " on" : "") + '" data-tid="' + (r.tid || "") + '" data-name="学生" data-status="' + label + '" data-q="' + h(q) + '">' +
             '<div class="q">' + h(q) + '</div>' +
-            '<div class="meta"><span>学生</span><span>·</span><span>' + fmtTime(r.ts) + '</span><span class="tag acc">AI 引导中</span></div></div>';
+            '<div class="meta"><span>学生</span><span>·</span><span>' + fmtTime(r.ts) + '</span><span class="tag ' + cls + '">' + label + '</span></div></div>';
         }).join("");
         var first = list.querySelector(".tq");
-        if (first) { first.classList.add("on"); syncTutorDetail(first); }
+        if (first) { first.classList.add("on"); currentTid = first.getAttribute("data-tid"); syncTutorDetail(first); }
       }).catch(function () {});
     }
     // 列表点击切换详情（事件委托，兼容 live 动态渲染与静态演示项）
@@ -608,8 +657,11 @@
       if (!item) return;
       $all(".tq", listHost).forEach(function (o) { o.classList.remove("on"); });
       item.classList.add("on");
+      currentTid = item.getAttribute("data-tid") || null;
       syncTutorDetail(item);
     });
+    bindBtn(document, "标记已解决", function () { setTutorStatus("solved"); });
+    bindBtn(document, "转教师接管", function () { setTutorStatus("teacher"); });
     onLive(loadTutor);
   }
 
@@ -646,16 +698,56 @@
         notify("请选择学生提交文件或粘贴正文");
       }
     });
+    var currentReviewId = null;
+    var currentDims = [];
     var finalForm = $('form[data-sim="#finalOut"]');
     if (finalForm) finalForm.addEventListener("submit", function (e) {
       if (!Edu.isLive()) return;
       e.preventDefault(); e.stopImmediatePropagation();
-      var out = $("#finalOut"); if (out) { out.hidden = false; out.textContent = "教师终评已记录（后端暂无终评发布端点，结果保留在当前会话）。"; }
-      notify("终评已保存");
+      if (!currentReviewId) { notify("请先生成一条评审记录"); return; }
+      var btn = finalForm.querySelector('[type="submit"]');
+      var scores = {};
+      $all('input[type="number"]', finalForm).forEach(function (el, i) {
+        var d = currentDims[i];
+        var v = parseFloat(el.value);
+        if (d && !isNaN(v)) scores[d.name || d.dimension || ("维度" + (i + 1))] = v;
+      });
+      var ta = $all("textarea", finalForm)[0];
+      busy(btn, true, "保存中…");
+      API.review.patch(currentReviewId, {
+        scores: Object.keys(scores).length ? scores : null,
+        comment: ta ? ta.value : "", status: "published"
+      }).then(function (r) {
+        busy(btn, false);
+        var out = $("#finalOut");
+        if (out) {
+          out.hidden = false;
+          out.textContent = "教师终评已保存并发布" +
+            (r && r.final_total != null ? "，总分 " + r.final_total : "") + "。";
+        }
+        notify("终评已保存");
+        loadHistory();
+      }).catch(function (err) { busy(btn, false); notify("保存失败：" + (err.message || err)); });
     });
+
+    function reviewAction(status) {
+      if (!currentReviewId) { notify("请先在列表中选择一条评审记录"); return; }
+      var ff = $('form[data-sim="#finalOut"]');
+      var ta = ff ? $all("textarea", ff)[0] : null;
+      API.review.patch(currentReviewId, {
+        status: status, reason: ta ? ta.value : ""
+      }).then(function () {
+        notify(status === "returned" ? "已退回学生修改" : "已标记为需人工检查");
+        loadHistory();
+      }).catch(function (err) { notify("操作失败：" + (err.message || err)); });
+    }
+    bindBtn(document, "退回修改", function () { reviewAction("returned"); });
+    bindBtn(document, "需要人工检查", function () { reviewAction("manual"); });
 
     function renderReview(review, taskId, student, name) {
       var dims = review.dimensions || [];
+      currentReviewId = taskId || currentReviewId;
+      currentDims = dims;
       var tb = document.querySelectorAll("table tbody")[1]; // 分维度评分证据表
       if (tb) {
         tb.innerHTML = dims.map(function (d) {
@@ -716,6 +808,7 @@
         if (sc) sc.textContent = rows.length + " 份";
         var vw = document.getElementById("reviewViewing");
         if (vw) vw.textContent = rows[0] ? ((rows[0].student || "学生") + " · " + (rows[0].file_name || "")) : "暂无";
+        if (!currentReviewId && rows[0]) currentReviewId = rows[0].task_id;
         // 无选中记录时清掉写死的假证据与终评预填
         resetReviewEvidence();
       }).catch(function () {});
@@ -732,6 +825,32 @@
     }
     var nextBtn = $all('a.btn[href="lesson.html"]').filter(function (a) { return a.textContent.indexOf("备课") > -1; })[0];
     bindBtn(document, "导出报告", function () { var p = pid(); if (p) window.open(API.analytics.exportUrl(p)); });
+
+    var lastAgg = null;
+    function genReviewLesson(withPpt) {
+      var p = pid();
+      if (!p) { notify("请先选择课程"); return; }
+      var weak = (lastAgg && lastAgg.top_knowledge || []).slice(0, 2).map(function (x) { return x[0]; });
+      var topic = "讲评课：" + (weak.length ? weak.join("、") : "阶段学情讲评");
+      notify("正在生成讲评课…");
+      API.lesson.generate({ project_id: Number(p), topic: topic, lesson_type: "讲评课", hours: "1 课时" })
+        .then(function (res) {
+          notify("讲评课已生成");
+          if (withPpt) window.open(API.lesson.exportUrl(res.task_id, "pptx"));
+          else location.href = "lesson.html?task=" + res.task_id;
+        })
+        .catch(function (err) { notify("生成失败：" + (err.message || err)); });
+    }
+    bindBtn(document, "重新分析", function () { loadAggregate(); });
+    $all('button[data-demo]').forEach(function (b) {
+      if (b.textContent.indexOf("重新加载") > -1 && !b.getAttribute("data-live-bound")) {
+        b.setAttribute("data-live-bound", "1");
+        b.addEventListener("click", function (e) { e.preventDefault(); e.stopImmediatePropagation(); loadAggregate(); });
+      }
+    });
+    if (nextBtn) nextBtn.addEventListener("click", function (e) { e.preventDefault(); e.stopImmediatePropagation(); loadNext(lastAgg); });
+    bindBtn(document, "生成讲评课 PPT", function () { genReviewLesson(true); });
+    bindBtn(document, "生成讲评课", function () { genReviewLesson(false); });
 
     function clearAnalyticsDemo() {
       // 以下块没有对应后端接口，Live 下统一清成诚实空状态，避免展示写死的演示数据
@@ -768,6 +887,7 @@
       busy(applyBtn, true, "分析中…");
       API.analytics.aggregate({ project_id: Number(p) }).then(function (a) {
         busy(applyBtn, false);
+        lastAgg = a;
         setKpis(document, [
           { value: a.qa_count, foot: "覆盖 " + (a.student_answered || 0) + " 名学生" },
           { value: a.review_count, foot: "已评审" },
@@ -928,6 +1048,26 @@
       }).catch(function () {});
     }
     onLive(loadFiles);
+    // 页头「上传资料」按钮：直接选文件上传（默认师生可见、分类「资料」）
+    var topUp = $all("button").filter(function (b) { return b.textContent.indexOf("上传资料") > -1 && !b.closest("form"); })[0];
+    if (topUp) topUp.addEventListener("click", function (e) {
+      if (!Edu.isLive()) return;
+      e.preventDefault(); e.stopImmediatePropagation();
+      var p = pid(); if (!p) { notify("请先选择课程"); return; }
+      var input = document.createElement("input");
+      input.type = "file"; input.multiple = true;
+      input.accept = ".pdf,.docx,.doc,.pptx,.ppt,.md,.txt,.csv,.xlsx,.xls,.png,.jpg,.jpeg";
+      input.onchange = function () {
+        var files = Array.prototype.slice.call(input.files || []);
+        if (!files.length) return;
+        notify("上传解析中…");
+        var chain = Promise.resolve();
+        files.forEach(function (f) { chain = chain.then(function () { return API.files.upload({ projectId: Number(p), category: "资料", visibility: "both", file: f }); }); });
+        chain.then(function () { notify("已加入 " + files.length + " 个文件"); loadFiles(); })
+          .catch(function (err) { notify("上传失败：" + (err.message || err)); });
+      };
+      input.click();
+    });
   }
 
   /* ---------------- tasks ---------------- */
@@ -994,6 +1134,9 @@
       if (!Edu.isLive()) return;
       var b = e.target.closest("button"); if (!b) return;
       var txt = b.textContent || "";
+      if (b.id === "cfg_save") {
+        e.preventDefault(); e.stopImmediatePropagation(); saveModelSettings(b); return;
+      }
       if (txt.indexOf("测试连接") > -1) {
         e.preventDefault(); e.stopImmediatePropagation(); busy(b, true, "连接中…");
         API.health().then(function (h) { busy(b, false); notify("连接成功：" + (h.model || "默认模型") + (h.llm_configured ? "" : "（未配置密钥）")); }).catch(function (err) { busy(b, false); notify("连接失败：" + (err.message || err)); });
@@ -1015,6 +1158,85 @@
       busy(btn, true, "保存中…");
       API.settings.save(body).then(function (r) { busy(btn, false); notify("已保存并热生效：" + (r.updated || []).join("、")); }).catch(function (err) { busy(btn, false); notify("保存失败：" + (err.message || err)); });
     }
+
+    // ---------------- 外观（本机持久化） ----------------
+    function prefs() { try { return JSON.parse(localStorage.getItem("edu.prefs") || "{}"); } catch (e) { return {}; } }
+    function savePrefs(p) { try { localStorage.setItem("edu.prefs", JSON.stringify(p)); } catch (e) {} }
+    var lookSave = document.getElementById("lookSave");
+    if (lookSave) lookSave.addEventListener("click", function (e) {
+      if (!Edu.isLive()) return;
+      e.preventDefault(); e.stopImmediatePropagation();
+      var dark = document.getElementById("lookDark");
+      var font = document.getElementById("lookFont");
+      var sidebar = document.getElementById("lookSidebar");
+      var p = prefs();
+      p.theme = dark && dark.checked ? "dark" : "light";
+      p.fontSize = font && font.value.indexOf("紧凑") > -1 ? 12.5 : (font && font.value.indexOf("宽松") > -1 ? 14.5 : 13.5);
+      p.sidebar = sidebar ? sidebar.value : "展开";
+      savePrefs(p);
+      if (window.Edu && Edu.applyPrefs) Edu.applyPrefs();
+      notify("外观已保存并生效");
+    });
+    onLive(function () {
+      var p = prefs();
+      var ld = document.getElementById("lookDark"), ll = document.getElementById("lookLight");
+      if (p.theme === "dark" && ld) { ld.checked = true; if (ll) ll.checked = false; }
+      var lf = document.getElementById("lookFont");
+      if (lf && p.fontSize) lf.value = p.fontSize === 12.5 ? "紧凑（12.5px）" : (p.fontSize === 14.5 ? "宽松（14.5px）" : "标准（13.5px）");
+    });
+    var ll2 = document.getElementById("lookLight"), ld2 = document.getElementById("lookDark");
+    if (ll2 && ld2) {
+      ll2.addEventListener("change", function () { if (ll2.checked) ld2.checked = false; });
+      ld2.addEventListener("change", function () { if (ld2.checked) ll2.checked = false; });
+    }
+
+    // ---------------- 数据与隐私 ----------------
+    var backupBtn = document.getElementById("backupBtn");
+    if (backupBtn) backupBtn.addEventListener("click", function (e) {
+      if (!Edu.isLive()) return;
+      e.preventDefault(); e.stopImmediatePropagation();
+      window.open(API.maintenance.backupUrl());
+      notify("正在打包下载备份");
+    });
+    var cleanBtn = document.getElementById("cleanBtn");
+    if (cleanBtn) cleanBtn.addEventListener("click", function (e) {
+      if (!Edu.isLive()) return;
+      e.preventDefault(); e.stopImmediatePropagation();
+      busy(cleanBtn, true, "清理中…");
+      API.maintenance.cleanup().then(function (r) {
+        busy(cleanBtn, false);
+        notify("已清理 " + r.removed + " 个临时文件，释放 " + fmtSize(r.freed));
+      }).catch(function (err) { busy(cleanBtn, false); notify("清理失败：" + (err.message || err)); });
+    });
+    var resetBtn = document.getElementById("resetBtn");
+    if (resetBtn) resetBtn.addEventListener("click", function (e) {
+      if (!Edu.isLive()) return;
+      e.preventDefault(); e.stopImmediatePropagation();
+      if (!confirm("将删除全部课程、资料、任务与导出文件，且无法恢复。确定继续？")) return;
+      busy(resetBtn, true, "删除中…");
+      API.maintenance.reset().then(function () {
+        busy(resetBtn, false);
+        notify("已清空全部数据");
+        setTimeout(function () { location.reload(); }, 800);
+      }).catch(function (err) { busy(resetBtn, false); notify("删除失败：" + (err.message || err)); });
+    });
+
+    // ---------------- 高级设置（仅本机保存） ----------------
+    var advSave = document.getElementById("advSave");
+    if (advSave) advSave.addEventListener("click", function (e) {
+      if (!Edu.isLive()) return;
+      e.preventDefault(); e.stopImmediatePropagation();
+      var p = prefs();
+      p.advanced = {
+        concurrency: (document.getElementById("advConcurrency") || {}).value,
+        maxMB: (document.getElementById("advMaxMB") || {}).value,
+        log: (document.getElementById("advLog") || {}).value,
+        dual: !!(document.getElementById("advDual") || {}).checked,
+        format: (document.getElementById("advFormat") || {}).value
+      };
+      savePrefs(p);
+      notify("高级设置已保存到本机");
+    });
   }
 
   /* ---------------- student ---------------- */
@@ -1128,11 +1350,37 @@
   /* ---------------- tools ---------------- */
   function initTools() {
     bindBtn(document, "查看学情分析", function () { location.href = "analytics.html"; });
-    // 其余导出按钮在 live 模式下无对应后端端点，保留演示提示（site.js 已在非 live 弹 toast；live 下静默，补一个轻提示）
+    bindBtn(document, "导出模板", function () { window.open(API.tools.rubricUrl("insight")); });
+    bindBtn(document, "导出 Excel", function () {
+      var p = pid();
+      var c = (typeof Edu.getSelectedCourse === "function") ? Edu.getSelectedCourse() : null;
+      window.open(API.tools.gradesUrl(p, c && (c.class_name || "")));
+    });
+    bindBtn(document, "分组", function (e, b) {
+      var c = (typeof Edu.getSelectedCourse === "function") ? Edu.getSelectedCourse() : null;
+      var n = Number((c && (c.class_size || c.classSize)) || 30);
+      n = Math.max(2, Math.min(80, n));
+      var size = 5, groups = Math.ceil(n / size), parts = [];
+      for (var i = 0; i < groups; i++) {
+        var a = i * size + 1, z = Math.min((i + 1) * size, n);
+        parts.push("第" + (i + 1) + "组 " + a + (z > a ? "-" + z : "") + " 号");
+      }
+      var rule = b.closest(".rule");
+      var res = rule && rule.querySelector(".groupRes");
+      if (rule && !res) {
+        res = document.createElement("div");
+        res.className = "mini groupRes";
+        res.style.marginTop = "6px";
+        rule.appendChild(res);
+      }
+      if (res) res.textContent = "共 " + n + " 人，分 " + groups + " 组（每组约 " + size + " 人）：" + parts.join("；");
+      notify("已按班级人数 " + n + " 分组");
+    });
+    // 其余按钮在 live 模式下仍无对应后端端点，保留轻提示
     document.addEventListener("click", function (e) {
       if (!Edu.isLive()) return;
       var b = e.target.closest("[data-demo]"); if (!b) return;
-      notify("演示功能：后端暂未提供该批量导出端点");
+      notify("该功能暂未接入后端");
     });
   }
 
