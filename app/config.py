@@ -56,3 +56,24 @@ PROJECT_DIR.mkdir(parents=True, exist_ok=True)
 # 未归属项目时的默认输出目录
 EXPORT_DIR = (ROOT / ".data" / "exports").resolve()
 EXPORT_DIR.mkdir(parents=True, exist_ok=True)
+
+# ---------------------------------------------------------------------------
+# 教案 PPT 导出：母版模板与配图
+# ---------------------------------------------------------------------------
+# 母版模板：把 .potx / .pptx 放在 assets/templates/ 下，并通过 PPT_TEMPLATE_PATH 指定；
+# 文件不存在或打开失败时自动退回程序化母版（不依赖 python-pptx 默认模板）。
+PPT_TEMPLATE_DIR = (ROOT / "assets" / "templates").resolve()
+PPT_TEMPLATE_DIR.mkdir(parents=True, exist_ok=True)
+PPT_TEMPLATE_PATH = Path(os.getenv("PPT_TEMPLATE_PATH", "assets/templates/default.potx"))
+if not PPT_TEMPLATE_PATH.is_absolute():
+    PPT_TEMPLATE_PATH = (ROOT / PPT_TEMPLATE_PATH).resolve()
+
+# 课件配图：走智谱 /images/generations，可整体关闭；无密钥或失败时退化为形状图示
+PPT_IMAGE_ENABLE = _bool("PPT_IMAGE_ENABLE", True)
+PPT_IMAGE_MAX = int(os.getenv("PPT_IMAGE_MAX", "3"))
+PPT_IMAGE_MAX_WAIT = int(os.getenv("PPT_IMAGE_MAX_WAIT", "45"))
+PPT_IMAGE_BUDGET = int(os.getenv("PPT_IMAGE_BUDGET", "90"))
+PPT_IMAGE_MODEL = os.getenv("PPT_IMAGE_MODEL", os.getenv("ZHIPU_IMAGE_MODEL", "glm-image"))
+PPT_IMAGE_SIZE = os.getenv("PPT_IMAGE_SIZE", "1024x1024")
+PPT_IMAGE_CACHE_DIR = (ROOT / ".data" / "image_cache").resolve()
+PPT_IMAGE_CACHE_DIR.mkdir(parents=True, exist_ok=True)

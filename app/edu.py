@@ -7,6 +7,7 @@
 """
 from __future__ import annotations
 
+import hashlib
 import io
 import json
 import os
@@ -17,7 +18,9 @@ from pathlib import Path
 from typing import Any
 
 from app import db
-from app.config import ROOT, ZHIPU_API_KEY
+from app.config import (ROOT, ZHIPU_API_KEY, PPT_TEMPLATE_PATH, PPT_IMAGE_ENABLE,
+                        PPT_IMAGE_MAX, PPT_IMAGE_MAX_WAIT, PPT_IMAGE_BUDGET,
+                        PPT_IMAGE_MODEL, PPT_IMAGE_SIZE, PPT_IMAGE_CACHE_DIR)
 
 TMP_DIR = (ROOT / ".data" / "tmp").resolve()
 TMP_DIR.mkdir(parents=True, exist_ok=True)
@@ -78,6 +81,49 @@ def _as_list(value: Any) -> list:
 
 def _as_dict(value: Any) -> dict:
     return value if isinstance(value, dict) else {}
+
+
+def _ppt_image_bytes(prompt: str, max_wait: int = 45) -> tuple[bytes | None, str]:
+    """按提示词取配图字节：优先本地缓存，否则调用智谱生图并下载。
+
+    返回 (bytes, 来源)；来源为 cached / generated / failed / skipped。
+    任何异常都吞掉，保证导出流程不因配图失败而中断。
+    """
+    prompt = (prompt or "").strip()
+    if not prompt:
+        return None, "skipped"
+    key = hashlib.sha1(
+        f"{prompt}|{PPT_IMAGE_MODEL}|{PPT_IMAGE_SIZE}".encode("utf-8")).hexdigest()
+    cache = Path(PPT_IMAGE_CACHE_DIR) / f"{key}.png"
+    try:
+        if cache.exists() and cache.stat().st_size > 1024:
+            return cache.read_bytes(), "cached"
+    except Exception:
+        pass
+    if not ZHIPU_API_KEY:
+        return None, "skipped"
+    try:
+        from app import zhipu_media
+        res = zhipu_media.generate_image(
+            prompt, model=PPT_IMAGE_MODEL, size=PPT_IMAGE_SIZE,
+            poll=True, max_wait=max(10, int(max_wait)))
+        urls = res.get("images") or res.get("urls") or []
+        if not urls:
+            return None, "failed"
+        first = urls[0]
+        url = first.get("url") if isinstance(first, dict) else first
+        if not url:
+            return None, "failed"
+        import requests
+        r = requests.get(url, timeout=30)
+        if r.status_code != 200 or len(r.content) < 1024:
+            return None, "failed"
+        tmp = cache.with_suffix(".part")
+        tmp.write_bytes(r.content)
+        tmp.replace(cache)
+        return r.content, "generated"
+    except Exception:
+        return None, "failed"
 
 
 # ---------------------------------------------------------------------------
@@ -770,10 +816,24 @@ def export_lesson_pptx(pkg: dict[str, Any], course: str) -> bytes:
     C_SOFT = RGBColor(0xD6, 0xE4, 0xF0)
     C_BOARD = RGBColor(0x1E, 0x3A, 0x34)
 
-    prs = Presentation()
+    # ---- 母版：优先加载项目内模板，失败则用程序化母版 ----
+    used_template = False
+    template_used = ""
+    prs = None
+    try:
+        if PPT_TEMPLATE_PATH and Path(PPT_TEMPLATE_PATH).exists():
+            prs = Presentation(str(PPT_TEMPLATE_PATH))
+            used_template = True
+            template_used = str(PPT_TEMPLATE_PATH)
+    except Exception:
+        prs = None
+        used_template = False
+    if prs is None:
+        prs = Presentation()
     prs.slide_width = W
     prs.slide_height = H
-    blank = prs.slide_layouts[6]
+    blank = (prs.slide_layouts[6] if len(prs.slide_layouts) > 6
+             else prs.slide_layouts[len(prs.slide_layouts) - 1])
     page = {"n": 0}
 
     def set_font(run, size, bold=False, color=C_TEXT, name=FONT):
@@ -841,7 +901,7 @@ def export_lesson_pptx(pkg: dict[str, Any], course: str) -> bytes:
         tree.insert(2, sp._element)
 
     def header(slide, title, kicker=None):
-        rect(slide, 0, 0, W / EMU, 0.12, fill=C_PRIMARY)
+        # 顶部主色条由母版统一绘制；这里只排版标题区
         if kicker:
             text(slide, 0.62, 0.42, 10.5, 0.3, kicker, 11, True, C_ACCENT)
         text(slide, 0.62, 0.7 if kicker else 0.52, 11.6, 0.8, title, 25, True, C_PRIMARY)
@@ -849,6 +909,9 @@ def export_lesson_pptx(pkg: dict[str, Any], course: str) -> bytes:
 
     def footer(slide, light=False):
         page["n"] += 1
+        # 程序化母版已提供页脚与可自动更新的页码域，幻灯片内不再重复绘制
+        if not used_template:
+            return
         if not light:
             rect(slide, 0, H / EMU - 0.05, W / EMU, 0.05, fill=C_PRIMARY)
         color = C_SOFT if light else C_MUTED
@@ -856,6 +919,74 @@ def export_lesson_pptx(pkg: dict[str, Any], course: str) -> bytes:
              f"致壹智能教育工作台 · {course}", 9, False, color)
         text(slide, 12.0, H / EMU - 0.55, 0.8, 0.3, f"{page['n']:02d}", 9, False,
              color, PP_ALIGN.RIGHT)
+
+    def build_master():
+        """无模板时构建统一母版：主题色、顶栏、页脚、可自动更新的页码域。
+
+        python-pptx 不提供 MasterShapes.add_shape，这里先在临时页绘制，
+        再把图形 XML 迁移到母版并删除临时页。
+        """
+        master = prs.slide_master
+        # 主题色：覆盖默认主题的强调色与深/浅色，保证母版与页面同一套配色
+        try:
+            from pptx.opc.constants import RELATIONSHIP_TYPE as RT
+            theme = master.part.part_related_by(RT.THEME)
+            xml = theme.blob.decode("utf-8")
+            mapping = {"accent1": "1F4E79", "accent2": "E69A2C",
+                       "dk2": "222B38", "lt2": "F4F7FB"}
+            for tag, val in mapping.items():
+                xml = re.sub(rf"(<a:{tag}>)(.*?)(</a:{tag}>)",
+                             rf'\1<a:srgbClr val="{val}"/>\3', xml, count=1, flags=re.S)
+            theme._blob = xml.encode("utf-8")
+        except Exception:
+            pass
+        staging = prs.slides.add_slide(blank)
+        shapes = [
+            rect(staging, 0, 0, W / EMU, H / EMU, fill=C_LIGHT),      # 背景
+            rect(staging, 0, 0, W / EMU, 0.12, fill=C_PRIMARY),       # 顶栏
+            rect(staging, 0, H / EMU - 0.05, W / EMU, 0.05, fill=C_PRIMARY),
+            text(staging, 0.62, H / EMU - 0.55, 9.5, 0.3,
+                 f"致壹智能教育工作台 · {course}", 9, False, C_MUTED),
+        ]
+        # 页码域：PowerPoint / WPS 打开时自动显示当前页号
+        box = staging.shapes.add_textbox(Inches(12.0), Inches(H / EMU - 0.55),
+                                         Inches(0.8), Inches(0.3))
+        tf = box.text_frame
+        tf.margin_left = 0
+        tf.margin_right = 0
+        tf.margin_top = 0
+        tf.margin_bottom = 0
+        p = tf.paragraphs[0]
+        p.alignment = PP_ALIGN.RIGHT
+        fld = p._p.makeelement(qn("a:fld"), {
+            "id": "{B4C3D2E1-0000-4000-8000-000000000001}", "type": "slidenum"})
+        rpr = etree.SubElement(fld, qn("a:rPr"))
+        rpr.set("lang", "zh-CN")
+        rpr.set("sz", "900")
+        solid = etree.SubElement(rpr, qn("a:solidFill"))
+        etree.SubElement(solid, qn("a:srgbClr")).set("val", "6B7280")
+        etree.SubElement(fld, qn("a:t")).text = "1"
+        p._p.append(fld)
+        shapes.append(box)
+        # 把图形迁移到母版，并重新编号避免 id 冲突
+        tree = master.shapes._spTree
+        for i, sh in enumerate(shapes):
+            el = sh._element
+            el.getparent().remove(el)
+            tree.append(el)
+            cnv = el.find(".//" + qn("p:cNvPr"))
+            if cnv is not None:
+                cnv.set("id", str(800 + i))
+                cnv.set("name", f"Master decor {i + 1}")
+        # 删除临时页及其关系
+        sld_ids = prs.slides._sldIdLst
+        last = list(sld_ids)[-1]
+        rid = getattr(last, "rId", None) or last.get(qn("r:id"))
+        prs.part.drop_rel(rid)
+        sld_ids.remove(last)
+
+    if not used_template:
+        build_master()
 
     def as_list(value) -> list:
         return _as_list(value)
@@ -912,9 +1043,17 @@ def export_lesson_pptx(pkg: dict[str, Any], course: str) -> bytes:
         shape = slide.shapes.add_table(len(rows) + 1, ncol, Inches(l), Inches(t),
                                        Inches(w), Inches(height))
         tbl = shape.table
-        if col_w:
-            for j, cw in enumerate(col_w[:ncol]):
-                tbl.columns[j].width = Inches(cw)
+        if not col_w:
+            # 列宽自适应：按表头与各列最长内容分配，长文本列更宽
+            weights = []
+            for j in range(ncol):
+                longest = max([len(headers[j])] +
+                              [len(r[j]) if j < len(r) else 0 for r in rows])
+                weights.append(max(3, min(longest, 24)))
+            total = float(sum(weights)) or 1.0
+            col_w = [max(0.8, w * x / total) for x in weights]
+        for j, cw in enumerate(col_w[:ncol]):
+            tbl.columns[j].width = Inches(cw)
         for j, head in enumerate(headers):
             cell = tbl.cell(0, j)
             cell.text = ""
@@ -1022,21 +1161,93 @@ def export_lesson_pptx(pkg: dict[str, Any], course: str) -> bytes:
             s.notes_slide.notes_text_frame.text = notes
         footer(s)
 
+    img_map: dict[int, bytes] = {}
+    img_stats = {"enabled": bool(PPT_IMAGE_ENABLE), "requested": 0, "generated": 0,
+                 "cached": 0, "failed": 0, "skipped": 0, "budget_s": PPT_IMAGE_BUDGET}
+
+    def prepare_images(slide_list):
+        """为内容页按 visual.prompt / kind 自动配图；任何失败都不影响导出。"""
+        if not PPT_IMAGE_ENABLE:
+            img_stats["disabled"] = True
+            return
+        if not ZHIPU_API_KEY:
+            img_stats["skipped_no_key"] = True
+            return
+        try:
+            deadline = time.time() + PPT_IMAGE_BUDGET
+            for sd in slide_list:
+                if not isinstance(sd, dict):
+                    continue
+                if len(img_map) >= PPT_IMAGE_MAX or time.time() >= deadline:
+                    break
+                kind = str(sd.get("kind") or "")
+                vis = as_dict(sd.get("visual"))
+                prompt = str(vis.get("prompt") or "").strip()
+                if not prompt:
+                    if kind not in ("example", "concept", "knowledge"):
+                        continue
+                    prompt = (f"教学示意图，主题：{sd.get('title') or course}，"
+                              "扁平简洁插画风格，画面中不要出现文字")
+                img_stats["requested"] += 1
+                remain = max(10, int(deadline - time.time()))
+                data, src = _ppt_image_bytes(prompt,
+                                             max_wait=min(PPT_IMAGE_MAX_WAIT, remain))
+                if data:
+                    img_map[id(sd)] = data
+                    img_stats[src] = img_stats.get(src, 0) + 1
+                else:
+                    img_stats["failed" if src == "failed" else "skipped"] += 1
+        except Exception:
+            img_stats["error"] = True
+
+    def picture_box(slide, l, t, w, h, data, caption=""):
+        try:
+            pic = slide.shapes.add_picture(io.BytesIO(data), Inches(l), Inches(t))
+            nw, nh = pic.image.size
+            ratio = (nw / nh) if nh else 1.0
+            ww, hh = w, w / ratio
+            if hh > h:
+                hh, ww = h, h * ratio
+            pic.width = Inches(ww)
+            pic.height = Inches(hh)
+            pic.left = Inches(l + (w - ww) / 2)
+            pic.top = Inches(t + (h - hh) / 2)
+            try:
+                pic.line.color.rgb = C_LINE
+                pic.line.width = Pt(1)
+            except Exception:
+                pass
+            if caption:
+                text(slide, l, t + h - 0.02, w, 0.3, caption, 8, False, C_MUTED,
+                     PP_ALIGN.RIGHT)
+            return True
+        except Exception:
+            return False
+
     def page_content(slide_data, label):
         s = prs.slides.add_slide(blank)
         header(s, str(slide_data.get("title") or label), label)
         items = as_list(slide_data.get("bullets"))
         tb = as_dict(slide_data.get("table"))
         vis = as_dict(slide_data.get("visual"))
+        img = img_map.get(id(slide_data))
         has_tbl = bool(tb.get("rows"))
-        has_vis = str(vis.get("type") or "none") != "none" and bool(vis.get("prompt"))
+        has_vis = bool(img) or (str(vis.get("type") or "none") != "none"
+                                and bool(vis.get("prompt")))
         left_w = 7.3 if (has_tbl or has_vis) else 11.6
         bullets(s, 0.62, 1.9, left_w, 3.5, items, size=19)
         if has_tbl:
-            table(s, 8.25, 1.92, 4.45, tb.get("headers") or [], tb.get("rows") or [],
-                  size=10, row_h=0.4)
+            rows = tb.get("rows") or []
+            table(s, 8.25, 1.92, 4.45, tb.get("headers") or [], rows,
+                  size=10, row_h=0.34)
+            if img:
+                ty = 1.92 + 0.34 * (len(as_list(rows)) + 1) + 0.12
+                ih = 5.95 - ty
+                if ih >= 1.1:
+                    picture_box(s, 8.25, ty, 4.45, ih, img)
         elif has_vis:
-            visual_box(s, 8.25, 1.9, 4.45, 3.5, vis)
+            if not (img and picture_box(s, 8.25, 1.9, 4.45, 3.5, img, "AI 配图")):
+                visual_box(s, 8.25, 1.9, 4.45, 3.5, vis)
         if slide_data.get("key_takeaway"):
             callout(s, "结论｜" + str(slide_data["key_takeaway"]))
         if slide_data.get("notes"):
@@ -1195,12 +1406,13 @@ def export_lesson_pptx(pkg: dict[str, Any], course: str) -> bytes:
             page_activity(row, matched, i + 1,
                           act_slides[i] if i < len(act_slides) else None)
 
-    handled = {"cover", "objectives", "agenda", "quiz", "homework", "summary", "board"}
+    handled = {"cover", "objectives", "agenda", "activity", "quiz", "homework",
+               "summary", "board"}
+    content_slides = [sd for sd in slides if str(sd.get("kind") or "concept") not in handled]
+    prepare_images(content_slides)
     takeaways = []
-    for sd in slides:
+    for sd in content_slides:
         kind = str(sd.get("kind") or "concept")
-        if kind in handled:
-            continue
         if sd.get("key_takeaway"):
             takeaways.append(str(sd["key_takeaway"]))
         page_content(sd, "案例分析" if kind == "example" else "知识讲解")
@@ -1239,6 +1451,13 @@ def export_lesson_pptx(pkg: dict[str, Any], course: str) -> bytes:
 
     buf = io.BytesIO()
     prs.save(buf)
+    try:
+        meta_out = pkg.setdefault("meta", {})
+        meta_out["ppt_master"] = {"template": template_used or str(PPT_TEMPLATE_PATH),
+                                  "used_template": used_template}
+        meta_out["ppt_image_stats"] = img_stats
+    except Exception:
+        pass
     return buf.getvalue()
 
 
