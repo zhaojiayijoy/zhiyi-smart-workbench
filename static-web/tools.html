@@ -19,6 +19,25 @@
       </div>
 
       <div class="card" style="margin-bottom:14px">
+        <div class="card-h"><h2>智能体对话</h2><div class="right"><span class="tag" id="agentState">—</span></div></div>
+        <div class="card-b">
+          <div class="grid g2" style="gap:12px">
+            <div class="field"><label>智能体</label><select id="agentPick"></select></div>
+            <div class="field" id="agentExtra"></div>
+          </div>
+          <div class="chat" id="agentChat" style="max-height:380px;overflow:auto">
+            <div class="msg ai"><div class="who">AI</div><div class="bubble">选择智能体后输入内容开始对话；多轮消息会按顺序带上文，切换智能体会清空上下文。</div></div>
+          </div>
+          <form class="composer" id="agentForm" style="margin-top:10px">
+            <textarea rows="2" placeholder="输入内容，Enter 发送，Shift+Enter 换行"></textarea>
+            <button class="btn primary" type="submit">发送</button>
+            <button class="btn ghost" type="button" id="agentClear">清空</button>
+          </form>
+          <div class="mini" id="agentNote" style="margin-top:6px">正在读取本地接口…</div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-bottom:14px">
         <div class="card-h"><h2>资源与任务</h2></div>
         <div class="card-b">
           <div class="quick">
@@ -84,7 +103,7 @@
 <div class="toast"></div>
 <script src="assets/js/data.js?v=1795420906"></script>
 <script src="assets/js/site.js?v=1795490000"></script>
-<script src="assets/js/api.js?v=1795420906"></script>
+<script src="assets/js/api.js?v=1795494000"></script>
 <script src="assets/js/live.js?v=1795490000"></script>
 <script>
 (function(){
@@ -108,6 +127,151 @@
       if(left <= 0){ clearInterval(t); t = null; btn.textContent = '开始'; out.textContent = '时间到'; }
     }, 1000);
   });
+})();
+</script>
+<script>
+/* 智能体对话：调用本地 /api/agent/chat（智谱 POST /v1/agents） */
+(function(){
+  var API = window.EduAPI;
+  var pick = document.getElementById('agentPick');
+  var extra = document.getElementById('agentExtra');
+  var chat = document.getElementById('agentChat');
+  var form = document.getElementById('agentForm');
+  var note = document.getElementById('agentNote');
+  var state = document.getElementById('agentState');
+  var clearBtn = document.getElementById('agentClear');
+  if (!pick || !form || !chat) return;
+
+  var FALLBACK_AGENTS = [
+    { id:'intelligent_education_solve_agent', name:'智能教育解题', custom:[] },
+    { id:'general_translation', name:'通用翻译', custom:['source_lang','target_lang'] },
+    { id:'slides_glm_agent', name:'幻灯片生成', custom:[] },
+    { id:'ai_drawing_agent', name:'AI 绘画', custom:[] },
+    { id:'receipt_recognition_agent', name:'票据识别', custom:[] },
+    { id:'clothes_recognition_agent', name:'服饰识别', custom:[] },
+    { id:'vidu_template_agent', name:'视频模板', custom:[] }
+  ];
+  var FALLBACK_LANGS = ['auto','zh-CN','zh-TW','en','en-US','ja','ko','fr','de','es','ru'];
+  var LANG_LABEL = { auto:'自动识别' };
+
+  var agents = FALLBACK_AGENTS, langs = FALLBACK_LANGS, history = [], busy = false;
+
+  function h(s){
+    var d = document.createElement('div');
+    d.textContent = s == null ? '' : String(s);
+    return d.innerHTML;
+  }
+  function lines(s){ return h(s).replace(/\n/g, '<br>'); }
+  function agentById(id){
+    for (var i = 0; i < agents.length; i++) if (agents[i].id === id) return agents[i];
+    return null;
+  }
+  function langLabel(v){ return LANG_LABEL[v] || v; }
+
+  function options(list, def){
+    return list.map(function(v){
+      return '<option value="' + h(v) + '"' + (v === def ? ' selected' : '') + '>' + h(langLabel(v)) + '</option>';
+    }).join('');
+  }
+  function renderExtra(){
+    var a = agentById(pick.value);
+    extra.innerHTML = '';
+    if (!a || !a.custom || a.custom.indexOf('source_lang') < 0) return;
+    extra.innerHTML =
+      '<label>翻译语言</label><div style="display:flex;gap:8px">' +
+        '<div style="flex:1"><span class="k mini">源语言</span><select id="agentSrc">' + options(langs, 'auto') + '</select></div>' +
+        '<div style="flex:1"><span class="k mini">目标语言</span><select id="agentTgt">' + options(langs, 'zh-CN') + '</select></div>' +
+      '</div>';
+  }
+  function append(role, html){
+    var d = document.createElement('div');
+    d.className = 'msg ' + (role === 'me' ? 'me' : 'ai');
+    d.innerHTML = '<div class="who">' + (role === 'me' ? '我' : 'AI') + '</div><div class="bubble">' + html + '</div>';
+    chat.appendChild(d);
+    d.scrollIntoView({ behavior:'smooth', block:'end' });
+    return d;
+  }
+  function reset(msg){
+    history = [];
+    chat.innerHTML = '';
+    append('ai', msg || '上下文已清空，可以重新开始。');
+    renderExtra();
+  }
+
+  function fill(data){
+    if (data && data.agents && data.agents.length) agents = data.agents;
+    if (data && data.languages && data.languages.length) langs = data.languages;
+    pick.innerHTML = agents.map(function(a){
+      return '<option value="' + h(a.id) + '">' + h(a.name) + '</option>';
+    }).join('');
+    if (data && data.default) pick.value = data.default;
+    renderExtra();
+  }
+
+  function send(){
+    if (busy) return;
+    var ta = form.querySelector('textarea');
+    var text = (ta.value || '').trim();
+    if (!text) return;
+    if (!API || !API.agent) { note.textContent = '接口客户端未加载，请刷新页面。'; return; }
+
+    var cv = null;
+    var src = document.getElementById('agentSrc');
+    var tgt = document.getElementById('agentTgt');
+    if (src && tgt) cv = { source_lang: src.value, target_lang: tgt.value };
+
+    append('me', lines(text));
+    history.push({ role:'user', content:text });
+    ta.value = '';
+    var thinking = append('ai', '<span class="spin"></span> 智能体思考中…');
+    busy = true;
+    state.textContent = '调用中';
+
+    API.agent.chat({ agent_id: pick.value, messages: history.slice(-12), custom_variables: cv })
+      .then(function(res){
+        var out = (res && res.content) || '(无输出)';
+        var html = lines(out);
+        (res && res.attachments || []).forEach(function(a){
+          if (a.type === 'image') html += '<div style="margin-top:8px"><img src="' + h(a.url) + '" alt="" style="max-width:100%;border-radius:8px"></div>';
+          else html += '<div style="margin-top:8px"><a href="' + h(a.url) + '" target="_blank" rel="noopener">' + h(a.type) + ' 链接</a></div>';
+        });
+        var u = (res && res.usage) || {};
+        if (u.total_tokens) html += '<div class="mini" style="margin-top:8px">tokens：输入 ' + u.prompt_tokens + ' / 输出 ' + u.completion_tokens + ' / 合计 ' + u.total_tokens + '</div>';
+        thinking.querySelector('.bubble').innerHTML = html;
+        thinking.scrollIntoView({ behavior:'smooth', block:'end' });
+        history.push({ role:'assistant', content:out });
+        state.textContent = '就绪';
+      })
+      .catch(function(e){
+        thinking.querySelector('.bubble').innerHTML = '<span style="color:var(--warn)">调用失败：' + h(e.message || e) + '</span>';
+        history.pop();
+        state.textContent = '失败';
+      })
+      .then(function(){ busy = false; });
+  }
+
+  pick.addEventListener('change', function(){ reset('已切换智能体，上下文已清空。'); });
+  form.addEventListener('submit', function(e){ e.preventDefault(); send(); });
+  form.querySelector('textarea').addEventListener('keydown', function(e){
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); }
+  });
+  if (clearBtn) clearBtn.addEventListener('click', function(){ reset(); });
+
+  if (API && API.agent && API.agent.list) {
+    API.agent.list().then(function(d){
+      fill(d);
+      state.textContent = '已连接';
+      note.textContent = '已连接本地接口：' + API.base + '（智谱 POST /v1/agents）';
+    }).catch(function(){
+      fill(null);
+      state.textContent = '未连接';
+      note.textContent = '未连接本地接口（先启动 api_server.py），当前为内置智能体清单，发送会失败。';
+    });
+  } else {
+    fill(null);
+    state.textContent = '未连接';
+    note.textContent = '接口客户端未加载，请刷新页面。';
+  }
 })();
 </script>
 </body>

@@ -27,6 +27,10 @@ ZHIPU_BASE_URL = os.getenv("ZHIPU_BASE_URL", "https://open.bigmodel.cn/api/paas/
 ZHIPU_API_KEY = os.getenv("ZHIPU_API_KEY", "")
 ZHIPU_MODEL = os.getenv("ZHIPU_MODEL", "glm-4-flash")
 
+# 智能体对话：文档地址为 https://open.bigmodel.cn/api/v1/agents（注意不是 /paas/v4）
+ZHIPU_AGENT_URL = os.getenv("ZHIPU_AGENT_URL",
+                            "https://open.bigmodel.cn/api/v1/agents")
+
 ALLOWED_EXT = set(e.strip().lower() for e in os.getenv("ALLOWED_EXT", ".xlsx,.xls,.csv").split(","))
 
 # 非表格文档：交给智谱「文件解析」转为正文文本（Lite 免费，支持以下格式）

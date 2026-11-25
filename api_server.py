@@ -1016,6 +1016,48 @@ def assistant_chat(body: ChatIn) -> dict:
 
 
 # ---------------------------------------------------------------------------
+# 智谱智能体对话（POST /v1/agents）
+# ---------------------------------------------------------------------------
+class AgentChatIn(BaseModel):
+    agent_id: str = "intelligent_education_solve_agent"
+    messages: list[dict[str, Any]] = Field(default_factory=list)
+    custom_variables: Optional[dict[str, Any]] = None
+    project_id: Optional[int] = None
+
+
+@app.get("/api/agent/list")
+def agent_list() -> dict:
+    """返回可用智能体与翻译语言枚举，供前端下拉。"""
+    from app import zhipu_agent
+    return ok({"agents": zhipu_agent.AGENTS, "languages": zhipu_agent.LANGUAGES,
+               "default": zhipu_agent.DEFAULT_AGENT})
+
+
+@app.post("/api/agent/chat")
+def agent_chat(body: AgentChatIn) -> dict:
+    from app import zhipu_agent
+    t0 = _now()
+    try:
+        res = zhipu_agent.chat(body.agent_id, body.messages, body.custom_variables)
+    except Exception as e:
+        return err(f"智能体异常：{e.__class__.__name__}: {e}", 500)
+    if res.get("status") == "error":
+        return err(res.get("error") or "智能体调用失败", 502)
+
+    prompt = ""
+    for m in reversed(body.messages or []):
+        if isinstance(m, dict) and m.get("role") == "user":
+            c = m.get("content")
+            prompt = c if isinstance(c, str) else json.dumps(c, ensure_ascii=False)
+            break
+    tid = db.save_task(prompt=prompt[:500], answer=res.get("content") or "", kind="agent",
+                       status="ok", duration_s=round(_now() - t0, 1),
+                       project_id=body.project_id)
+    res["task_id"] = tid
+    return ok(res)
+
+
+# ---------------------------------------------------------------------------
 # 学生空间汇总
 # ---------------------------------------------------------------------------
 @app.get("/api/student/dashboard")

@@ -94,6 +94,10 @@
     assistant: {
       chat: function (p) { return _req("/assistant/chat", { method: "POST", body: p }); }
     },
+    agent: {
+      list: function () { return _req("/agent/list"); },
+      chat: function (p) { return _req("/agent/chat", { method: "POST", body: p }); }
+    },
     settings: {
       get: function () { return _req("/settings"); },
       save: function (p) { return _req("/settings", { method: "POST", body: p }); }
