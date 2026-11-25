@@ -4,8 +4,14 @@
 (function () {
   "use strict";
   var BASE = (function () {
-    try { return localStorage.getItem("edu_api_base") || "http://127.0.0.1:8700/api"; }
-    catch (e) { return "http://127.0.0.1:8700/api"; }
+    var saved = null;
+    try { saved = localStorage.getItem("edu_api_base"); } catch (e) { saved = null; }
+    if (saved) return saved;
+    // 本地预览：静态站跑在 8765，接口在 8700
+    var host = location.hostname;
+    if (host === "localhost" || host === "127.0.0.1" || host === "") return "http://127.0.0.1:8700/api";
+    // 服务器部署：静态站与接口同源（同一个 uvicorn 端口）
+    return location.origin + "/api";
   })();
 
   function _req(path, opts) {

@@ -1371,6 +1371,14 @@ def export_grades(project_id: Optional[int] = Query(None),
                       "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
 
 
+# 静态站：同源托管 static-web/，单端口即可访问整站（本地仍可用 8765 预览）
+_STATIC_DIR = ROOT / "static-web"
+if _STATIC_DIR.is_dir():
+    from fastapi.staticfiles import StaticFiles
+
+    app.mount("/", StaticFiles(directory=str(_STATIC_DIR), html=True), name="static")
+
+
 if __name__ == "__main__":
     import uvicorn
     print(f"致壹 智能教育工作台 API → http://127.0.0.1:{API_PORT}")
