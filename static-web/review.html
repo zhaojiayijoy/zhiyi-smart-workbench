@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>作业评审 · 致壹 智能教育工作台</title>
-<link rel="stylesheet" href="assets/css/site.css?v=1795481000">
+<link rel="stylesheet" href="assets/css/site.css?v=1795620000">
 </head>
 <body data-page="review">
 <div class="app">
@@ -21,7 +21,6 @@
       <div class="ctx">
         <div><span class="k">当前课程</span><b data-fill="course.name">—</b></div>
         <div><span class="k">授课对象</span><b data-fill="course.classWithSize">—</b></div>
-        <div><span class="k">课时</span><b data-fill="course.totalHours">—</b></div>
         <div><span class="k">进度</span><b data-fill="course.progress">—</b></div>
       </div>
 
@@ -46,9 +45,10 @@
             </div>
             <div class="grid g2">
               <div class="field"><label>学生姓名</label><input type="text" placeholder="例如：陈思远"></div>
-              <div class="field"><label>匿名编号</label><input type="text" placeholder="例如：S-017"></div>
               <div class="field"><label>班级</label><input type="text" data-fill="course.class" placeholder="自动带入当前课程班级"></div>
-              <div class="field"><label>评分量规</label><select><option>洞察报告量规（4 维度 / 100 分）</option><option>促销方案量规（4 维度 / 100 分）</option><option>自定义量规</option></select></div>
+            </div>
+            <div class="field"><label>评分量规</label>
+              <select id="rubricPick"><option value="">默认量规（内容 / 数据 / 表达 / 可行性）</option></select>
             </div>
             <div class="form-actions">
               <button class="btn primary" type="submit">开始评审</button>
@@ -95,33 +95,16 @@
               <div class="field"><label>方案可行性</label><input type="number" value="" max="25"></div>
               <div class="field"><label>表达规范</label><input type="number" value="" max="20"></div>
             </div>
-            <div class="grid g2">
-              <div class="field"><label>终评评语</label><textarea style="min-height:80px"></textarea></div>
-              <div>
-                <div class="field"><label>修改原因（若调整 AI 评分）</label><input type="text" placeholder="例如：数据支撑扣分过重，已上调 2 分"></div>
-                <div class="field"><label>处理结果</label>
-                  <select>
-                    <option>通过并发布</option>
-                    <option>退回修改</option>
-                    <option>需要人工进一步检查</option>
-                  </select>
-                </div>
-              </div>
-            </div>
+            <div class="field"><label>终评评语</label><textarea style="min-height:80px"></textarea></div>
             <div class="form-actions">
               <button class="btn" type="submit" data-confirm="保存后该学生成绩将按终评计入课程，确定保存？">保存教师终评</button>
               <button class="btn" type="button" data-demo="已退回给学生修改">退回修改</button>
-              <button class="btn ghost" type="button" data-demo="已标记为需人工检查">需要人工进一步检查</button>
+              <button class="btn ghost" type="button">需要人工检查</button>
               <span class="mini">总计 <b id="reviewFinalTotal">—</b> / 100</span>
             </div>
           </form>
           <div class="rule" id="finalOut" hidden style="margin-top:12px">暂无数据</div>
         </div>
-      </div>
-
-      <div class="card" id="rubricVersions" data-versions style="margin-top:14px">
-        <div class="card-h"><h2>评分标准版本历史</h2><div class="right"><span class="mini ver-now" data-tpl="当前 {ver}">—</span><span class="mini">评分标准调整会记录在案</span></div></div>
-        <div class="card-b"><div class="mini" style="padding:10px 0">暂无数据</div></div>
       </div>
 
     </main>
@@ -209,8 +192,8 @@
 })();
 </script>
 <script src="assets/js/data.js?v=1795420906"></script>
-<script src="assets/js/site.js?v=1795490000"></script>
-<script src="assets/js/api.js?v=1795420906"></script>
-<script src="assets/js/live.js?v=1795490000"></script>
+<script src="assets/js/site.js?v=1795600000"></script>
+<script src="assets/js/api.js?v=1795700003"></script>
+<script src="assets/js/live.js?v=1795700002"></script>
 </body>
 </html>

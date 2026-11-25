@@ -42,10 +42,12 @@
     health: function () { return _req("/health"); },
 
     courses: {
-      list: function () { return _req("/courses"); },
+      list: function (includeArchived) { return _req("/courses" + (includeArchived ? "?include_archived=1" : "")); },
       create: function (p) { return _req("/courses", { method: "POST", body: p }); },
       get: function (id) { return _req("/courses/" + id); },
       overview: function (id) { return _req("/courses/" + id + "/overview"); },
+      rounds: function (id) { return _req("/courses/" + id + "/rounds"); },
+      archiveRound: function (id, p) { return _req("/courses/" + id + "/rounds/archive", { method: "POST", body: p || {} }); },
       remove: function (id) { return _req("/courses/" + id, { method: "DELETE" }); }
     },
     files: {
@@ -59,6 +61,7 @@
         return _req("/files", { method: "POST", body: fd, form: true });
       },
       text: function (id) { return _req("/files/" + id + "/text"); },
+      downloadUrl: function (id) { return BASE + "/files/" + id + "/download"; },
       remove: function (id) { return _req("/files/" + id, { method: "DELETE" }); }
     },
     tasks: {
@@ -77,7 +80,18 @@
       regenerateAll: function (id) { return _req("/lesson/" + id + "/regenerate-all", { method: "POST", body: {} }); },
       exportUrl: function (id, type) { return BASE + "/lesson/" + id + "/export?type=" + (type || "docx"); }
     },
+    outline: {
+      get: function (pid) { return _req("/outline?project_id=" + (pid || "")); },
+      generate: function (p) { return _req("/outline/generate", { method: "POST", body: p }); },
+      save: function (pid, p) { return _req("/outline/" + pid, { method: "PUT", body: p }); },
+      revise: function (pid, note) { return _req("/outline/" + pid + "/revise", { method: "POST", body: { teacher_note: note } }); },
+      approve: function (pid) { return _req("/outline/" + pid + "/approve", { method: "POST", body: {} }); },
+      generateOne: function (pid, no) { return _req("/outline/" + pid + "/sessions/" + no + "/generate", { method: "POST", body: {} }); },
+      generateAll: function (pid) { return _req("/outline/" + pid + "/generate-all", { method: "POST", body: {} }); },
+      cancelAll: function (pid) { return _req("/outline/" + pid + "/generate-all/cancel", { method: "POST", body: {} }); }
+    },
     training: {
+      templates: function () { return _req("/training/templates"); },
       generate: function (p) { return _req("/training/generate", { method: "POST", body: p }); },
       history: function (pid) { return _req("/training/history?project_id=" + (pid || "")); },
       get: function (id) { return _req("/training/" + id); },
@@ -91,6 +105,7 @@
       status: function (id, st) { return _req("/tutor/records/" + id, { method: "PATCH", body: { status: st } }); }
     },
     review: {
+      rubrics: function () { return _req("/review/rubrics"); },
       evaluate: function (p) { return _req("/review/evaluate", { method: "POST", body: p }); },
       history: function (pid) { return _req("/review/history?project_id=" + (pid || "")); },
       get: function (id) { return _req("/review/" + id); },
@@ -115,7 +130,8 @@
       reset: function () { return _req("/maintenance/reset", { method: "POST", body: { confirm: "DELETE" } }); }
     },
     assistant: {
-      chat: function (p) { return _req("/assistant/chat", { method: "POST", body: p }); }
+      chat: function (p) { return _req("/assistant/chat", { method: "POST", body: p }); },
+      save: function (p) { return _req("/assistant/save", { method: "POST", body: p }); }
     },
     agent: {
       list: function () { return _req("/agent/list"); },
@@ -128,6 +144,9 @@
     student: {
       dashboard: function (pid, student) {
         return _req("/student/dashboard?project_id=" + (pid || "") + "&student=" + encodeURIComponent(student || ""));
+      },
+      wrong: function (pid, student) {
+        return _req("/student/wrong?project_id=" + (pid || "") + "&student=" + encodeURIComponent(student || ""));
       }
     }
   };

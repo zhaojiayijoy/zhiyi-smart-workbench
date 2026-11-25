@@ -4,81 +4,45 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>AI 助手 · 致壹 智能教育工作台</title>
-<link rel="stylesheet" href="assets/css/site.css?v=1795481000">
+<link rel="stylesheet" href="assets/css/site.css?v=1795620000">
 </head>
 <body data-page="assistant">
 <div class="app">
   <aside class="sidebar"></aside>
   <div class="main">
     <header class="topbar"></header>
-    <main class="content">
+    <main class="content" style="max-width:none;display:flex;flex-direction:column">
 
       <div class="page-head">
         <div><h1>AI 助手</h1><p class="sub" data-page-sub>结合当前课程资料与学情回答问题，生成内容需教师确认</p></div>
-        <div class="right"><button class="btn" type="button" data-demo="已新建对话">新建对话</button></div>
+        <div class="right"><span class="tag acc">已加载 <b data-fill="course.resourceCount">—</b> 课程资料</span><button class="btn" type="button" data-demo="已新建对话">新建对话</button></div>
       </div>
 
-      <div class="split">
-        <div class="card" style="display:flex;flex-direction:column;min-height:560px">
-          <div class="card-h"><h2>对话</h2><div class="right"><span class="tag acc">已加载 <b data-fill="course.resourceCount">—</b> 课程资料</span></div></div>
-          <div class="card-b" style="flex:1">
-            <div class="chat" id="chat">
-              <div class="msg ai">
-                <div class="who">AI</div>
-                <div class="bubble">你好。我可以围绕「<b data-fill="course.name">—</b>」协助备课与学情分析，生成内容请核对后使用：
-                  <ul>
-                    <li>把某个知识点改写成课堂导入</li>
-                    <li>根据错误类型生成针对性练习</li>
-                    <li>对比两版教案的差异并给出修改建议</li>
-                  </ul>
-                </div>
+      <div style="display:flex;flex-direction:column;flex:1;min-height:calc(100vh - 200px)">
+        <div style="flex:1;min-height:0;overflow:auto;padding:4px 2px 12px">
+          <div class="chat" id="chat">
+            <div class="msg ai">
+              <div class="who">AI</div>
+              <div class="bubble">你好。我可以围绕「<b data-fill="course.name">—</b>」协助备课与学情分析，生成内容请核对后使用：
+                <ul>
+                  <li>把某个知识点改写成课堂导入</li>
+                  <li>根据错误类型生成针对性练习</li>
+                  <li>对比两版教案的差异并给出修改建议</li>
+                </ul>
               </div>
             </div>
-          </div>
-          <div class="card-b" style="border-top:1px solid var(--line);padding-top:12px">
-            <div class="checks" id="suggests" style="margin-bottom:8px">
-              <button class="chk" type="button" data-prompt="生成一组区分参照群体与意见领袖的练习题">生成练习</button>
-              <button class="chk" type="button" data-prompt="把第 6 次课的教案压缩成 45 分钟版本">压缩教案</button>
-              <button class="chk" type="button" data-prompt="总结近 30 天学情中最需要干预的三个问题">总结学情</button>
-            </div>
-            <form class="composer" id="composer">
-              <textarea placeholder="输入问题，Enter 发送，Shift+Enter 换行" rows="2"></textarea>
-              <button class="btn primary" type="submit">发送</button>
-            </form>
-            <div class="mini" id="assistantDemoNote" style="margin-top:6px">静态演示：回复为内置示例，不会调用任何模型服务。</div>
           </div>
         </div>
-
-        <div class="stack">
-          <div class="card">
-            <div class="card-h"><h2>当前上下文</h2></div>
-            <div class="card-b">
-              <div class="grid g2" style="gap:10px">
-                <div><span class="k mini">课程</span><div style="font-weight:600" data-fill="course.name">—</div></div>
-                <div><span class="k mini">班级</span><div data-fill="course.classWithSize">—</div></div>
-                <div><span class="k mini">进度</span><div data-fill="course.progress">—</div></div>
-                <div><span class="k mini">模型</span><div>—</div></div>
-              </div>
-              <div class="hr"></div>
-              <div class="checks">
-                <label class="chk on"><input type="checkbox" checked>教材正文</label>
-                <label class="chk on"><input type="checkbox" checked>课程标准</label>
-                <label class="chk on"><input type="checkbox" checked>学情数据</label>
-                <label class="chk"><input type="checkbox">案例集</label>
-              </div>
-            </div>
+        <div style="padding:12px 0 0">
+          <div class="checks" id="suggests" style="margin-bottom:8px">
+            <button class="chk" type="button" data-prompt="生成一组区分参照群体与意见领袖的练习题">生成练习</button>
+            <button class="chk" type="button" data-prompt="把第 6 次课的教案压缩成 45 分钟版本">压缩教案</button>
+            <button class="chk" type="button" data-prompt="总结近 30 天学情中最需要干预的三个问题">总结学情</button>
           </div>
-
-          <div class="card">
-            <div class="card-h"><h2>使用提示</h2></div>
-            <div class="card-b">
-              <div class="stack" style="gap:8px">
-                <div class="rule">回答会标注依据来源，便于核对。</div>
-                <div class="rule">涉及成绩或评价时，需教师复核后使用。</div>
-                <div class="rule">所有对话仅保存在本地。</div>
-              </div>
-            </div>
-          </div>
+          <form class="composer" id="composer">
+            <textarea placeholder="输入问题，Enter 发送，Shift+Enter 换行" rows="2"></textarea>
+            <button class="btn primary" type="submit">发送</button>
+          </form>
         </div>
       </div>
 
@@ -88,126 +52,8 @@
 
 <div class="toast"></div>
 <script src="assets/js/data.js?v=1795420906"></script>
-<script src="assets/js/site.js?v=1795490000"></script>
-<script src="assets/js/api.js?v=1795420906"></script>
-<script src="assets/js/live.js?v=1795490000"></script>
-<script>
-(function(){
-  var chat = document.getElementById('chat');
-
-  function toast(msg){
-    if (window.Edu && Edu.toast) Edu.toast(msg);
-    else window.alert(msg);
-  }
-
-  function citeHtml(){
-    return '<div class="cite-box" hidden><div class="mini">暂无引用依据</div></div>';
-  }
-
-  function attach(bubble, skipCite){
-    if (!bubble || bubble.querySelector('.msg-actions')) return;
-    if (!skipCite && !bubble.querySelector('.cite-box')) bubble.insertAdjacentHTML('beforeend', citeHtml());
-    var acts = document.createElement('div');
-    acts.className = 'msg-actions';
-    [['copy','复制'],['regen','重新生成'],['cite','查看引用'],['save','保存到课程'],['import','转为课堂导入'],['drill','转为课后练习']].forEach(function(p){
-      var b = document.createElement('button');
-      b.type = 'button';
-      b.setAttribute('data-act', p[0]);
-      b.textContent = p[1];
-      acts.appendChild(b);
-    });
-    bubble.appendChild(acts);
-  }
-
-  function attachAll(){
-    if (!chat) return;
-    Array.prototype.forEach.call(chat.querySelectorAll('.msg.ai .bubble'), function(b, i){
-      attach(b, i === 0 && !b.querySelector('.msg-actions'));
-    });
-  }
-  attachAll();
-
-  if (chat && window.MutationObserver){
-    new MutationObserver(function(muts){
-      for (var i = 0; i < muts.length; i++){
-        if (muts[i].addedNodes.length){ attachAll(); return; }
-      }
-    }).observe(chat, {childList:true, subtree:true});
-  }
-
-  if (chat){
-    chat.addEventListener('click', function(e){
-      var btn = e.target.closest('.msg-actions button');
-      if (!btn) return;
-      var bubble = btn.closest('.bubble');
-      var act = btn.getAttribute('data-act');
-
-      if (act === 'copy'){
-        var clone = bubble.cloneNode(true);
-        var acts = clone.querySelector('.msg-actions');
-        if (acts) acts.remove();
-        var text = (clone.textContent || '').trim();
-        if (navigator.clipboard && navigator.clipboard.writeText){
-          navigator.clipboard.writeText(text).then(function(){ toast('已复制回答'); }, function(){ toast('复制失败，请手动选择文本'); });
-        } else {
-          toast('已复制回答（示例）');
-        }
-        return;
-      }
-      if (act === 'regen') return toast('已重新生成（示例）');
-      if (act === 'cite'){
-        var box = bubble.querySelector('.cite-box');
-        if (box){
-          box.hidden = !box.hidden;
-          if (!box.hidden) box.scrollIntoView({behavior:'smooth',block:'nearest'});
-        }
-        return;
-      }
-      if (act === 'save') return toast('已保存到当前课程资料（示例）');
-      if (act === 'import') return toast('已转为课堂导入并带入备课本（示例）');
-      if (act === 'drill') return toast('已转为课后练习，加入学生练习列表（示例）');
-    });
-  }
-
-  if (window.__eduSendAssistant) return; // live.js 已接管助手对话（含非 live 回退）
-  var form = document.getElementById('composer');
-  if (!form) return;
-  var ta = form.querySelector('textarea');
-
-  function send(text){
-    if(!text.trim()) return;
-    var me = document.createElement('div');
-    me.className = 'msg me';
-    me.innerHTML = '<div class="who">李</div><div class="bubble"></div>';
-    me.querySelector('.bubble').textContent = text;
-    chat.appendChild(me);
-    ta.value = '';
-    var ai = document.createElement('div');
-    ai.className = 'msg ai';
-    ai.innerHTML = '<div class="who">AI</div><div class="bubble"><span class="spin"></span> 正在结合课程资料整理…</div>';
-    chat.appendChild(ai);
-    ai.scrollIntoView({behavior:'smooth',block:'end'});
-    setTimeout(function(){
-      ai.querySelector('.bubble').innerHTML =
-        '<b>示例回复</b><br>已结合当前课程资料与近 30 天学情整理出草案。静态版本仅展示交互效果；在真实版本中，这里会返回带引用来源的结果，并支持一键写入备课包。';
-      ai.scrollIntoView({behavior:'smooth',block:'end'});
-    }, 900);
-  }
-
-  form.addEventListener('submit', function(e){
-    e.preventDefault();
-    send(ta.value);
-  });
-  ta.addEventListener('keydown', function(e){
-    if(e.key === 'Enter' && !e.shiftKey){ e.preventDefault(); send(ta.value); }
-  });
-  document.querySelectorAll('[data-prompt]').forEach(function(b){
-    b.addEventListener('click', function(){ send(b.getAttribute('data-prompt')); });
-  });
-
-  var q = new URLSearchParams(location.search).get('q');
-  if(q) send(q);
-})();
-</script>
+<script src="assets/js/site.js?v=1795600000"></script>
+<script src="assets/js/api.js?v=1795700003"></script>
+<script src="assets/js/live.js?v=1795700002"></script>
 </body>
 </html>

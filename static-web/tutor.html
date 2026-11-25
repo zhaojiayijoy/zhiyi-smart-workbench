@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>学生答疑 · 致壹 智能教育工作台</title>
-<link rel="stylesheet" href="assets/css/site.css?v=1795481000">
+<link rel="stylesheet" href="assets/css/site.css?v=1795620000">
 </head>
 <body data-page="tutor">
 <div class="app">
@@ -21,7 +21,6 @@
       <div class="ctx">
         <div><span class="k">当前课程</span><b data-fill="course.name">—</b></div>
         <div><span class="k">授课对象</span><b data-fill="course.classWithSize">—</b></div>
-        <div><span class="k">课时</span><b data-fill="course.totalHours">—</b></div>
         <div><span class="k">进度</span><b data-fill="course.progress">—</b></div>
       </div>
 
@@ -67,23 +66,11 @@
         </div>
 
         <div class="card" id="newAsk">
-          <div class="card-h"><h2>新建答疑</h2><div class="right"><span class="mini">支持上传题目截图</span></div></div>
+          <div class="card-h"><h2>新建答疑</h2></div>
           <div class="card-b">
-            <form data-sim="#askOut" data-msg="答疑已创建（示例）">
-              <div class="field"><label>学生问题 *</label><textarea required style="min-height:84px" placeholder="粘贴学生原问题，保留原始表述"></textarea></div>
-              <div class="grid g2">
-                <div class="field"><label>关联知识点</label><select><option>参照群体</option><option>锚定效应</option><option>消费者态度</option><option>损失厌恶</option><option>其他</option></select></div>
-                <div class="field"><label>可见范围</label><select><option>师生可见</option><option>教师可见</option><option>学生可见</option></select></div>
-              </div>
-              <div class="field"><label>上传题目</label><input type="file"></div>
-              <div class="field">
-                <label>引导方式</label>
-                <div class="checks">
-                  <label class="chk on"><input type="checkbox" checked>先给提示</label>
-                  <label class="chk on"><input type="checkbox" checked>指出卡点</label>
-                  <label class="chk"><input type="checkbox">直接给完整解析</label>
-                </div>
-              </div>
+            <form data-sim="#askOut" data-msg="答疑已创建">
+              <div class="field"><label>学生问题 *</label><textarea required style="min-height:96px" placeholder="粘贴学生原问题，保留原始表述"></textarea></div>
+              <div class="field"><label>关联知识点</label><select><option>参照群体</option><option>锚定效应</option><option>消费者态度</option><option>损失厌恶</option><option>其他</option></select></div>
               <div class="form-actions"><button class="btn" type="submit">创建答疑</button><button class="btn" type="reset">清空</button></div>
             </form>
             <div class="rule" id="askOut" hidden style="margin-top:12px">暂无数据</div>
@@ -91,40 +78,14 @@
         </div>
       </div>
 
-      <script>
-      (function(){
-        var items = Array.prototype.slice.call(document.querySelectorAll(".tq"));
-        var title = document.getElementById("tutorDetailTitle");
-        var status = document.getElementById("tutorDetailStatus");
-        var bubble = document.getElementById("tutorBubble");
-        if (!items.length || !title || !status || !bubble) return;
-
-        items.forEach(function(item){
-          item.tabIndex = 0;
-          item.addEventListener("keydown", function(e){
-            if (e.key === "Enter" || e.key === " "){ e.preventDefault(); item.click(); }
-          });
-          item.addEventListener("click", function(){
-            items.forEach(function(o){ o.classList.remove("on"); });
-            item.classList.add("on");
-            title.textContent = item.getAttribute("data-name") + " 的提问";
-            var st = item.getAttribute("data-status");
-            status.textContent = st;
-            status.className = "tag " + (st === "已解决" ? "ok" : (st === "等待学生尝试" ? "warn" : "acc"));
-            bubble.textContent = item.getAttribute("data-q");
-          });
-        });
-      })();
-      </script>
-
     </main>
   </div>
 </div>
 
 <div class="toast"></div>
 <script src="assets/js/data.js?v=1795420906"></script>
-<script src="assets/js/site.js?v=1795490000"></script>
-<script src="assets/js/api.js?v=1795420906"></script>
-<script src="assets/js/live.js?v=1795490000"></script>
+<script src="assets/js/site.js?v=1795600000"></script>
+<script src="assets/js/api.js?v=1795700003"></script>
+<script src="assets/js/live.js?v=1795700002"></script>
 </body>
 </html>

@@ -30,6 +30,7 @@
       label: "教学流程",
       items: [
         { href: "courses.html", icon: "book", text: "课程项目", page: "courses" },
+        { href: "outline.html", icon: "file", text: "备课大纲", page: "outline" },
         { href: "lesson.html", icon: "spark", text: "一键备课", page: "lesson" },
         { href: "training.html", icon: "tool", text: "创建实训", page: "training" },
         { href: "tutor.html", icon: "chat", text: "学生答疑", page: "tutor" },
@@ -64,7 +65,7 @@
   ];
 
   var TITLES = {
-    index: "工作台首页", courses: "课程项目", lesson: "一键备课", training: "创建实训",
+    index: "工作台首页", courses: "课程项目", outline: "备课大纲", lesson: "一键备课", training: "创建实训",
     tutor: "学生答疑", review: "作业评审", analytics: "学情分析", assistant: "AI 助手",
     files: "课程资源", tasks: "任务中心", settings: "设置", student: "学生空间", tools: "教学工具"
   };
@@ -168,7 +169,7 @@
 
   /** 当前可用课程：内存/接口课程 + 演示模式持久化的自定义课程（按 id 去重） */
   function currentCourses() {
-    var base = (Edu.state.courses && Edu.state.courses.length) ? Edu.state.courses : (window.EDU.courses || []);
+    var base = (Edu.state.courses && Edu.state.courses.length) ? Edu.state.courses : [];
     base = base || [];
     var custom = readCustomCourses();
     if (!custom.length) return base;
@@ -209,7 +210,7 @@
         nav += '<a href="' + it.href + '" class="' + (on ? "active" : "") + '">' + ic(it.icon) + "<span>" + it.text + "</span></a>";
       });
     });
-    var u = isStudent ? window.EDU.student : window.EDU.teacher;
+    var u = (isStudent ? window.EDU.student : window.EDU.teacher) || {};
     aside.innerHTML =
       '<a class="brand" href="' + (isStudent ? "student.html" : "index.html") + '">' +
         '<div class="mark">致</div>' +
@@ -218,8 +219,8 @@
       '<div class="side-new"><button type="button" data-go="' + (isStudent ? "student.html#tasks" : "index.html") + '">' +
         ic("plus", 14) + (isStudent ? " 我的学习任务" : " 新建教学任务") + "</button></div>" +
       '<nav class="nav">' + nav + "</nav>" +
-      '<div class="side-foot"><div class="avatar">' + u.initials + "</div>" +
-        "<div><b>" + (isStudent ? u.name : "本地用户") + "</b><span>" + (isStudent ? u.class : "教师 · 单租户") + "</span></div></div>";
+      '<div class="side-foot"><div class="avatar">' + (u.initials || "") + "</div>" +
+        "<div><b>" + (isStudent ? (u.name || "学生") : "本地用户") + "</b><span>" + (isStudent ? (u.class || "") : "教师 · 单租户") + "</span></div></div>";
   }
 
   /* ---------- 顶栏 ---------- */
@@ -568,8 +569,8 @@
       });
     }).catch(function () {
       liveBadge(false);
-      Edu.state.courses = window.EDU.courses || [];
-      // 优先恢复上次选中的课程（含演示模式持久化的自定义课程），避免刷新后串课
+      Edu.state.courses = [];
+      // 优先恢复上次选中的课程（含本地保存的自定义课程），避免刷新后串课
       var saved = null; try { saved = localStorage.getItem("edu.course"); } catch (e) {}
       var visible = currentCourses();
       Edu.state.selectedCourseId = (saved && visible.some(function (c) { return String(c.id) === String(saved); }))
@@ -577,7 +578,7 @@
         : (visible[0] ? visible[0].id : null);
       var pick = document.querySelector("#coursePick");
       if (pick && Edu.state.selectedCourseId) pick.value = String(Edu.state.selectedCourseId);
-      toast("演示模式：启动 api_server.py 后刷新可接入真实数据");
+      toast("无法连接后端服务，请确认 api_server.py 已启动");
       emitCourseChange();
       renderTopCourseSummary();
     });
@@ -637,10 +638,6 @@
       text = text.replace(/「[^」]*」/g, "「" + name + "」");
       // 2) 替换（当前：xxx）格式的课程引用
       text = text.replace(/（当前：[^）]*）/g, "（当前：" + name + "）");
-      // 3) 兜底：如果还有写死的三个 demo 课程名，也替换掉
-      ["消费者行为分析", "市场营销基础", "数字营销实训"].forEach(function (demo) {
-        if (name && demo !== name) text = text.split(demo).join(name);
-      });
       sub.textContent = text;
     });
   }

@@ -454,14 +454,18 @@ def generate_lesson_package(project_id: int, topic: str, extra: str = "", *,
                             outputs: list[str] | None = None,
                             file_ids: list[int] | None = None,
                             model: str = "", review_model: str = "",
-                            dual_check: bool = False) -> dict[str, Any]:
+                            dual_check: bool = False,
+                            outline_ctx: str = "") -> dict[str, Any]:
     ctx = course_context(project_id, file_ids=file_ids)
     outs = outputs or list(LESSON_OUTPUTS)
+    outline_block = ""
+    if outline_ctx:
+        outline_block = f"\n本节课在整门课备课大纲中的定位（必须与大纲保持一致）：\n{outline_ctx}\n"
     human = f"""请为下面这节课生成一份可直接上课的完整备课包（含课件）。
 
 课程上下文：
 {ctx}
-
+{outline_block}
 本次课题：{topic}
 课型：{lesson_type}
 课时：{hours}
@@ -572,6 +576,167 @@ out_of_scope、consistent、untraceable（true 表示存在无法追溯的资料
         data["meta"]["ppt_issues_after"] = ppt_structure_issues(data)
     data["checks"] = lesson_checks(data)
     return data
+
+
+# ---------------------------------------------------------------------------
+# 1.5) 整门课备课大纲（生成 → 教师审查 → 通过后才允许生成备课包）
+# ---------------------------------------------------------------------------
+_OUTLINE_RULE = (
+    "你是一名资深职业教育教研员，负责把课程信息拆解为整门课的教学大纲。"
+    "所有内容必须基于给定的课程上下文；上下文没有的信息不要编造，统一写“未提供，可按教材补充”。"
+    "输出必须是合法 JSON，不要使用 Markdown 代码块，不要输出 JSON 之外的任何文字。"
+)
+
+_OUTLINE_OUTPUTS = ["教案", "PPT", "课堂练习", "答案与解析", "评分量规"]
+
+
+def generate_course_outline(project_id: int, extra: str = "",
+                            total_sessions: int | None = None,
+                            total_hours: int | None = None,
+                            teacher_note: str = "") -> dict[str, Any]:
+    """生成整门课大纲：模块划分 + 逐讲安排；teacher_note 用于按教师意见重写。"""
+    ctx = course_context(project_id)
+    p = db.get_project(project_id) or {}
+    hours_hint = total_hours or _num_from_text(p.get("hours"))
+    sess_hint = total_sessions or _num_from_text(p.get("total_sessions"))
+    revise = ""
+    if teacher_note.strip():
+        revise = f"\n上一版大纲的教师修改意见（必须落实）：\n{teacher_note.strip()}\n"
+    human = f"""请基于下面的课程信息，生成整门课的备课大纲（按讲次逐讲安排）。
+
+课程上下文：
+{ctx}
+{revise}
+课程总课时：{hours_hint or '未填写'}
+计划讲次数：{sess_hint or '按课时自行安排（每讲 2 课时）'}
+教师补充要求：{extra or '无'}
+
+严格按以下 JSON 结构输出（数组按内容增减，键必须存在）：
+{{
+  "course": "课程名称",
+  "positioning": "一句话课程定位",
+  "goals": ["知识目标", "能力目标", "素养目标"],
+  "modules": [{{"name": "模块名", "hours": 6, "session_nos": [1, 2, 3]}}],
+  "sessions": [{{"no": 1, "module": "模块名", "topic": "第 1 讲课题", "hours": 2,
+    "objectives": ["目标"], "key_points": ["重点"], "difficulties": ["难点"],
+    "activity": "课堂主要活动", "outputs": ["教案", "PPT", "课堂练习"]}}],
+  "assessment": [{{"item": "过程性评价", "weight": 40, "method": "评价方式"}}],
+  "resources": ["需要准备的资料"],
+  "checks": {{"hours_match": true, "objectives_covered": true, "sessions_planned": true}}
+}}
+
+要求：
+1. sessions 按讲次从 1 连续编号，课时合计必须等于课程总课时（无法整除时以最后一讲补齐）；
+2. 每讲 objectives 2-3 条、key_points 1-3 条、difficulties 1-2 条，均由课程目标拆解而来；
+3. outputs 只能从 {('、'.join(_OUTLINE_OUTPUTS))} 中选择；
+4. assessment 各项 weight 合计 100。
+另外输出 "checks"：hours_match 表示课时是否合计一致，objectives_covered 表示是否覆盖课程目标，
+sessions_planned 表示讲次是否连续无缺。"""
+    data = _json_call(_OUTLINE_RULE, human)
+    return normalize_outline(data, p)
+
+
+def _num_from_text(value: Any) -> int | None:
+    m = re.search(r"\d+", str(value or ""))
+    return int(m.group()) if m else None
+
+
+def _str_list(value: Any) -> list[str]:
+    if isinstance(value, str):
+        value = [value]
+    if not isinstance(value, list):
+        return []
+    return [str(x).strip() for x in value if str(x).strip()]
+
+
+def normalize_outline(data: dict[str, Any], project: dict[str, Any] | None = None) -> dict[str, Any]:
+    """把模型输出收敛成前端可稳定渲染的结构（讲次补号、课时补数、字段转列表）。"""
+    p = project or {}
+    sessions: list[dict[str, Any]] = []
+    for i, s in enumerate(data.get("sessions") or [], 1):
+        if not isinstance(s, dict):
+            continue
+        sessions.append({
+            "no": int(s.get("no") or i),
+            "module": str(s.get("module") or "").strip(),
+            "topic": str(s.get("topic") or "").strip() or f"第 {i} 讲",
+            "hours": int(s.get("hours") or 2),
+            "objectives": _str_list(s.get("objectives")),
+            "key_points": _str_list(s.get("key_points")),
+            "difficulties": _str_list(s.get("difficulties")),
+            "activity": str(s.get("activity") or "").strip(),
+            "outputs": [x for x in _str_list(s.get("outputs")) if x in _OUTLINE_OUTPUTS]
+                      or list(_OUTLINE_OUTPUTS[:3]),
+        })
+    sessions.sort(key=lambda x: x["no"])
+    for idx, s in enumerate(sessions, 1):
+        s["no"] = idx
+
+    modules = []
+    for m in data.get("modules") or []:
+        if not isinstance(m, dict):
+            continue
+        modules.append({"name": str(m.get("name") or "").strip(),
+                        "hours": int(m.get("hours") or 0),
+                        "session_nos": [int(x) for x in (m.get("session_nos") or [])
+                                        if str(x).isdigit()]})
+    if not modules and sessions:
+        # 模型没给模块时按讲次合并成单模块，保证 UI 有结构可显示
+        modules = [{"name": "全部讲次", "hours": sum(s["hours"] for s in sessions),
+                    "session_nos": [s["no"] for s in sessions]}]
+
+    assessment = []
+    for a in data.get("assessment") or []:
+        if not isinstance(a, dict):
+            continue
+        try:
+            weight = int(float(a.get("weight") or 0))
+        except (TypeError, ValueError):
+            weight = 0
+        assessment.append({"item": str(a.get("item") or "").strip(),
+                           "weight": weight, "method": str(a.get("method") or "").strip()})
+
+    total = sum(s["hours"] for s in sessions)
+    target = _num_from_text(p.get("hours"))
+    checks = {
+        "hours_match": bool(total) and (not target or total == target),
+        "sessions_planned": bool(sessions),
+        "objectives_covered": bool(sessions) and all(s["objectives"] for s in sessions),
+        "total_hours": total,
+        "target_hours": target,
+    }
+    return {
+        "course": str(data.get("course") or p.get("name") or "").strip(),
+        "positioning": str(data.get("positioning") or "").strip(),
+        "goals": _str_list(data.get("goals")),
+        "modules": modules,
+        "sessions": sessions,
+        "assessment": assessment,
+        "resources": _str_list(data.get("resources")),
+        "checks": checks,
+    }
+
+
+def outline_session_context(outline: dict[str, Any], session_no: int) -> str:
+    """拼出某一讲在大纲中的定位，供生成该讲备课包时注入提示词。"""
+    sessions = [s for s in (outline.get("sessions") or []) if isinstance(s, dict)]
+    cur = next((s for s in sessions if int(s.get("no") or 0) == int(session_no)), None)
+    if not cur:
+        return ""
+    lines = [
+        f"整门课定位：{outline.get('positioning') or '未提供'}",
+        f"课程目标：{'；'.join(outline.get('goals') or []) or '未提供'}",
+        f"本讲位置：第 {cur.get('no')} 讲 / 共 {len(sessions)} 讲"
+        f"（模块：{cur.get('module') or '未划分'}）",
+        f"本讲课题：{cur.get('topic') or ''}",
+        f"本讲课时：{cur.get('hours') or 2} 课时",
+        f"本讲目标：{'；'.join(cur.get('objectives') or []) or '未提供'}",
+        f"本讲重点：{'；'.join(cur.get('key_points') or []) or '未提供'}",
+        f"本讲难点：{'；'.join(cur.get('difficulties') or []) or '未提供'}",
+        f"课堂主要活动：{cur.get('activity') or '未提供'}",
+        f"本讲产出物：{'、'.join(cur.get('outputs') or []) or '教案、PPT、课堂练习'}",
+    ]
+    return "\n".join(lines)
 
 
 _SECTION_PROMPT = {
@@ -1606,6 +1771,28 @@ def generate_training(project_id: int, scenario: str, extra: str = "") -> dict[s
     return data
 
 
+# 实训场景模板：纯数据，供前端一键填入场景描述，不依赖模型
+TRAINING_TEMPLATES: list[dict[str, Any]] = [
+    {"key": "research", "name": "市场调研",
+     "scenario": "为一家连锁茶饮品牌进入新城市做市场调研：设计问卷、回收至少 50 份样本、用 Excel 完成交叉分析，并输出一页选址建议。",
+     "extra": "交付物：问卷、样本数据表、一页选址建议。"},
+    {"key": "promotion", "name": "促销方案",
+     "scenario": "为门店季度冲刺设计一套促销方案：明确目标人群与销售目标，测算预算与 ROI，并输出可执行的落地排期。",
+     "extra": "交付物：促销方案 PPT、预算测算表、执行排期表。"},
+    {"key": "complaint", "name": "客户投诉处理",
+     "scenario": "处理一起因物流延误引发的客户投诉：梳理事实与责任，给出补偿方案与回复话术，并复盘改进流程。",
+     "extra": "交付物：事件时间线、处理方案、回复话术、流程改进建议。"},
+    {"key": "store", "name": "门店经营分析",
+     "scenario": "分析一家门店近三个月的经营数据：找出销售下滑的主要原因，提出三项可落地的改进措施并预估效果。",
+     "extra": "交付物：数据分析表、原因分析、改进措施与效果预估。"},
+]
+
+
+def training_templates() -> list[dict[str, Any]]:
+    """返回实训模板列表（副本，避免调用方修改常量）。"""
+    return [dict(t) for t in TRAINING_TEMPLATES]
+
+
 def export_training_docx(pkg: dict[str, Any], course: str) -> bytes:
     import docx
     d = docx.Document()
@@ -2144,6 +2331,92 @@ def _docx_table_header(table, headers: list[str]) -> None:
         for p in cell.paragraphs:
             for run in p.runs:
                 run.bold = True
+
+
+# ---------------------------------------------------------------------------
+# 教学轮次归档包
+# ---------------------------------------------------------------------------
+ROUND_ARTIFACT_KINDS = ["lessons", "trainings", "reviews", "nextplans", "analytics", "outlines"]
+
+
+def build_round_archive(project_id: int) -> dict[str, Any]:
+    """把某轮课程项目打包为 ZIP 字节：课程信息、任务清单、资料清单与生成产物。
+
+    仅做本地汇总，不调用模型，也不重新导出 Office 文件。
+    """
+    import zipfile
+
+    pid = int(project_id)
+    p = db.get_project(pid) or {}
+    tasks = db.list_tasks(project_id=pid, limit=1000)
+    files = db.list_files(project_id=pid, limit=500)
+    round_no = int(p.get("round") or 1)
+    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+    info = {
+        "课程名称": p.get("name") or "",
+        "班级": p.get("class_name") or "",
+        "轮次": round_no,
+        "课时": p.get("hours") or "",
+        "当前课次": p.get("current_session") or 0,
+        "总课次": p.get("total_sessions") or 0,
+        "进度": p.get("progress") or "",
+        "学习目标": p.get("objectives") or "",
+        "重点": p.get("key_points") or "",
+        "难点": p.get("difficulties") or "",
+        "教材版本": p.get("textbook_version") or "",
+        "归档时间": now,
+    }
+
+    def _fmt(ts: Any) -> str:
+        try:
+            return datetime.fromtimestamp(float(ts or 0)).strftime("%Y-%m-%d %H:%M")
+        except Exception:
+            return ""
+
+    task_rows = [{
+        "id": t.get("id"), "类型": t.get("kind"), "标题": t.get("prompt") or "",
+        "状态": t.get("status") or "", "时间": _fmt(t.get("created_at")),
+    } for t in tasks]
+    file_rows = [{
+        "名称": f.get("name"), "分类": f.get("category") or "", "格式": f.get("ext") or "",
+        "可见": VISIBILITY_LABEL.get(f.get("visibility") or "teacher", ""),
+        "大小": int(f.get("size") or 0),
+    } for f in files]
+
+    artifacts: dict[str, list[dict[str, Any]]] = {}
+    for kind in ROUND_ARTIFACT_KINDS:
+        items = db.list_artifacts(kind, project_id=pid)
+        if items:
+            artifacts[kind] = [{"ref": ref, "payload": payload} for ref, payload in items]
+
+    readme = (
+        f"课程：{info['课程名称']}\n"
+        f"轮次：第 {round_no} 轮\n"
+        f"归档时间：{now}\n\n"
+        "本包包含：\n"
+        "- 课程信息.json：本轮课程档案与进度\n"
+        "- 任务清单.json：备课 / 实训 / 答疑 / 评审 / 学情等任务记录\n"
+        "- 资料清单.json：本轮课程资料索引（不含文件二进制）\n"
+        "- 产物/*.json：各生成产物的完整数据，可用于后续复盘或迁移\n\n"
+        "说明：归档不会删除原项目数据，原项目仍可在工作台中查看。\n"
+    )
+
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
+        zf.writestr("课程信息.json", json.dumps(info, ensure_ascii=False, indent=2))
+        zf.writestr("任务清单.json", json.dumps(task_rows, ensure_ascii=False, indent=2))
+        zf.writestr("资料清单.json", json.dumps(file_rows, ensure_ascii=False, indent=2))
+        for kind, rows in artifacts.items():
+            zf.writestr(f"产物/{kind}.json", json.dumps(rows, ensure_ascii=False, indent=2))
+        zf.writestr("README.txt", readme)
+
+    return {
+        "zip": buf.getvalue(),
+        "summary": {"round": round_no, "task_count": len(task_rows),
+                    "file_count": len(file_rows),
+                    "kinds": {k: len(v) for k, v in artifacts.items()}},
+    }
 
 
 def artifact_path(folder: Path | str | None, filename: str) -> Path:

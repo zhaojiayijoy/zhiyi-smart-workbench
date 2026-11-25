@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>创建实训 · 致壹 智能教育工作台</title>
-<link rel="stylesheet" href="assets/css/site.css?v=1795481000">
+<link rel="stylesheet" href="assets/css/site.css?v=1795620000">
 </head>
 <body data-page="training">
 <div class="app">
@@ -21,28 +21,22 @@
       <div class="ctx">
         <div><span class="k">当前课程</span><b data-fill="course.name">—</b></div>
         <div><span class="k">授课对象</span><b data-fill="course.classWithSize">—</b></div>
-        <div><span class="k">课时</span><b data-fill="course.totalHours">—</b></div>
-        <div><span class="k">可用资料</span><b data-fill="course.resourceCount">—</b></div>
+        <div><span class="k">进度</span><b data-fill="course.progress">—</b></div>
       </div>
 
       <div class="card" style="margin-bottom:14px">
         <div class="card-h"><h2>场景描述</h2><div class="right"><span class="tag acc">关联：<b data-fill="course.name">—</b></span></div></div>
         <div class="card-b">
-          <div class="checks" id="tplBar" style="margin-bottom:10px">
-            <span class="mini" style="align-self:center">预设模板：</span>
-            <button class="chk on" type="button" data-tpl="marketing">营销方案</button>
-            <button class="chk" type="button" data-tpl="data">数据分析报告</button>
-            <button class="chk" type="button" data-tpl="interview">访谈调研</button>
-            <button class="chk" type="button" data-tpl="finance">财务测算</button>
-            <button class="chk" type="button" data-tpl="project">项目汇报</button>
-            <button class="chk" type="button" data-tpl="official">公文写作</button>
-          </div>
-          <div class="cite-box" id="tplInfo" style="margin:0 0 12px"></div>
-          <form data-sim="#trainOut" data-msg="实训任务包已生成（示例）">
+          <form data-sim="#trainOut" data-msg="实训任务包已生成">
+            <div class="field">
+              <label>场景模板</label>
+              <div class="checks" id="tplBar"></div>
+              <span class="hint" id="tplHint">选择模板可快速填入场景，可继续修改。</span>
+            </div>
             <div class="field">
               <label>真实工作场景 *</label>
               <textarea id="trainScenario" required style="min-height:84px"></textarea>
-              <span class="hint">选择上方模板可自动预填场景、角色、交付物与评分量规。</span>
+              <span class="hint">写清岗位、交付物与时间要求，生成结果会更贴近真实工作。</span>
             </div>
             <div class="field">
               <label>补充要求</label>
@@ -105,28 +99,6 @@
         var filter = document.getElementById("taskStatus");
         var countEl = document.getElementById("taskCount");
 
-        function toast(msg){
-          if (window.Edu && Edu.toast) Edu.toast(msg);
-          else window.alert(msg);
-        }
-
-        function setStatus(tr, status){
-          tr.setAttribute("data-status", status);
-          if (status === "published") tr.cells[1].innerHTML = '<span class="tag ok">已发布</span>';
-          else if (status === "draft") tr.cells[1].innerHTML = '<span class="tag warn">草稿</span>';
-          else tr.cells[1].innerHTML = '<span class="tag">已关闭</span>';
-          renderOps(tr, status);
-        }
-
-        function renderOps(tr, status){
-          var ops =
-            '<button class="btn sm" type="button" data-act="edit">编辑</button>' +
-            '<button class="btn sm" type="button" data-act="copy">复制</button>';
-          if (status === "draft") ops += '<button class="btn sm" type="button" data-act="publish">发布</button>';
-          if (status !== "closed") ops += '<button class="btn sm ghost" type="button" data-act="close">关闭</button>';
-          tr.cells[5].innerHTML = ops;
-        }
-
         function rows(){ return Array.prototype.slice.call(tb.querySelectorAll("tr")).filter(function(tr){ return tr.cells.length >= 6; }); }
 
         function applyFilter(){
@@ -142,224 +114,11 @@
           countEl.textContent = shown + " 个";
         }
 
-        rows().forEach(function(tr){ renderOps(tr, tr.getAttribute("data-status")); });
-
         search.addEventListener("input", applyFilter);
         filter.addEventListener("change", applyFilter);
-
-        tb.addEventListener("click", function(e){
-          var btn = e.target.closest("button[data-act]");
-          if (!btn) return;
-          var tr = btn.closest("tr");
-          var act = btn.getAttribute("data-act");
-          var name = tr.cells[0].textContent.trim();
-
-          if (act === "edit") return toast("已打开「" + name + "」编辑器（示例）");
-
-          if (act === "copy"){
-            var clone = tr.cloneNode(true);
-            clone.cells[0].innerHTML = "<b>" + name + "（副本）</b>";
-            clone.cells[3].textContent = "—";
-            tr.parentNode.insertBefore(clone, tr.nextSibling);
-            setStatus(clone, "draft");
-            applyFilter();
-            return toast("已复制「" + name + "」为草稿");
-          }
-
-          if (act === "publish"){
-            if (!window.confirm("发布「" + name + "」后，学生即可查看并提交。确定发布？")) return;
-            setStatus(tr, "published");
-            applyFilter();
-            return toast("「" + name + "」已发布到学生空间");
-          }
-
-          if (act === "close"){
-            if (!window.confirm("关闭「" + name + "」后，学生将无法继续提交。确定关闭？")) return;
-            setStatus(tr, "closed");
-            applyFilter();
-            return toast("「" + name + "」已关闭");
-          }
-        });
       })();
 
-      /* 实训模板：自动预填场景、角色、交付物与评分量规 */
-      (function(){
-        var TPLS = {
-          marketing: {
-            name: "双十一满减促销方案",
-            scenario: "某快消品牌准备在双十一期间推出一档满减活动，市场部需要你在 3 天内完成一份促销方案，说明目标人群、优惠结构与传播节奏，并用数据支撑你的选择。",
-            extra: "要求使用课程中的参照群体与锚定效应；提交 Excel 测算表、Word 方案与 6 页 PPT；小组 4 人分工。",
-            role: "市场部助理（4 人小组）：1 人负责数据测算，1 人负责人群与洞察，1 人负责方案撰写，1 人负责汇报。",
-            goals: ["用前测问卷数据识别价格敏感人群，说明依据。", "设计三档满减结构，给出毛利测算与风险提示。", "用锚定效应解释优惠呈现方式，并给出反例。"],
-            deliverables: [
-              { k: "Excel", v: "至少 3 个工作表：原始数据、测算模型、敏感性分析；公式可追溯。" },
-              { k: "Word", v: "1500-2000 字方案，含目标人群、优惠结构、传播节奏、风险与应对。" },
-              { k: "PPT", v: "6 页以内，包含一页核心数据图与一页结论。" }
-            ],
-            rubric: [
-              { d: "人群洞察", w: 25, s: "有数据支撑，能区分价格敏感与品牌偏好人群", x: "只给结论、无依据" },
-              { d: "优惠结构", w: 25, s: "三档结构清晰，毛利测算正确", x: "档位重叠、测算缺公式" },
-              { d: "传播节奏", w: 25, s: "分阶段说明渠道与内容", x: "只列渠道、无节奏" },
-              { d: "风险与合规", w: 25, s: "识别价格合规与库存风险", x: "未提风险" }
-            ]
-          },
-          data: {
-            name: "季度订单数据分析报告",
-            scenario: "某电商平台运营团队拿到一份 1200 行的季度订单数据，需要完成数据清洗、描述统计与用户分层，为下一季度投放预算提供依据。",
-            extra: "使用 Excel 完成清洗与透视分析；提交 1 份 Word 报告与 6 页 PPT；结论需给出置信区间与风险提示。",
-            role: "数据分析助理（3 人）：1 人负责清洗，1 人负责分析建模，1 人负责报告撰写。",
-            goals: ["识别并处理缺失值与异常值，说明处理规则。", "按 RFM 完成用户分层并给出各层特征。", "用图表支撑 3 条可执行的投放建议。"],
-            deliverables: [
-              { k: "Excel", v: "清洗记录、透视表与图表；关键指标需有公式或步骤说明。" },
-              { k: "Word", v: "1200-1500 字分析报告：口径、发现、建议、局限。" },
-              { k: "PPT", v: "6 页以内，含一页核心图表与一页结论。" }
-            ],
-            rubric: [
-              { d: "数据清洗", w: 25, s: "规则明确、处理可复现", x: "直接删除不说明" },
-              { d: "分析方法", w: 30, s: "分层口径合理，图表选择恰当", x: "图表与问题不匹配" },
-              { d: "结论与建议", w: 30, s: "结论有数据支撑且可执行", x: "建议空泛" },
-              { d: "表达规范", w: 15, s: "报告结构完整、术语准确", x: "缺少口径说明" }
-            ]
-          },
-          interview: {
-            name: "新品用户访谈与洞察报告",
-            scenario: "新品上市前，市场部需要访谈 8 位目标用户，了解使用场景、价格接受度与竞品选择原因，并形成洞察报告。",
-            extra: "访谈提纲需覆盖使用场景、价格、竞品三类问题；提交访谈记录、编码表与 6 页洞察 PPT。",
-            role: "用户研究助理（4 人）：1 人设计提纲，2 人执行访谈，1 人负责编码与报告。",
-            goals: ["设计半结构化访谈提纲并通过预访谈修订。", "完成 8 位用户访谈并整理逐字稿要点。", "编码提炼 3 条洞察，给出产品与定价建议。"],
-            deliverables: [
-              { k: "Word", v: "访谈提纲、8 份访谈记录摘要、洞察报告。" },
-              { k: "Excel", v: "编码表：受访者、场景、痛点、价格敏感度、竞品。" },
-              { k: "PPT", v: "6 页以内，含用户画像与核心洞察。" }
-            ],
-            rubric: [
-              { d: "提纲质量", w: 20, s: "问题开放、无引导，覆盖三类主题", x: "封闭式或诱导性问题" },
-              { d: "访谈执行", w: 25, s: "追问到位、记录完整", x: "记录缺原话" },
-              { d: "编码分析", w: 30, s: "编码一致，能归纳主题", x: "只罗列不归纳" },
-              { d: "洞察表达", w: 25, s: "洞察具体、可转化为行动", x: "结论泛化" }
-            ]
-          },
-          finance: {
-            name: "新产品线三年财务测算",
-            scenario: "公司计划上新一条产品线，需要完成三年期收入、成本与现金流测算，判断投资回收期与盈亏平衡点。",
-            extra: "假设需注明来源；提交 Excel 模型、Word 测算说明与 6 页汇报 PPT。",
-            role: "财务分析助理（3 人）：1 人负责假设，1 人负责建模，1 人负责汇报。",
-            goals: ["列出收入、成本、费用假设并说明依据。", "搭建三年利润表与现金流模型。", "计算回收期、盈亏平衡点并做敏感性分析。"],
-            deliverables: [
-              { k: "Excel", v: "假设页、利润表、现金流量表、敏感性分析；公式可追溯。" },
-              { k: "Word", v: "800-1200 字测算说明：假设、口径、结论、风险。" },
-              { k: "PPT", v: "6 页以内，含关键指标图与投资建议。" }
-            ],
-            rubric: [
-              { d: "假设合理性", w: 25, s: "假设有来源、可解释", x: "假设无依据" },
-              { d: "模型准确性", w: 35, s: "三表勾稽正确、公式清晰", x: "硬编码、勾稽错误" },
-              { d: "敏感性分析", w: 20, s: "识别关键变量并给出区间", x: "仅单点测算" },
-              { d: "汇报表达", w: 20, s: "结论明确、风险提示到位", x: "只报数字" }
-            ]
-          },
-          project: {
-            name: "项目中期汇报",
-            scenario: "项目进入中期，需要向管理层汇报进度、风险与资源需求，争取下一阶段预算。",
-            extra: "汇报材料需包含里程碑达成、风险矩阵与资源请求；提交 PPT、一页纸摘要与进度预算表。",
-            role: "项目经理助理（3 人）：1 人负责进度，1 人负责风险，1 人负责汇报材料。",
-            goals: ["用里程碑对比说明当前进度偏差。", "识别 3 项主要风险并给出应对。", "提出下一阶段资源请求并量化依据。"],
-            deliverables: [
-              { k: "PPT", v: "8 页以内：目标、进度、风险、资源请求、下一步。" },
-              { k: "Word", v: "一页纸摘要，供管理层快速阅读。" },
-              { k: "Excel", v: "进度计划与预算执行表，含偏差说明。" }
-            ],
-            rubric: [
-              { d: "结构完整", w: 25, s: "按管理层关注顺序组织", x: "流水账式罗列" },
-              { d: "数据支撑", w: 25, s: "进度与预算有量化对比", x: "只有定性描述" },
-              { d: "风险识别", w: 25, s: "风险分级并有应对措施", x: "未提风险" },
-              { d: "汇报表达", w: 25, s: "重点突出、时间控制得当", x: "信息过载" }
-            ]
-          },
-          official: {
-            name: "共建实习基地请示公文",
-            scenario: "学院拟与本地企业共建实习基地，需要起草一份请示公文，说明背景、方案、经费与预期成效。",
-            extra: "严格使用请示文种与规范格式；提交正文、附件方案与 5 页汇报 PPT。",
-            role: "行政助理（2 人）：1 人负责起草，1 人负责校核与附件整理。",
-            goals: ["按请示格式写明缘由、事项与请求。", "说明合作方案、经费预算与分工。", "附风险评估与预期成效。"],
-            deliverables: [
-              { k: "Word", v: "请示正文（标题、主送、正文、落款、日期）规范完整。" },
-              { k: "Word", v: "附件：共建方案与经费预算表。" },
-              { k: "PPT", v: "5 页以内，用于院务会汇报。" }
-            ],
-            rubric: [
-              { d: "格式规范", w: 30, s: "文种、要素、版式符合公文规范", x: "文种混用、缺落款" },
-              { d: "内容完整", w: 30, s: "缘由、事项、请求齐全", x: "只提请求无依据" },
-              { d: "逻辑与措辞", w: 25, s: "层次清楚、措辞得体", x: "口语化" },
-              { d: "附件配套", w: 15, s: "附件与正文一致", x: "附件缺失" }
-            ]
-          }
-        };
-
-        var bar = document.getElementById("tplBar");
-        var info = document.getElementById("tplInfo");
-        var out = document.getElementById("trainOut");
-        var scenario = document.getElementById("trainScenario");
-        var extra = document.getElementById("trainExtra");
-        var form = document.querySelector('form[data-sim="#trainOut"]');
-        if (!bar || !info || !scenario) return;
-        var cur = "marketing";
-
-        function renderInfo(t){
-          info.innerHTML = '<div class="cite-h"><b>模板已预填：' + t.name + '</b><span class="mini">角色 · 交付物 · 评分量规</span></div><ul>' +
-            '<li><span class="k">角色</span><b>' + t.role + '</b></li>' +
-            '<li><span class="k">交付物</span><b>' + t.deliverables.map(function(d){ return d.k; }).join("、") + '</b></li>' +
-            '<li><span class="k">量规</span><b>' + t.rubric.map(function(r){ return r.d + " " + r.w + " 分"; }).join(" · ") + '</b></li></ul>';
-        }
-
-        function renderOut(t){
-          var title = document.getElementById("trainTitle");
-          var colA = document.getElementById("trainColA");
-          var colB = document.getElementById("trainColB");
-          var rub = document.getElementById("trainRubric");
-          if (title) title.textContent = "任务包：" + t.name;
-          if (colA) colA.innerHTML = '<h3>项目背景</h3><p class="mini" style="margin:0 0 12px">' + t.scenario + '</p>' +
-            '<h3>学生角色</h3><p class="mini" style="margin:0 0 12px">' + t.role + '</p>' +
-            '<h3>任务目标</h3><div class="stack" style="gap:6px">' +
-            t.goals.map(function(g, i){ return '<div class="rule">' + "①②③④".charAt(i) + " " + g + '</div>'; }).join("") + '</div>';
-          if (colB) colB.innerHTML = '<h3>交付物要求</h3><div class="stack" style="gap:8px">' +
-            t.deliverables.map(function(d){ return '<div class="rule"><b>' + d.k + '</b><br>' + d.v + '</div>'; }).join("") + '</div>';
-          if (rub){
-            rub.hidden = false;
-            rub.innerHTML = '<h3>评分量规</h3><div class="table-wrap"><table><thead><tr><th>维度</th><th>分值</th><th>优秀标准</th><th>常见扣分</th></tr></thead><tbody>' +
-              t.rubric.map(function(r){ return '<tr><td>' + r.d + '</td><td>' + r.w + '</td><td class="mini">' + r.s + '</td><td class="mini">' + r.x + '</td></tr>'; }).join("") +
-              '</tbody></table></div>';
-          }
-        }
-
-        function apply(key){
-          var t = TPLS[key]; if (!t) return;
-          cur = key;
-          Array.prototype.forEach.call(bar.querySelectorAll("[data-tpl]"), function(b){
-            b.classList.toggle("on", b.getAttribute("data-tpl") === key);
-          });
-          scenario.value = t.scenario;
-          if (extra) extra.value = t.extra;
-          renderInfo(t);
-          if (out && !out.hidden) renderOut(t);
-        }
-
-        bar.addEventListener("click", function(e){
-          var b = e.target.closest("[data-tpl]");
-          if (b) apply(b.getAttribute("data-tpl"));
-        });
-
-        if (form) form.addEventListener("submit", function(){
-          renderOut(TPLS[cur]);
-        });
-
-        apply("marketing");
-      })();
       </script>
-
-      <div class="card" id="trainVersions" data-versions style="margin-top:14px">
-        <div class="card-h"><h2>版本历史</h2><div class="right"><span class="mini ver-now" data-tpl="当前 {ver}">—</span><span class="mini">任务包与评分量规的修改均可追溯</span></div></div>
-        <div class="card-b"><div class="mini" style="padding:10px 0">暂无数据</div></div>
-      </div>
 
     </main>
   </div>
@@ -367,8 +126,8 @@
 
 <div class="toast"></div>
 <script src="assets/js/data.js?v=1795420906"></script>
-<script src="assets/js/site.js?v=1795490000"></script>
-<script src="assets/js/api.js?v=1795420906"></script>
-<script src="assets/js/live.js?v=1795490000"></script>
+<script src="assets/js/site.js?v=1795600000"></script>
+<script src="assets/js/api.js?v=1795700003"></script>
+<script src="assets/js/live.js?v=1795700002"></script>
 </body>
 </html>

@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>备课大纲 · 致壹 智能教育工作台</title>
+<link rel="stylesheet" href="assets/css/site.css?v=1795620000">
+</head>
+<body data-page="outline">
+<div class="app">
+  <aside class="sidebar"></aside>
+  <div class="main">
+    <header class="topbar"></header>
+    <main class="content">
+
+      <div class="page-head">
+        <div><h1>备课大纲</h1><p class="sub" data-page-sub>agent 工作流：先出整门课大纲，由你审查修改后，再按讲次生成备课包</p></div>
+        <div class="right"><a class="btn" href="lesson.html">打开一键备课</a></div>
+      </div>
+
+      <div class="ctx">
+        <div><span class="k">当前课程</span><b data-fill="course.name">—</b></div>
+        <div><span class="k">授课对象</span><b data-fill="course.classWithSize">—</b></div>
+        <div><span class="k">进度</span><b data-fill="course.progress">—</b></div>
+      </div>
+
+      <div class="row" style="margin-bottom:14px;flex-wrap:wrap">
+        <span class="step" id="step1"><i>1</i>生成备课大纲</span>
+        <span class="step" id="step2"><i>2</i>教师审查与修改</span>
+        <span class="step" id="step3"><i>3</i>生成备课包（PPT / Excel / 教案）</span>
+      </div>
+
+      <div class="card" id="outlineEmpty">
+        <div class="card-h"><h2>备课大纲</h2><div class="right"><span class="tag" id="emptyTag">未生成</span></div></div>
+        <div class="card-b">
+          <div class="empty">
+            <div class="ic">▤</div>
+            <h3>还没有备课大纲</h3>
+            <p id="emptyText">AI 会基于课程信息与资料，先拆出模块与逐讲安排；你审查通过后才生成各讲备课包。</p>
+          </div>
+          <div class="grid g3" id="genOptions" style="margin-top:14px">
+            <div class="field"><label>计划讲次数</label><input type="number" min="1" id="genSessions" placeholder="留空按课时自动安排"></div>
+            <div class="field"><label>总课时</label><input type="number" min="1" id="genHours" placeholder="留空用课程已填课时"></div>
+            <div class="field"><label>补充要求</label><input type="text" id="genExtra" placeholder="如：偏实操、多案例、压缩到 8 讲"></div>
+          </div>
+          <div class="form-actions">
+            <button class="btn primary" type="button" id="btnGenerate">生成备课大纲</button>
+            <span class="mini">生成约需半分钟，结果会显示在本页供审查</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="card" id="outlineBody" hidden>
+        <div class="card-h">
+          <h2>备课大纲</h2>
+          <div class="right"><span class="tag" id="olStatus">—</span><span class="mini" id="olMeta"></span></div>
+        </div>
+        <div class="card-b">
+          <div id="olSummary"></div>
+          <div id="olChecks" class="stack" style="gap:6px;margin:10px 0"></div>
+
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>讲次</th><th>模块</th><th>课题</th><th>课时</th><th>教学目标</th><th>重难点</th><th>产出物</th><th>状态</th><th>操作</th></tr></thead>
+              <tbody id="olRows"><tr><td colspan="9" class="mini">暂无数据</td></tr></tbody>
+            </table>
+          </div>
+
+          <div class="field" style="margin-top:14px">
+            <label>修改意见（对话式修改：写清要改什么，AI 会重写整份大纲，需重新审查）</label>
+            <textarea id="reviseNote" style="min-height:72px" placeholder="例如：第三讲太浅，加入真实企业案例；最后一讲改成复习课；总课时压缩到 32 课时"></textarea>
+          </div>
+          <div class="form-actions" style="flex-wrap:wrap">
+            <button class="btn" type="button" id="btnRevise">按意见重写</button>
+            <button class="btn primary" type="button" id="btnApprove">通过大纲审查</button>
+            <button class="btn" type="button" id="btnGenAll">批量生成全部讲次</button>
+            <button class="btn ghost" type="button" id="btnCancel" hidden>停止生成</button>
+            <span class="mini" id="olHint">通过审查后才能生成备课包</span>
+          </div>
+          <div class="rule" id="jobBar" hidden style="margin-top:10px"></div>
+        </div>
+      </div>
+
+      <div class="card" id="packCard" style="margin-top:14px" hidden>
+        <div class="card-h"><h2>已生成的备课包</h2><div class="right"><span class="mini" id="packCount">0 份</span></div></div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>讲次</th><th>课题</th><th>状态</th><th>操作</th></tr></thead>
+            <tbody id="packRows"><tr><td colspan="4" class="mini">暂无数据</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+    </main>
+  </div>
+</div>
+
+<div class="toast"></div>
+<script src="assets/js/data.js?v=1795420906"></script>
+<script src="assets/js/site.js?v=1795600000"></script>
+<script src="assets/js/api.js?v=1795700003"></script>
+<script>
+/* ===== 备课大纲：agent 工作流页面 ===== */
+(function () {
+  "use strict";
+  var API = window.EduAPI;
+  var qs = new URLSearchParams(location.search);
+  var courseParam = qs.get("course");
+  var autogen = qs.get("autogen") === "1";
+  var autoTried = false;
+  var item = null;
+  var pollTimer = null;
+
+  function $(s) { return document.querySelector(s); }
+  function h(s) {
+    if (s === null || s === undefined) return "";
+    return String(s).replace(/[&<>"]/g, function (m) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[m];
+    });
+  }
+  function toast(msg) { if (window.toast) window.toast(msg); }
+  function busy(btn, on, label) {
+    if (!btn) return;
+    if (on) { btn._lab = btn.innerHTML; btn.disabled = true; btn.innerHTML = '<span class="spin"></span> ' + (label || "处理中…"); }
+    else { btn.disabled = false; btn.innerHTML = btn._lab || btn.innerHTML; }
+  }
+  function pid() {
+    return courseParam ? Number(courseParam)
+      : (window.Edu && Edu.state.selectedCourseId ? Number(Edu.state.selectedCourseId) : null);
+  }
+  function statusLabel(st) {
+    return { draft: "草稿待审查", edited: "已修改待审查", approved: "已通过审查" }[st] || "草稿待审查";
+  }
+  function sessionLabel(st) {
+    return { pending: "待生成", generating: "生成中…", generated: "已生成", failed: "生成失败" }[st || "pending"] || "待生成";
+  }
+
+  /* ---------- 阶段条 ---------- */
+  function renderSteps() {
+    var has = !!item;
+    var approved = has && item.status === "approved";
+    var packDone = false;
+    if (has) {
+      var sessions = (item.outline && item.outline.sessions) || [];
+      var state = item.sessions_state || {};
+      packDone = sessions.length > 0 && sessions.every(function (s) {
+        return (state[String(s.no)] || {}).status === "generated";
+      });
+    }
+    var s1 = $("#step1"), s2 = $("#step2"), s3 = $("#step3");
+    s1.className = "step" + (has ? " done" : " cur");
+    s2.className = "step" + (!has ? "" : approved ? " done" : " cur");
+    s3.className = "step" + (!approved ? "" : packDone ? " done" : " cur");
+  }
+
+  /* ---------- 渲染大纲 ---------- */
+  function render() {
+    renderSteps();
+    var empty = $("#outlineEmpty"), body = $("#outlineBody");
+    if (!item || !item.outline) {
+      empty.hidden = false;
+      body.hidden = true;
+      $("#packCard").hidden = true;
+      return;
+    }
+    empty.hidden = true;
+    body.hidden = false;
+
+    var ol = item.outline;
+    var st = $("#olStatus");
+    st.textContent = statusLabel(item.status);
+    st.className = "tag " + (item.status === "approved" ? "ok" : "acc");
+    $("#olMeta").textContent = "v" + (item.version || 1) +
+      (item.teacher_note ? " · 已按意见修改" : "");
+
+    var html = '<h3 style="margin:0 0 6px">' + h(ol.course || "") + "</h3>";
+    if (ol.positioning) html += '<p class="mini" style="margin:0 0 10px">' + h(ol.positioning) + "</p>";
+    if ((ol.goals || []).length) {
+      html += '<div class="checks" style="margin-bottom:10px">' + ol.goals.map(function (g) {
+        return '<span class="chk on">' + h(g) + "</span>";
+      }).join("") + "</div>";
+    }
+    if ((ol.modules || []).length) {
+      html += '<div class="stack" style="gap:6px">' + ol.modules.map(function (m) {
+        return '<div class="rule"><b>' + h(m.name) + "</b> · " + (m.hours || 0) + " 课时 · 第 " +
+          (m.session_nos || []).join("、") + " 讲</div>";
+      }).join("") + "</div>";
+    }
+    $("#olSummary").innerHTML = html;
+
+    var ck = ol.checks || {};
+    var checks = [];
+    checks.push((ck.hours_match ? "通过：" : "注意：") + "课时合计 " + (ck.total_hours || 0) +
+      (ck.target_hours ? " / 课程 " + ck.target_hours + " 课时" : ""));
+    checks.push((ck.objectives_covered ? "通过：" : "注意：") + "每讲都有教学目标");
+    checks.push((ck.sessions_planned ? "通过：" : "注意：") + "讲次从 1 连续编号");
+    if ((ol.assessment || []).length) {
+      checks.push("评价：" + ol.assessment.map(function (a) {
+        return a.item + " " + a.weight + "%";
+      }).join("；"));
+    }
+    $("#olChecks").innerHTML = checks.map(function (t) {
+      return '<div class="mini">' + h(t) + "</div>";
+    }).join("");
+
+    var state = item.sessions_state || {};
+    var sessions = ol.sessions || [];
+    $("#olRows").innerHTML = sessions.length ? sessions.map(function (s) {
+      var ss = state[String(s.no)] || {};
+      var label = sessionLabel(ss.status);
+      var tagCls = ss.status === "generated" ? "ok" : ss.status === "failed" ? "err" : "";
+      var ops = "";
+      if (ss.status === "generated" && ss.task_id) {
+        ops = '<a class="btn sm" href="lesson.html?task=' + ss.task_id + '">打开</a> ' +
+          '<a class="btn sm ghost" href="' + API.lesson.exportUrl(ss.task_id, "pptx") + '" target="_blank">PPT</a> ' +
+          '<a class="btn sm ghost" href="' + API.lesson.exportUrl(ss.task_id, "xlsx") + '" target="_blank">Excel</a>';
+      } else {
+        ops = '<button class="btn sm" type="button" data-gen-one="' + s.no + '">生成</button>';
+      }
+      return "<tr>" +
+        "<td>" + s.no + "</td>" +
+        "<td>" + h(s.module || "") + "</td>" +
+        "<td><b>" + h(s.topic) + "</b></td>" +
+        "<td>" + (s.hours || 0) + "</td>" +
+        '<td class="mini">' + h((s.objectives || []).join("；")) + "</td>" +
+        '<td class="mini">' + h((s.key_points || []).join("；")) + "<br>" + h((s.difficulties || []).join("；")) + "</td>" +
+        '<td class="mini">' + h((s.outputs || []).join("、")) + "</td>" +
+        '<td><span class="tag ' + tagCls + '">' + label + "</span></td>" +
+        "<td>" + ops + "</td>" +
+        "</tr>";
+    }).join("") : '<tr><td colspan="9" class="mini">大纲里没有讲次，请按意见重写</td></tr>';
+
+    var approved = item.status === "approved";
+    $("#btnApprove").disabled = approved;
+    $("#btnApprove").textContent = approved ? "已通过审查" : "通过大纲审查";
+    $("#btnGenAll").disabled = !approved;
+    $("#olHint").textContent = approved
+      ? "已通过审查，可以生成备课包；重复点击只会补齐未生成的讲次"
+      : "通过审查后才能生成备课包（这是 agent 工作流的硬约束）";
+
+    // 批量生成进度
+    var job = item.job;
+    var bar = $("#jobBar");
+    if (job && job.running) {
+      bar.hidden = false;
+      bar.textContent = "批量生成中：" + (job.done || 0) + " / " + (job.total || 0) +
+        (job.current ? "，正在生成第 " + job.current + " 讲…" : "…") +
+        "（单讲约需 1-3 分钟，可离开页面，稍后回来查看）";
+      $("#btnCancel").hidden = false;
+      $("#btnGenAll").disabled = true;
+      schedulePoll();
+    } else {
+      bar.hidden = true;
+      $("#btnCancel").hidden = true;
+      if (job && job.finished) {
+        bar.hidden = false;
+        bar.textContent = "上次批量生成已结束：" + (job.done || 0) + " / " + (job.total || 0) +
+          ((job.failed || []).length ? "，失败讲次：" + job.failed.join("、") + "（可单独重试）" : "");
+      }
+    }
+
+    renderPacks(sessions, state);
+  }
+
+  function renderPacks(sessions, state) {
+    var rows = sessions.filter(function (s) {
+      return (state[String(s.no)] || {}).status === "generated";
+    });
+    $("#packCard").hidden = !rows.length;
+    $("#packCount").textContent = rows.length + " 份";
+    $("#packRows").innerHTML = rows.length ? rows.map(function (s) {
+      var tid = (state[String(s.no)] || {}).task_id;
+      return "<tr><td>第 " + s.no + " 讲</td><td>" + h(s.topic) + '</td><td><span class="tag ok">已生成</span></td>' +
+        '<td><a class="btn sm" href="lesson.html?task=' + tid + '">打开</a> ' +
+        '<a class="btn sm ghost" href="' + API.lesson.exportUrl(tid, "docx") + '" target="_blank">Word</a> ' +
+        '<a class="btn sm ghost" href="' + API.lesson.exportUrl(tid, "pptx") + '" target="_blank">PPT</a> ' +
+        '<a class="btn sm ghost" href="' + API.lesson.exportUrl(tid, "xlsx") + '" target="_blank">Excel</a></td></tr>';
+    }).join("") : "";
+  }
+
+  /* ---------- 数据加载 ---------- */
+  function schedulePoll() {
+    if (pollTimer) return;
+    pollTimer = setTimeout(function () {
+      pollTimer = null;
+      load(true);
+    }, 3000);
+  }
+
+  function load(silent) {
+    var p = pid();
+    if (!p) return;
+    API.outline.get(p).then(function (data) {
+      item = data && data.outline ? data : null;
+      render();
+      if (autogen && !autoTried && !silent) {
+        autoTried = true;
+        doGenerate(true);
+      }
+    }).catch(function (err) {
+      if (!silent) toast("读取大纲失败：" + (err.message || err));
+    });
+  }
+
+  function doGenerate(auto) {
+    var p = pid();
+    if (!p) { toast("请先选择课程"); return; }
+    var btn = $("#btnGenerate");
+    busy(btn, true, "生成大纲中…");
+    var sess = Number($("#genSessions").value) || undefined;
+    var hours = Number($("#genHours").value) || undefined;
+    var extra = ($("#genExtra").value || "").trim();
+    API.outline.generate({ project_id: p, extra: extra, total_sessions: sess, total_hours: hours })
+      .then(function (data) {
+        busy(btn, false);
+        item = data && data.outline ? data : null;
+        render();
+        toast(auto ? "课程已创建，备课大纲已生成，请审查" : "备课大纲已生成，请审查后通过");
+      })
+      .catch(function (err) {
+        busy(btn, false);
+        toast("生成大纲失败：" + (err.message || err));
+      });
+  }
+
+  /* ---------- 事件 ---------- */
+  document.addEventListener("click", function (e) {
+    var one = e.target.closest("[data-gen-one]");
+    if (one) {
+      var no = Number(one.getAttribute("data-gen-one"));
+      var p = pid();
+      busy(one, true, "生成中…");
+      API.outline.generateOne(p, no).then(function () {
+        toast("第 " + no + " 讲备课包已生成");
+        load();
+      }).catch(function (err) {
+        busy(one, false);
+        toast("生成失败：" + (err.message || err));
+        load(true);
+      });
+    }
+  });
+
+  $("#btnGenerate").addEventListener("click", function () { doGenerate(false); });
+
+  $("#btnRevise").addEventListener("click", function () {
+    var note = ($("#reviseNote").value || "").trim();
+    if (!note) { toast("请先填写修改意见"); return; }
+    var btn = $("#btnRevise");
+    busy(btn, true, "按意见重写中…");
+    API.outline.revise(pid(), note).then(function (data) {
+      busy(btn, false);
+      item = data && data.outline ? data : item;
+      $("#reviseNote").value = "";
+      render();
+      toast("已按意见重写，请重新审查");
+    }).catch(function (err) {
+      busy(btn, false);
+      toast("重写失败：" + (err.message || err));
+    });
+  });
+
+  $("#btnApprove").addEventListener("click", function () {
+    var btn = $("#btnApprove");
+    busy(btn, true, "提交中…");
+    API.outline.approve(pid()).then(function (data) {
+      busy(btn, false);
+      item = data && data.outline ? data : item;
+      render();
+      toast("已通过大纲审查，可以生成备课包了");
+    }).catch(function (err) {
+      busy(btn, false);
+      toast("提交失败：" + (err.message || err));
+    });
+  });
+
+  $("#btnGenAll").addEventListener("click", function () {
+    var btn = $("#btnGenAll");
+    busy(btn, true, "启动中…");
+    API.outline.generateAll(pid()).then(function (r) {
+      busy(btn, false);
+      if (r && r.started) { toast("已开始批量生成 " + r.total + " 讲，可离开页面"); load(); }
+      else { toast((r && r.message) || "没有需要生成的讲次"); }
+    }).catch(function (err) {
+      busy(btn, false);
+      toast("启动失败：" + (err.message || err));
+    });
+  });
+
+  $("#btnCancel").addEventListener("click", function () {
+    API.outline.cancelAll(pid()).then(function () { toast("已请求停止，当前这讲完成后停止"); })
+      .catch(function (err) { toast("停止失败：" + (err.message || err)); });
+  });
+
+  /* ---------- 启动 ---------- */
+  function boot() {
+    var tries = 0;
+    var syncing = false;
+    (function wait() {
+      if (window.Edu && Edu.state.live) {
+        if (courseParam) { syncing = true; Edu.selectCourse(courseParam); }
+        load(false);
+        return;
+      }
+      if (++tries > 60) {
+        // 后端不可达：不展示任何演示数据，只提示连接服务
+        $("#emptyTag").textContent = "未连接";
+        $("#emptyTag").className = "tag warn";
+        $("#emptyText").textContent = "未连接后端服务（api_server.py）。连接后才能生成大纲，本页不会展示演示数据。";
+        $("#btnGenerate").disabled = true;
+        renderSteps();
+        return;
+      }
+      setTimeout(wait, 250);
+    })();
+    if (window.Edu && Edu.onCourseChange) {
+      Edu.onCourseChange(function () {
+        if (syncing) { syncing = false; return; }
+        courseParam = null; item = null; render(); load(true);
+      });
+    }
+  }
+
+  if (!API) return;
+  boot();
+})();
+</script>
+</body>
+</html>

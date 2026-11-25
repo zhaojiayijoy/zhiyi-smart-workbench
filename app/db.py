@@ -41,6 +41,10 @@ CREATE TABLE IF NOT EXISTS projects (
     total_sessions INTEGER NOT NULL DEFAULT 0,
     note TEXT NOT NULL DEFAULT '',
     is_demo INTEGER NOT NULL DEFAULT 0,
+    parent_id INTEGER,
+    round INTEGER NOT NULL DEFAULT 1,
+    status TEXT NOT NULL DEFAULT 'active',
+    archived_at REAL,
     created_at REAL NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_projects_created ON projects(created_at DESC);
@@ -138,6 +142,10 @@ def _migrate(conn: sqlite3.Connection) -> None:
         ("total_sessions", "INTEGER NOT NULL DEFAULT 0"),
         ("note", "TEXT NOT NULL DEFAULT ''"),
         ("is_demo", "INTEGER NOT NULL DEFAULT 0"),
+        ("parent_id", "INTEGER"),
+        ("round", "INTEGER NOT NULL DEFAULT 1"),
+        ("status", "TEXT NOT NULL DEFAULT 'active'"),
+        ("archived_at", "REAL"),
     ):
         if col not in proj_cols:
             conn.execute(f"ALTER TABLE projects ADD COLUMN {col} {ddl}")
@@ -212,6 +220,7 @@ def _conn() -> sqlite3.Connection:
         CREATE INDEX IF NOT EXISTS idx_files_created ON files(created_at DESC);
         CREATE INDEX IF NOT EXISTS idx_tasks_created ON tasks(created_at DESC);
         CREATE INDEX IF NOT EXISTS idx_artifacts_project ON artifacts(kind, project_id);
+        CREATE INDEX IF NOT EXISTS idx_projects_parent ON projects(parent_id);
         """
     )
     return conn
@@ -309,6 +318,7 @@ def list_projects(limit: int = 100) -> list[dict[str, Any]]:
             " p.audience, p.hours, p.objectives, p.key_points, p.difficulties,"
             " p.textbook_version, p.class_size, p.current_session, p.total_sessions,"
             " p.note, p.is_demo, p.created_at,"
+            " p.parent_id, p.round, p.status, p.archived_at,"
             " (SELECT COUNT(*) FROM files WHERE project_id=p.id) AS file_count,"
             " (SELECT COUNT(*) FROM tasks WHERE project_id=p.id) AS task_count"
             " FROM projects p ORDER BY p.created_at DESC, p.id DESC LIMIT ?",
@@ -328,7 +338,38 @@ def delete_project(project_id: int) -> None:
     with _conn() as c:
         c.execute("UPDATE files SET project_id=NULL WHERE project_id=?", (int(project_id),))
         c.execute("UPDATE tasks SET project_id=NULL WHERE project_id=?", (int(project_id),))
+        c.execute("UPDATE projects SET parent_id=NULL WHERE parent_id=?", (int(project_id),))
         c.execute("DELETE FROM projects WHERE id=?", (int(project_id),))
+
+
+def archive_project(project_id: int) -> None:
+    """把项目标记为已归档（历史轮次）。"""
+    with _conn() as c:
+        c.execute("UPDATE projects SET status='archived', archived_at=? WHERE id=?",
+                  (time.time(), int(project_id)))
+
+
+def set_project_round(project_id: int, parent_id: Optional[int], round_no: int) -> None:
+    """写入轮次关系：parent_id 指向课程根项目，round 为轮次序号。"""
+    with _conn() as c:
+        c.execute("UPDATE projects SET parent_id=?, round=? WHERE id=?",
+                  (int(parent_id) if parent_id is not None else None,
+                   int(round_no), int(project_id)))
+
+
+def list_rounds(root_id: int) -> list[dict[str, Any]]:
+    """列出某课程根项目及其全部轮次（子项目），按轮次升序。"""
+    with _conn() as c:
+        rows = c.execute(
+            "SELECT p.id, p.name, p.class_name, p.progress, p.current_session, p.total_sessions,"
+            " p.parent_id, p.round, p.status, p.archived_at, p.created_at,"
+            " (SELECT COUNT(*) FROM files WHERE project_id=p.id) AS file_count,"
+            " (SELECT COUNT(*) FROM tasks WHERE project_id=p.id) AS task_count"
+            " FROM projects p WHERE p.id=? OR p.parent_id=?"
+            " ORDER BY p.round ASC, p.id ASC",
+            (int(root_id), int(root_id)),
+        ).fetchall()
+    return [_d(r) for r in rows]
 
 
 # ---------------------------------------------------------------------------

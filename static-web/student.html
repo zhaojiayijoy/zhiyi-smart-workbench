@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>学生空间 · 致壹 智能教育工作台</title>
-<link rel="stylesheet" href="assets/css/site.css?v=1795481000">
+<link rel="stylesheet" href="assets/css/site.css?v=1795620000">
 </head>
 <body data-page="student" data-mode="student">
 <div class="app">
@@ -86,14 +86,12 @@
                 <div class="stack" style="gap:8px">
                   <div class="mini" style="padding:10px 0">暂无数据</div>
                 </div>
-                <div class="form-actions" style="margin-top:12px"><button class="btn" type="button" data-demo="已展开 remind 提示">查看老师提示</button></div>
               </div>
               <div>
                 <h3>我要提问</h3>
-                <form data-sim="#stuAskOut" data-msg="问题已提交（示例）">
-                  <div class="field"><label>你的问题</label><textarea required style="min-height:76px" placeholder="先写下你已经想到的思路"></textarea></div>
+                <form data-sim="#stuAskOut" data-msg="问题已提交">
+                  <div class="field"><label>你的问题</label><textarea required style="min-height:96px" placeholder="先写下你已经想到的思路"></textarea></div>
                   <div class="field"><label>关联知识点</label><select><option>参照群体</option><option>锚定效应</option><option>消费者态度</option><option>损失厌恶</option></select></div>
-                  <div class="field"><label>上传题目截图</label><input type="file"></div>
                   <div class="form-actions"><button class="btn primary" type="submit">提交问题</button></div>
                 </form>
                 <div class="rule" id="stuAskOut" hidden style="margin-top:12px">提交后将在此显示教师或 AI 的反馈。</div>
@@ -126,24 +124,6 @@
                 <div class="bar"><i id="rvProgBar" data-w="0" style="width:0"></i></div>
               </div>
             </div>
-            <div class="filter-row">
-              <select id="rvPoint" aria-label="按知识点筛选">
-                <option value="">全部知识点</option>
-                <option value="参照群体">参照群体</option>
-                <option value="锚定效应">锚定效应</option>
-                <option value="消费者态度">消费者态度</option>
-                <option value="数据分析">数据分析</option>
-              </select>
-              <select id="rvState" aria-label="按状态筛选">
-                <option value="">全部状态</option>
-                <option value="todo">待巩固</option>
-                <option value="done">已订正</option>
-                <option value="solid">已巩固</option>
-              </select>
-              <span class="mini" id="rvCount">0 题</span>
-              <span style="flex:1"></span>
-              <button class="btn primary" type="button" id="rvStart">开始连续复习</button>
-            </div>
             <div class="table-wrap">
               <table>
                 <thead><tr><th>题目</th><th>知识点</th><th>掌握度</th><th>最近错误</th><th>状态</th><th>操作</th></tr></thead>
@@ -151,22 +131,6 @@
                   <tr><td colspan="6" class="mini">暂无数据</td></tr>
                 </tbody>
               </table>
-            </div>
-
-            <div class="card" id="practice" hidden style="margin-top:12px;border-color:var(--accent-line)">
-              <div class="card-h">
-                <h2 id="pracTitle">连续复习</h2>
-                <div class="right"><span class="mini" id="pracProg">—</span><button class="btn sm ghost" type="button" id="pracClose">退出</button></div>
-              </div>
-              <div class="card-b">
-                <div class="rule" id="pracQ">—</div>
-                <div class="checks" id="pracOpts" style="margin-top:10px"></div>
-                <div class="evidence" id="pracFb"></div>
-                <div class="form-actions" style="margin-top:12px">
-                  <button class="btn primary" type="button" id="pracSubmit" disabled>提交答案</button>
-                  <button class="btn" type="button" id="pracNext" hidden>下一题</button>
-                </div>
-              </div>
             </div>
           </div>
 
@@ -194,7 +158,7 @@
     tasks: ["我的任务", "查看待完成与已提交的作业、实训与练习"],
     qa: ["我的答疑", "查看提问记录与老师提示"],
     feedback: ["教师反馈", "整卡点击查看详情，支持未读筛选与翻页"],
-    review: ["错题回顾", "按知识点与状态筛选，可进入连续复习"]
+    review: ["错题回顾", "查看错题记录与订正进度"]
   };
   function updateStats(){
     var todo = 0;
@@ -258,16 +222,13 @@
     if (fbNext) fbNext.addEventListener("click", function(){ fbPage++; renderFb(); });
 
     fbList.addEventListener("click", function(e){
-      var btn = e.target.closest("button[data-act]");
       var card = e.target.closest(".fb");
       if (!card) return;
-      if (btn){ toast("已定位到原文位置（示例）"); return; }
       card.setAttribute("data-read", "1");
       var tag = card.querySelector(".fb-unread");
       if (tag) tag.hidden = true;
       renderFb();
       updateStats();
-      toast("已打开反馈详情（示例）");
     });
     fbList.addEventListener("keydown", function(e){
       if (e.key === "Enter" || e.key === " "){
@@ -278,192 +239,19 @@
     renderFb();
   }
 
-  /* 3. 错题回顾：筛选 + 连续复习流程 */
+  /* 3. 错题回顾：接口暂未接入错题数据，仅保留进度占位 */
   var rvTbody = document.getElementById("rvTbody");
   if (rvTbody){
-    function allRv(){ return Array.prototype.slice.call(rvTbody.querySelectorAll("tr[data-point]")); }
-    var rvPoint = document.getElementById("rvPoint");
-    var rvState = document.getElementById("rvState");
-    var rvCount = document.getElementById("rvCount");
     var rvProgText = document.getElementById("rvProgText");
     var rvProgBar = document.getElementById("rvProgBar");
-
-    function applyRv(){
-      var p = rvPoint ? rvPoint.value : "";
-      var s = rvState ? rvState.value : "";
-      var shown = 0;
-      allRv().forEach(function(tr){
-        var ok = (!p || tr.getAttribute("data-point") === p) && (!s || tr.getAttribute("data-state") === s);
-        tr.style.display = ok ? "" : "none";
-        if (ok) shown++;
-      });
-      if (rvCount) rvCount.textContent = shown + " 题";
-    }
-    if (rvPoint) rvPoint.addEventListener("change", applyRv);
-    if (rvState) rvState.addEventListener("change", applyRv);
-    applyRv();
-
-    function updateProg(){
-      var total = allRv().length, done = 0, solid = 0;
-      if (!total) {
-        if (rvProgText) rvProgText.textContent = "暂无数据";
-        if (rvProgBar) rvProgBar.style.width = "0%";
-        return;
-      }
-      allRv().forEach(function(tr){
-        var s = tr.getAttribute("data-state");
-        if (s !== "todo") done++;
-        if (s === "solid") solid++;
-      });
-      if (rvProgText) rvProgText.textContent = done + " / " + total + " 题已订正" + (solid ? " · " + solid + " 个知识点已巩固" : "");
-      if (rvProgBar) rvProgBar.style.width = Math.round(done / total * 100) + "%";
-    }
-    updateProg();
-
-    var practice = document.getElementById("practice");
-    var pracQ = document.getElementById("pracQ");
-    var pracOpts = document.getElementById("pracOpts");
-    var pracFb = document.getElementById("pracFb");
-    var pracProg = document.getElementById("pracProg");
-    var pracSubmit = document.getElementById("pracSubmit");
-    var pracNext = document.getElementById("pracNext");
-    var pracClose = document.getElementById("pracClose");
-
-    var streak = {};
-    var bank = [
-      { point: "锚定效应",
-        q: "分析满减门槛的锚定作用：为什么「原价 ¥299，现价 ¥199」比直接标 ¥199 更容易被接受？",
-        opts: ["因为 199 看起来更低", "因为原价成为参照锚点，让现价显得便宜", "因为满减一定更划算", "因为消费者不会计算差价"],
-        ans: 1,
-        ev: "正确答案：B。原价 ¥299 是锚点，消费者以它为参照判断现价，差值被感知为收益。这属于锚定效应，而非真实的成本差异。" },
-      { point: "锚定效应",
-        q: "「原价 ¥599，限时 ¥399」的呈现方式主要利用了哪种效应？",
-        opts: ["损失厌恶", "锚定效应", "从众效应", "曝光效应"],
-        ans: 1,
-        ev: "正确答案：B。先给出高原价作为参照锚点，再展示现价，使现价显得更划算。" },
-      { point: "消费者态度",
-        q: "广告态度三成分标注：「这个广告让我觉得很温暖」属于态度中的哪个成分？",
-        opts: ["认知成分", "情感成分", "行为成分", "以上都不是"],
-        ans: 1,
-        ev: "正确答案：B。情感成分指向情绪体验；认知是信念判断，行为是行动倾向。" },
-      { point: "消费者态度",
-        q: "「我认为这个品牌值得信赖」属于态度中的哪个成分？",
-        opts: ["认知成分", "情感成分", "行为成分", "以上都不是"],
-        ans: 0,
-        ev: "正确答案：A。信赖是一种信念判断，属于认知成分；情感指向感受，行为指向购买意向。" },
-      { point: "参照群体",
-        q: "「同学都在用，所以我也想买」主要受哪种影响？",
-        opts: ["意见领袖", "参照群体", "锚定效应", "损失厌恶"],
-        ans: 1,
-        ev: "正确答案：B。同学是参照群体，个体通过与他人比较形成购买意愿，而非因为其专业影响力。" },
-      { point: "数据分析",
-        q: "满意度从 62% 提升到 68%，正确表述是？",
-        opts: ["提升 6%", "提升 6 个百分点", "提升 9.7%", "下降 6 个百分点"],
-        ans: 1,
-        ev: "正确答案：B。两个百分比指标相减，差值用「百分点」表述；「提升 6%」会被理解为相对增幅。" }
-    ];
-    var queue = [], curPoint = "", idx = 0, picked = -1;
-
-    function renderQ(){
-      var item = queue[idx];
-      pracProg.textContent = "第 " + (idx + 1) + " / " + queue.length + " 题";
-      pracQ.textContent = item.q;
-      pracOpts.innerHTML = "";
-      picked = -1;
-      item.opts.forEach(function(o, i){
-        var l = document.createElement("label");
-        l.className = "chk";
-        var r = document.createElement("input");
-        r.type = "radio";
-        r.name = "pracOpt";
-        r.value = String(i);
-        l.appendChild(r);
-        l.appendChild(document.createTextNode(o));
-        l.addEventListener("click", function(){
-          picked = i;
-          Array.prototype.forEach.call(pracOpts.children, function(c){ c.classList.remove("on"); });
-          l.classList.add("on");
-          pracSubmit.disabled = false;
-        });
-        pracOpts.appendChild(l);
-      });
-      pracFb.classList.remove("on");
-      pracFb.textContent = "";
-      pracSubmit.hidden = false;
-      pracSubmit.disabled = true;
-      pracNext.hidden = true;
-    }
-
-    function openPractice(point){
-      if (!practice) return;
-      curPoint = point || "";
-      queue = curPoint ? bank.filter(function(b){ return b.point === curPoint; }) : bank.slice();
-      if (!queue.length) queue = bank.slice();
-      idx = 0;
-      practice.hidden = false;
-      renderQ();
-      practice.scrollIntoView({ behavior: "smooth", block: "center" });
-    }
-
-    function markSolid(point){
-      var tr = null;
-      rvRows.forEach(function(r){ if (r.getAttribute("data-point") === point) tr = r; });
-      if (!tr || tr.getAttribute("data-state") === "solid") return;
-      tr.setAttribute("data-state", "solid");
-      if (tr.cells[4]) tr.cells[4].innerHTML = '<span class="tag ok">已巩固</span>';
-      applyRv();
-      updateProg();
-      toast("「" + point + "」连续答对 2 次，已标记为已巩固");
-    }
-
-    function finish(){
-      pracProg.textContent = "已完成";
-      pracQ.textContent = "本轮复习完成：" + queue.length + " / " + queue.length + " 题已作答。";
-      pracOpts.innerHTML = "";
-      pracFb.textContent = "连续复习记录已保存（示例）。同一知识点连续答对 2 次会自动标记为「已巩固」。";
-      pracFb.classList.add("on");
-      pracSubmit.hidden = true;
-      pracNext.hidden = true;
-    }
-
-    if (pracSubmit) pracSubmit.addEventListener("click", function(){
-      var item = queue[idx];
-      var ok = picked === item.ans;
-      pracFb.textContent = item.ev + (ok ? "" : "（你的选择与答案不一致，建议再看一次题干。）");
-      pracFb.classList.add("on");
-      pracSubmit.disabled = true;
-      pracNext.hidden = false;
-      if (ok){
-        streak[item.point] = (streak[item.point] || 0) + 1;
-        if (streak[item.point] >= 2) markSolid(item.point);
-      } else {
-        streak[item.point] = 0;
-      }
-    });
-    if (pracNext) pracNext.addEventListener("click", function(){
-      idx++;
-      if (idx >= queue.length) finish();
-      else renderQ();
-    });
-    if (pracClose) pracClose.addEventListener("click", function(){ if (practice) practice.hidden = true; });
-
-    var rvStart = document.getElementById("rvStart");
-    if (rvStart) rvStart.addEventListener("click", function(){ openPractice(); });
-
-    rvTbody.addEventListener("click", function(e){
-      var btn = e.target.closest("button[data-act]");
-      if (!btn) return;
-      var tr = btn.closest("tr");
-      var act = btn.getAttribute("data-act");
-      if (act === "practice" || act === "similar") openPractice(tr ? tr.getAttribute("data-point") : "");
-      else toast("已打开解析（示例）");
-    });
+    if (rvProgText) rvProgText.textContent = "暂无数据";
+    if (rvProgBar) rvProgBar.style.width = "0%";
   }
 })();
 </script>
 <script src="assets/js/data.js?v=1795420906"></script>
-<script src="assets/js/site.js?v=1795490000"></script>
-<script src="assets/js/api.js?v=1795420906"></script>
-<script src="assets/js/live.js?v=1795490000"></script>
+<script src="assets/js/site.js?v=1795600000"></script>
+<script src="assets/js/api.js?v=1795700003"></script>
+<script src="assets/js/live.js?v=1795700002"></script>
 </body>
 </html>

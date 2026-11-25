@@ -427,7 +427,7 @@
       var outputs = [];
       inputs.forEach(function (el) {
         var lab = (el.previousElementSibling && el.previousElementSibling.textContent) || el.name || el.placeholder || "";
-        if (el.type === "checkbox" && el.checked && el.parentElement.textContent.indexOf("双模型") < 0 && el.parentElement.textContent.indexOf("本次使用") < 0) {
+        if (el.type === "checkbox" && el.checked && !el.closest("#docChecks") && el.parentElement.textContent.indexOf("双模型") < 0 && el.parentElement.textContent.indexOf("本次使用") < 0) {
           var t = (el.parentElement.textContent || "").replace(/\s/g, "");
           if (t) outputs.push(t);
         }
@@ -442,12 +442,45 @@
       if (!topic) { notify("请填写本次课题"); return; }
       var dualBox = $all('.checks label.chk', form).filter(function (lab) { return /双模型/.test(lab.textContent); })[0];
       var dual = dualBox ? !!dualBox.querySelector('input:checked') : false;
+      var docIds = $all("#docChecks input:checked").map(function (i) {
+        return Number(i.getAttribute("data-fid"));
+      }).filter(function (n) { return n; });
       busy(btn, true, "生成中…");
       API.lesson.generate({ project_id: Number(p), topic: topic, lesson_type: lesson_type, hours: hours,
         student_level: student_level, style: style, extra: extra, outputs: outputs.length ? outputs : undefined,
+        file_ids: docIds.length ? docIds : undefined,
         dual_check: dual })
         .then(function (res) { busy(btn, false); renderLesson(res.pkg, res.task_id); notify("备课包已生成"); })
         .catch(function (err) { busy(btn, false); var o = $("#lessonOut"); if (o) { o.hidden = false; o.querySelector(".card-b").innerHTML = '<div class="rule" style="color:var(--warn)">生成失败：' + h(err.message || err) + '</div>'; } notify("生成失败"); });
+    });
+
+    function loadDocs() {
+      var p = pid(); if (!p) return;
+      var box = document.getElementById("docChecks");
+      var hint = document.getElementById("docHint");
+      if (!box) return;
+      API.files.list(p).then(function (files) {
+        files = files || [];
+        if (!files.length) {
+          box.innerHTML = '<span class="mini">当前课程暂无资料，将使用课程信息生成。</span>';
+          if (hint) hint.textContent = "未找到课程资料，可先到「课程资源」上传。";
+          return;
+        }
+        box.innerHTML = files.map(function (f) {
+          return '<label class="chk on"><input type="checkbox" data-fid="' + f.id + '" checked>' + h(f.name) + '</label>';
+        }).join("");
+        if (hint) hint.textContent = "已选 " + files.length + " / " + files.length + " 份资料，生成时仅引用所选资料。";
+      }).catch(function () {
+        if (box) box.innerHTML = '<span class="mini">资料加载失败，将使用课程信息生成。</span>';
+      });
+    }
+    document.addEventListener("change", function (e) {
+      if (!e.target || !e.target.closest || !e.target.closest("#docChecks")) return;
+      var all = $all("#docChecks input");
+      var checked = all.filter(function (i) { return i.checked; }).length;
+      var hint = document.getElementById("docHint");
+      if (hint) hint.textContent = "已选 " + checked + " / " + all.length + " 份资料" +
+        (checked ? "，生成时仅引用所选资料。" : "，未选将使用全部课程信息。");
     });
 
     function loadHistory() {
@@ -471,6 +504,7 @@
       var b = e.target.closest("[data-open-lesson]");
       if (b) { e.preventDefault(); var id = b.getAttribute("data-open-lesson"); API.lesson.get(id).then(function (pkg) { renderLesson(pkg, id); }).catch(function (err) { notify("打开失败：" + (err.message || err)); }); }
     });
+    onLive(loadDocs);
     onLive(loadHistory);
     // 从学情分析跳转过来时（lesson.html?task=123）直接打开对应备课包
     var qt = new URLSearchParams(location.search).get("task");
@@ -551,6 +585,30 @@
       var b = e.target.closest("[data-open-train]");
       if (b) { var id = b.getAttribute("data-open-train"); API.training.get(id).then(function (pkg) { renderTraining(pkg, id); }).catch(function (err) { notify("打开失败：" + (err.message || err)); }); }
     });
+    function loadTemplates() {
+      var bar = document.getElementById("tplBar");
+      if (!bar) return;
+      API.training.templates().then(function (rows) {
+        rows = rows || [];
+        if (!rows.length) { bar.innerHTML = '<span class="mini">暂无模板，可直接填写场景。</span>'; return; }
+        bar.innerHTML = rows.map(function (t) {
+          return '<button class="chk" type="button" data-tpl="' + h(t.key) + '">' + h(t.name) + '</button>';
+        }).join("");
+        bar.onclick = function (e) {
+          var b = e.target.closest("[data-tpl]");
+          if (!b) return;
+          var key = b.getAttribute("data-tpl");
+          var tpl = rows.filter(function (x) { return String(x.key) === key; })[0];
+          if (!tpl) return;
+          var sc = document.getElementById("trainScenario");
+          var ex = document.getElementById("trainExtra");
+          if (sc) { sc.value = tpl.scenario || ""; sc.dispatchEvent(new Event("input")); }
+          if (ex && tpl.extra) { ex.value = tpl.extra; ex.dispatchEvent(new Event("input")); }
+          notify("已套用模板：" + (tpl.name || ""));
+        };
+      }).catch(function () {});
+    }
+    onLive(loadTemplates);
     onLive(loadHistory);
     document.addEventListener("edu:training-changed", loadHistory);
   }
@@ -677,8 +735,11 @@
       var file = fileInput && fileInput.files && fileInput.files[0];
       var btn = form.querySelector('[type="submit"]');
       function doEval(text, name) {
+        var sel = document.getElementById("rubricPick");
+        var tpl = sel && rubricMap[sel.value];
         busy(btn, true, "评审中…");
-        API.review.evaluate({ project_id: p ? Number(p) : null, submission_text: text, file_name: name || "学生提交", student: student })
+        API.review.evaluate({ project_id: p ? Number(p) : null, submission_text: text, file_name: name || "学生提交", student: student,
+          rubric: tpl ? tpl.rows : undefined })
           .then(function (res) { busy(btn, false); renderReview(res.review, res.task_id, student, name); notify("评审完成"); })
           .catch(function (err) { busy(btn, false); notify("评审失败：" + (err.message || err)); });
       }
@@ -729,6 +790,34 @@
         loadHistory();
       }).catch(function (err) { busy(btn, false); notify("保存失败：" + (err.message || err)); });
     });
+
+    var rubricMap = {};
+    function applyRubric(key) {
+      var tpl = rubricMap[key];
+      var inputs = finalForm ? $all('input[type="number"]', finalForm) : [];
+      inputs.forEach(function (el, i) {
+        var row = tpl && tpl.rows && tpl.rows[i];
+        var lab = el.closest(".field") ? el.closest(".field").querySelector("label") : null;
+        if (row) {
+          if (lab) lab.textContent = row.dimension || ("维度" + (i + 1));
+          if (row.weight) el.max = row.weight;
+        }
+      });
+    }
+    function loadRubrics() {
+      var sel = document.getElementById("rubricPick");
+      if (!sel) return;
+      API.review.rubrics().then(function (rows) {
+        (rows || []).forEach(function (r) { rubricMap[r.key] = r; });
+        sel.innerHTML = '<option value="">默认量规（内容 / 数据 / 表达 / 可行性）</option>' +
+          (rows || []).map(function (r) {
+            return '<option value="' + h(r.key) + '">' + h(r.name) + '</option>';
+          }).join("");
+      }).catch(function () {});
+    }
+    var rubricSel = document.getElementById("rubricPick");
+    if (rubricSel) rubricSel.addEventListener("change", function () { applyRubric(rubricSel.value); });
+    onLive(loadRubrics);
 
     function reviewAction(status) {
       if (!currentReviewId) { notify("请先在列表中选择一条评审记录"); return; }
@@ -827,6 +916,19 @@
     bindBtn(document, "导出报告", function () { var p = pid(); if (p) window.open(API.analytics.exportUrl(p)); });
 
     var lastAgg = null;
+    var lastPayload = null;
+    function filterPayload() {
+      var daysEl = document.getElementById("anaDays");
+      var kpEl = document.getElementById("anaKp");
+      var src = $all("#anaSrc input:checked").map(function (i) { return i.value; });
+      var days = daysEl && daysEl.value ? Number(daysEl.value) : null;
+      return {
+        project_id: Number(pid()),
+        days: days || undefined,
+        knowledge_point: kpEl ? kpEl.value.trim() : "",
+        sources: src.length ? src : ["答疑", "评审", "实训"]
+      };
+    }
     function genReviewLesson(withPpt) {
       var p = pid();
       if (!p) { notify("请先选择课程"); return; }
@@ -884,8 +986,9 @@
     }
     function loadAggregate() {
       var p = pid(); if (!p) return;
+      lastPayload = filterPayload();
       busy(applyBtn, true, "分析中…");
-      API.analytics.aggregate({ project_id: Number(p) }).then(function (a) {
+      API.analytics.aggregate(lastPayload).then(function (a) {
         busy(applyBtn, false);
         lastAgg = a;
         setKpis(document, [
@@ -924,7 +1027,7 @@
       var host = document.querySelectorAll(".split .card .card-b .stack")[0]; // 下一课方案
       if (!host) return;
       host.innerHTML = '<div class="mini">正在生成下一课方案…</div>';
-      API.analytics.next({ project_id: Number(p) }).then(function (res) {
+      API.analytics.next(lastPayload || { project_id: Number(p) }).then(function (res) {
         var plan = res.plan || {};
         var rl = plan.review_lesson || {};
         var html = '<p class="sub" style="margin-bottom:10px">' + h(plan.prefill && plan.prefill.topic || (rl.title || "下一课方案")) + '</p>';
@@ -964,6 +1067,15 @@
       d.innerHTML = '<div class="who">' + (role === "me" ? "李" : "AI") + '</div><div class="bubble">' + html + '</div>';
       chat.appendChild(d); d.scrollIntoView({ behavior: "smooth", block: "end" }); return d;
     }
+    function addActs(msg) {
+      if (!msg || msg.querySelector(".msg-acts")) return;
+      var acts = document.createElement("div");
+      acts.className = "msg-acts";
+      acts.setAttribute("style", "display:flex;gap:8px;margin-top:8px");
+      acts.innerHTML = '<button class="btn sm ghost" type="button" data-act="copy">复制</button>' +
+        '<button class="btn sm ghost" type="button" data-act="save">保存到课程资料</button>';
+      msg.appendChild(acts);
+    }
     function realSend(text) {
       text = (text || "").trim(); if (!text) return;
       appendMsg("me", h(text));
@@ -976,9 +1088,37 @@
       API.assistant.chat({ prompt: text, project_id: p ? Number(p) : null }).then(function (res) {
         var out = (res && res.output) || "(无输出)";
         thinking.querySelector(".bubble").innerHTML = h(out).replace(/\n/g, "<br>");
+        addActs(thinking);
         thinking.scrollIntoView({ behavior: "smooth", block: "end" });
       }).catch(function (err) { thinking.querySelector(".bubble").innerHTML = '<span style="color:var(--warn)">生成失败：' + h(err.message || err) + "</span>"; });
     }
+    if (chat) chat.addEventListener("click", function (e) {
+      var b = e.target.closest("[data-act]");
+      if (!b) return;
+      e.preventDefault(); e.stopPropagation();
+      var msg = b.closest(".msg");
+      var bubble = msg ? msg.querySelector(".bubble") : null;
+      if (!bubble) return;
+      var text = bubble.innerText || bubble.textContent || "";
+      if (b.getAttribute("data-act") === "copy") {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(text).then(function () { notify("已复制"); })
+            .catch(function () { notify("复制失败"); });
+        } else { notify("当前浏览器不支持复制"); }
+        return;
+      }
+      if (!Edu.isLive()) { notify("未连接本地接口，无法保存"); return; }
+      var p = pid();
+      if (!p) { notify("请先选择课程"); return; }
+      var firstLine = (text.split("\n").filter(function (s) { return s && s.trim(); })[0] || "")
+        .replace(/^[#>*\-\s]+/, "").replace(/\*+/g, "").trim();
+      var head = firstLine.split(/[：:]/)[0].trim();
+      var title = (head.length >= 2 ? head : firstLine).slice(0, 24) || "AI 助手回答";
+      busy(b, true, "保存中…");
+      API.assistant.save({ project_id: Number(p), title: title, content: text })
+        .then(function (r) { busy(b, false); notify("已保存为课程资料：" + (r.name || "")); })
+        .catch(function (err) { busy(b, false); notify("保存失败：" + (err.message || err)); });
+    });
     window.__eduSendAssistant = realSend;
     if (form) {
       form.addEventListener("submit", function (e) { e.preventDefault(); e.stopImmediatePropagation(); realSend(form.querySelector("textarea").value); form.querySelector("textarea").value = ""; });
@@ -1256,15 +1396,16 @@
         notify("问题已提交");
       }).catch(function (err) { busy(btn, false); notify("失败：" + (err.message || err)); });
     });
-    function renderStudent(d) {
+    function renderStudent(d, wrong) {
       d = d || {};
+      wrong = wrong || { items: [], total: 0, corrected: 0 };
       var myQa = d.my_qa || [], myRev = d.my_reviews || [],
           trains = d.trainings || [], lessons = d.lessons || [];
       setKpis(document, [
         { value: trains.length, foot: "实训任务" },
         { value: myRev.filter(function (r) { return r.status !== "published"; }).length, foot: "待阅读反馈" },
         { value: myRev.length ? Math.round(myRev.reduce(function (s, r) { return s + Number((r.meta || {}).final_total || 0); }, 0) / myRev.length) : 0, foot: "作业平均分" },
-        { value: myQa.length, foot: "答疑记录" }
+        { value: wrong.total || 0, foot: "已讲解 " + (wrong.corrected || 0) + " 题" }
       ]);
       // 顶部副文案：用真实计数替换写死的"2 个任务 / 1 条反馈"
       var heroP = document.querySelector("#studentHero p");
@@ -1330,20 +1471,29 @@
         var fbCount = document.getElementById("fbCount");
         if (fbCount) fbCount.textContent = "共 " + myRev.length + " 条";
       }
-      // 错题本：接口暂无该字段 → 空状态
+      // 错题本：由真实评审低分维度与答疑错因派生
       var rvTb = document.getElementById("rvTbody");
-      if (rvTb) rvTb.innerHTML = '<tr><td colspan="6" class="mini">暂无错题记录。</td></tr>';
+      if (rvTb) {
+        rvTb.innerHTML = (wrong.items || []).map(function (it) {
+          var st = it.status === "已讲解" ? '<span class="tag ok">已讲解</span>' : '<span class="tag warn">待订正</span>';
+          return '<tr><td>' + h(it.topic || "—") + '</td><td>' + h(it.knowledge_point || "—") + '</td><td>' + h(it.mastery || "—") + '</td>' +
+            '<td class="wrap">' + h(it.last_error || "—") + '</td><td>' + st + '</td><td class="mini">—</td></tr>';
+        }).join("") || '<tr><td colspan="6" class="mini">暂无错题记录。</td></tr>';
+      }
       var rvCount = document.getElementById("rvCount");
-      if (rvCount) rvCount.textContent = "0 题";
+      if (rvCount) rvCount.textContent = (wrong.total || 0) + " 题";
       var rvProgText = document.getElementById("rvProgText");
-      if (rvProgText) rvProgText.textContent = "0 / 0 题已订正";
+      if (rvProgText) rvProgText.textContent = (wrong.corrected || 0) + " / " + (wrong.total || 0) + " 题已订正";
       var rvProgBar = document.getElementById("rvProgBar");
-      if (rvProgBar) rvProgBar.style.width = "0%";
+      if (rvProgBar) rvProgBar.style.width = (wrong.total ? Math.round((wrong.corrected || 0) / wrong.total * 100) : 0) + "%";
     }
     onLive(function () {
       var p = pid();
-      var stu = (window.EDU && window.EDU.student && window.EDU.student.name) || "陈思远";
-      API.student.dashboard(p, stu).then(function (d) { renderStudent(d); }).catch(function () {});
+      var stu = (window.EDU && window.EDU.student && window.EDU.student.name) || "";
+      Promise.all([
+        API.student.dashboard(p, stu),
+        API.student.wrong(p, stu).catch(function () { return { items: [], total: 0, corrected: 0 }; })
+      ]).then(function (res) { renderStudent(res[0], res[1]); }).catch(function () {});
     });
   }
 

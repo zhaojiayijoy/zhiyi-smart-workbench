@@ -13,6 +13,7 @@ import json
 import os
 import re
 import sys
+import threading
 import time
 import uuid
 from pathlib import Path
@@ -51,10 +52,11 @@ STORE: dict[str, dict[str, Any]] = {
     "nextplans": {},    # task_id -> {project_id, plan, analytics, ts}
     "tutors": {},       # thread_id -> {project_id, question, history:[{role,text}], ts}
     "analytics": {},    # project_id -> {analytics, ts}
+    "outlines": {},     # project_id -> {project_id, status, outline, sessions_state, ...}
 }
 
 # 这些桶的 key 是整数 task_id，从库里恢复时需要还原类型
-_INT_KEY_BUCKETS = {"lessons", "trainings", "reviews", "nextplans"}
+_INT_KEY_BUCKETS = {"lessons", "trainings", "reviews", "nextplans", "outlines"}
 
 # 桶 -> Streamlit 工作台写入的任务类型（用于读取 tasks.meta 中的旧产物）
 _TASK_KIND = {"lessons": "lesson", "trainings": "training",
@@ -313,8 +315,11 @@ def _course_out(p: Optional[dict]) -> Optional[dict]:
 
 
 @app.get("/api/courses")
-def list_courses() -> dict:
-    return ok([_course_out(p) for p in db.list_projects()])
+def list_courses(include_archived: bool = Query(False)) -> dict:
+    rows = db.list_projects()
+    if not include_archived:
+        rows = [p for p in rows if (p.get("status") or "active") != "archived"]
+    return ok([_course_out(p) for p in rows])
 
 
 @app.get("/api/courses/{cid}")
@@ -329,6 +334,152 @@ def get_course(cid: int) -> dict:
 @app.get("/api/courses/{cid}/overview")
 def course_overview_api(cid: int) -> dict:
     return ok(db.course_overview(cid))
+
+
+@app.get("/api/courses/{cid}/rounds")
+def list_course_rounds(cid: int) -> dict:
+    """列出该课程根项目及其全部轮次（历史轮次即「子项目」）。"""
+    p = db.get_project(cid)
+    if not p:
+        raise HTTPException(404, "课程不存在")
+    root_id = int(p.get("parent_id") or p["id"])
+    out = []
+    for r in db.list_rounds(root_id):
+        meta = {}
+        items = db.list_artifacts("rounds", project_id=int(r["id"]))
+        if items:
+            meta = items[0][1] or {}
+        out.append({
+            "id": r["id"],
+            "name": r["name"],
+            "round": int(r.get("round") or 1),
+            "status": r.get("status") or "active",
+            "archived_at": r.get("archived_at"),
+            "progress": r.get("progress") or "",
+            "current_session": int(r.get("current_session") or 0),
+            "total_sessions": int(r.get("total_sessions") or 0),
+            "file_count": int(r.get("file_count") or 0),
+            "task_count": int(r.get("task_count") or 0),
+            "zip_file_id": meta.get("zip_file_id"),
+        })
+    return ok({"root_id": root_id, "rounds": out})
+
+
+# 归档后带入新一轮的教学资料分类
+TEACHING_FILE_CATEGORIES = ("教材", "课件", "案例", "评分标准", "试题")
+
+
+class RoundIn(BaseModel):
+    name: Optional[str] = None
+    class_: Optional[str] = Field(None, alias="class")
+    class_name: Optional[str] = None
+    classSize: Optional[int] = None
+    totalHours: Optional[int] = None
+    totalSessions: Optional[int] = None
+    hours: Optional[str] = None
+    textbook: Optional[str] = None
+    textbook_version: Optional[str] = None
+    objectives: Optional[str] = None
+    key: Optional[str] = None
+    key_points: Optional[str] = None
+    diff: Optional[str] = None
+    difficulties: Optional[str] = None
+    note: Optional[str] = None
+    desc: Optional[str] = None
+    description: Optional[str] = None
+    audience: Optional[str] = None
+
+
+def _unique_project_name(base: str) -> str:
+    """课程名在库里唯一，重名时追加序号。"""
+    names = {p.get("name") for p in db.list_projects(limit=1000)}
+    if base not in names:
+        return base
+    i = 2
+    while f"{base}（{i}）" in names:
+        i += 1
+    return f"{base}（{i}）"
+
+
+@app.post("/api/courses/{cid}/rounds/archive")
+def archive_course_round(cid: int, body: RoundIn) -> dict:
+    """归档当前轮次：打包 ZIP + 标记旧项目 + 以子项目形式创建新一轮。"""
+    p = db.get_project(cid)
+    if not p:
+        raise HTTPException(404, "课程不存在")
+    if (p.get("status") or "active") == "archived":
+        raise HTTPException(400, "该课程已归档，不能重复归档")
+
+    root_id = int(p.get("parent_id") or p["id"])
+    round_no = int(p.get("round") or 1)
+
+    pkg = edu.build_round_archive(cid)
+    zip_name = f"第{round_no}轮教学归档_{time.strftime('%Y%m%d')}.zip"
+    try:
+        zip_id = db.save_file(
+            name=zip_name, ext="ZIP", kind="doc", content=pkg["zip"],
+            size=len(pkg["zip"]), project_id=cid, visibility="teacher",
+            category="归档", ai_context=0, parse_status="parsed",
+        )
+    except Exception as e:
+        raise HTTPException(500, f"归档包保存失败：{e}")
+
+    db.archive_project(cid)
+
+    raw_name = (body.name or p.get("name") or "未命名课程").strip()
+    base_name = re.sub(r"（第\d+轮）$", "", raw_name) or raw_name
+    new_pid = db.create_project(
+        _unique_project_name(f"{base_name}（第{round_no + 1}轮）"),
+        description=(body.description or body.desc or p.get("description") or ""),
+    )
+    db.update_course(
+        new_pid,
+        audience=body.audience or p.get("audience"),
+        class_name=body.class_ or body.class_name or p.get("class_name"),
+        hours=(str(int(body.totalHours)) if body.totalHours is not None
+               else (body.hours or p.get("hours"))),
+        textbook_version=body.textbook or body.textbook_version or p.get("textbook_version"),
+        objectives=body.objectives or p.get("objectives"),
+        key_points=body.key or body.key_points or p.get("key_points"),
+        difficulties=body.diff or body.difficulties or p.get("difficulties"),
+        progress="",
+        class_size=(body.classSize if body.classSize is not None else p.get("class_size")),
+        current_session=0,
+        total_sessions=(body.totalSessions if body.totalSessions is not None
+                        else p.get("total_sessions")),
+        note=(body.note if body.note is not None else p.get("note")),
+    )
+    db.set_project_round(new_pid, root_id, round_no + 1)
+
+    copied = 0
+    for f in db.list_files(project_id=cid, limit=500):
+        if (f.get("category") or "") not in TEACHING_FILE_CATEGORIES:
+            continue
+        full = db.get_file(int(f["id"]), with_content=True) or {}
+        db.save_file(
+            name=full.get("name") or f["name"],
+            ext=full.get("ext") or f.get("ext") or "",
+            kind=full.get("kind") or f.get("kind") or "doc",
+            content=full.get("content"),
+            size=int(full.get("size") or 0),
+            rows=int(full.get("rows") or 0),
+            cols=int(full.get("cols") or 0),
+            chars=int(full.get("chars") or 0),
+            parsed_text=full.get("parsed_text"),
+            project_id=new_pid,
+            visibility=full.get("visibility") or "teacher",
+            category=full.get("category") or "",
+            ai_context=int(full.get("ai_context") or 1),
+            parse_status=full.get("parse_status") or "parsed",
+        )
+        copied += 1
+
+    db.save_artifact("rounds", cid, {
+        "round": round_no, "zip_file_id": zip_id, "next_id": new_pid,
+        "archived_at": time.time(), "copied_files": copied,
+    }, project_id=cid)
+    return ok({"archived_id": cid, "next": _course_out(db.get_project(new_pid)),
+               "zip_file_id": zip_id, "copied_files": copied})
 
 
 class CourseIn(BaseModel):
@@ -468,6 +619,25 @@ def get_file(fid: int) -> dict:
     if not f:
         raise HTTPException(404, "文件不存在")
     return ok(f)
+
+
+@app.get("/api/files/{fid}/download")
+def download_file(fid: int) -> Response:
+    f = db.get_file(fid, with_content=True)
+    if not f:
+        raise HTTPException(404, "文件不存在")
+    content = f.get("content") or b""
+    if not content:
+        raise HTTPException(404, "文件内容为空")
+    ext = (f.get("ext") or "").upper()
+    media = {
+        "ZIP": "application/zip", "PDF": "application/pdf",
+        "DOCX": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "XLSX": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "PPTX": "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+        "TXT": "text/plain; charset=utf-8", "CSV": "text/csv; charset=utf-8",
+    }.get(ext, "application/octet-stream")
+    return _file_resp(content, f.get("name") or f"file.{ext.lower()}", media)
 
 
 @app.get("/api/files/{fid}/text")
@@ -654,6 +824,266 @@ def export_lesson(tid: int, type: str = Query("docx")) -> Response:
 
 
 # ---------------------------------------------------------------------------
+# 备课大纲（agent 工作流：生成大纲 → 教师审查 → 通过后按讲次生成备课包）
+# ---------------------------------------------------------------------------
+class OutlineIn(BaseModel):
+    project_id: int
+    extra: str = ""
+    total_sessions: Optional[int] = None
+    total_hours: Optional[int] = None
+    teacher_note: str = ""
+
+
+class OutlineUpdateIn(BaseModel):
+    outline: Optional[dict] = None
+    teacher_note: Optional[str] = None
+
+
+class OutlineReviseIn(BaseModel):
+    teacher_note: str = ""
+
+
+# 批量生成进度（进程内）：project_id -> {running, cancel, total, done, current, failed}
+_OUTLINE_JOBS: dict[int, dict[str, Any]] = {}
+
+
+def _new_outline_item(project_id: int, outline: dict[str, Any],
+                      version: int = 1, teacher_note: str = "",
+                      ask: dict[str, Any] | None = None) -> dict[str, Any]:
+    now = _now()
+    return {
+        "project_id": project_id,
+        "status": "draft",           # draft | edited | approved
+        "version": version,
+        "ask": ask or {},            # 生成要求（讲次数/课时/补充要求），按意见重写时沿用
+        "teacher_note": teacher_note,
+        "created": now,
+        "updated": now,
+        "approved_at": None,
+        "outline": outline,
+        "sessions_state": {},        # "1" -> {status: pending|generating|generated|failed, task_id, error}
+        "job": None,
+    }
+
+
+def _persist_outline_lesson(project_id: int, topic: str, pkg: dict[str, Any],
+                            session_no: int, outline_version: int,
+                            materials: list[str] | None = None) -> int:
+    """把大纲某一讲生成的备课包存入 lessons 桶（与一键备课共用同一条导出链路）。"""
+    meta = {"pkg": pkg, "topic": topic, "version": "v1",
+            "materials": materials or [], "model": "默认", "review_model": "",
+            "dual_check": False, "lesson_type": "新授课",
+            "outputs": [], "created": _now(), "params": {},
+            "outline_version": outline_version, "outline_session": session_no,
+            "review_status": "待教师确认", "issues": []}
+    tid = db.save_task(prompt=topic, answer="备课包已生成", kind="lesson", status="ok",
+                       duration_s=0.0, project_id=project_id, meta=meta)
+    _store_put("lessons", tid, {"project_id": project_id, "topic": topic, "pkg": pkg,
+                                "materials": materials or [], "version": "v1",
+                                "ts": _now()})
+    return tid
+
+
+def _generate_outline_session(pid: int, item: dict[str, Any], no: int) -> int:
+    """按大纲第 no 讲生成一份完整备课包，返回 task_id。"""
+    outline = item.get("outline") or {}
+    target = next((s for s in (outline.get("sessions") or [])
+                   if isinstance(s, dict) and int(s.get("no") or 0) == int(no)), None)
+    if not target:
+        raise ValueError(f"大纲中不存在第 {no} 讲")
+    ctx = edu.outline_session_context(outline, no)
+    pkg = edu.generate_lesson_package(
+        pid, str(target.get("topic") or f"第 {no} 讲"),
+        hours=f"{target.get('hours') or 2} 课时",
+        outputs=target.get("outputs") or None,
+        outline_ctx=ctx,
+    )
+    return _persist_outline_lesson(pid, str(target.get("topic") or f"第 {no} 讲"), pkg,
+                                   no, int(item.get("version") or 1))
+
+
+@app.post("/api/outline/generate")
+def outline_generate(body: OutlineIn) -> dict:
+    if not db.get_project(body.project_id):
+        raise HTTPException(404, "课程不存在")
+    try:
+        outline = edu.generate_course_outline(
+            body.project_id, extra=body.extra,
+            total_sessions=body.total_sessions, total_hours=body.total_hours,
+            teacher_note=body.teacher_note)
+    except Exception as e:
+        return err(f"生成大纲失败：{e.__class__.__name__}: {e}", 500)
+    old = _store_get("outlines", body.project_id) or {}
+    item = _new_outline_item(body.project_id, outline,
+                             version=int(old.get("version") or 0) + 1,
+                             teacher_note=body.teacher_note,
+                             ask={"total_sessions": body.total_sessions,
+                                  "total_hours": body.total_hours,
+                                  "extra": body.extra})
+    _store_put("outlines", body.project_id, item)
+    return ok(item)
+
+
+@app.get("/api/outline")
+def outline_get(project_id: int = Query(...)) -> dict:
+    return ok(_store_get("outlines", project_id) or {})
+
+
+@app.put("/api/outline/{pid}")
+def outline_update(pid: int, body: OutlineUpdateIn) -> dict:
+    item = _store_get("outlines", pid)
+    if not item:
+        raise HTTPException(404, "大纲不存在")
+    if body.outline is not None:
+        item["outline"] = edu.normalize_outline(body.outline, db.get_project(pid))
+        if item.get("status") != "approved":
+            item["status"] = "edited"
+    if body.teacher_note is not None:
+        item["teacher_note"] = body.teacher_note
+    item["updated"] = _now()
+    _store_put("outlines", pid, item)
+    return ok(item)
+
+
+@app.post("/api/outline/{pid}/revise")
+def outline_revise(pid: int, body: OutlineReviseIn) -> dict:
+    """对话式修改：教师给意见，agent 重写整份大纲（版本 +1，需重新审查）。"""
+    item = _store_get("outlines", pid)
+    if not item:
+        raise HTTPException(404, "大纲不存在")
+    note = (body.teacher_note or "").strip()
+    if not note:
+        raise HTTPException(400, "请先填写修改意见")
+    ask = item.get("ask") or {}
+    try:
+        outline = edu.generate_course_outline(
+            pid, teacher_note=note,
+            extra=ask.get("extra") or "",
+            total_sessions=ask.get("total_sessions"),
+            total_hours=ask.get("total_hours"))
+    except Exception as e:
+        return err(f"按意见重写失败：{e.__class__.__name__}: {e}", 500)
+    item["outline"] = outline
+    item["status"] = "draft"
+    item["version"] = int(item.get("version") or 0) + 1
+    item["teacher_note"] = note
+    item["updated"] = _now()
+    item["approved_at"] = None
+    # 大纲已变，之前按旧大纲生成的讲次不再对应当前大纲，需要重新生成
+    item["sessions_state"] = {}
+    _store_put("outlines", pid, item)
+    return ok(item)
+
+
+@app.post("/api/outline/{pid}/approve")
+def outline_approve(pid: int) -> dict:
+    item = _store_get("outlines", pid)
+    if not item:
+        raise HTTPException(404, "大纲不存在")
+    sessions = [s for s in ((item.get("outline") or {}).get("sessions") or [])
+                if isinstance(s, dict)]
+    if not sessions:
+        raise HTTPException(400, "大纲没有讲次，无法通过审查")
+    item["status"] = "approved"
+    item["approved_at"] = _now()
+    item["updated"] = _now()
+    _store_put("outlines", pid, item)
+    return ok(item)
+
+
+@app.post("/api/outline/{pid}/sessions/{no}/generate")
+def outline_generate_one(pid: int, no: int) -> dict:
+    item = _store_get("outlines", pid)
+    if not item:
+        raise HTTPException(404, "大纲不存在")
+    if item.get("status") != "approved":
+        raise HTTPException(400, "请先通过备课大纲审查，再生成备课包")
+    try:
+        tid = _generate_outline_session(pid, item, no)
+    except Exception as e:
+        item.setdefault("sessions_state", {})[str(no)] = {
+            "status": "failed", "error": f"{e.__class__.__name__}: {e}", "task_id": None}
+        _store_put("outlines", pid, item)
+        return err(f"生成第 {no} 讲失败：{e.__class__.__name__}: {e}", 500)
+    item.setdefault("sessions_state", {})[str(no)] = {"status": "generated", "task_id": tid}
+    item["updated"] = _now()
+    _store_put("outlines", pid, item)
+    return ok({"task_id": tid, "session_no": no})
+
+
+def _run_outline_batch(pid: int, session_nos: list[int]) -> None:
+    job = _OUTLINE_JOBS.setdefault(pid, {})
+    job.update({"running": True, "cancel": False, "total": len(session_nos),
+                "done": 0, "current": None, "failed": [], "started": _now()})
+    try:
+        for no in session_nos:
+            if job.get("cancel"):
+                break
+            item = _store_get("outlines", pid)
+            if not item:
+                break
+            state = item.setdefault("sessions_state", {})
+            state[str(no)] = {"status": "generating",
+                              "task_id": (state.get(str(no)) or {}).get("task_id")}
+            item["job"] = {"running": True, "total": job["total"], "done": job["done"],
+                           "current": no, "failed": list(job["failed"])}
+            _store_put("outlines", pid, item)
+            job["current"] = no
+            try:
+                tid = _generate_outline_session(pid, item, no)
+                state[str(no)] = {"status": "generated", "task_id": tid}
+            except Exception as e:  # 单讲失败不阻断后续讲次
+                state[str(no)] = {"status": "failed", "task_id": None,
+                                  "error": f"{e.__class__.__name__}: {e}"}
+                job["failed"].append(no)
+            job["done"] += 1
+            item["job"] = {"running": True, "total": job["total"], "done": job["done"],
+                           "current": no, "failed": list(job["failed"])}
+            item["updated"] = _now()
+            _store_put("outlines", pid, item)
+    finally:
+        job["running"] = False
+        job["current"] = None
+        item = _store_get("outlines", pid)
+        if item:
+            item["job"] = {"running": False, "total": job.get("total"), "done": job.get("done"),
+                           "current": None, "failed": list(job.get("failed") or []),
+                           "finished": _now()}
+            item["updated"] = _now()
+            _store_put("outlines", pid, item)
+
+
+@app.post("/api/outline/{pid}/generate-all")
+def outline_generate_all(pid: int) -> dict:
+    item = _store_get("outlines", pid)
+    if not item:
+        raise HTTPException(404, "大纲不存在")
+    if item.get("status") != "approved":
+        raise HTTPException(400, "请先通过备课大纲审查，再批量生成备课包")
+    job = _OUTLINE_JOBS.get(pid)
+    if job and job.get("running"):
+        raise HTTPException(400, "该课程正在批量生成，请等待完成")
+    state = item.get("sessions_state") or {}
+    sessions = [s for s in ((item.get("outline") or {}).get("sessions") or [])
+                if isinstance(s, dict)]
+    todo = [int(s["no"]) for s in sessions
+            if (state.get(str(s.get("no"))) or {}).get("status") != "generated"]
+    if not todo:
+        return ok({"started": False, "total": 0, "message": "全部讲次均已生成"})
+    threading.Thread(target=_run_outline_batch, args=(pid, todo), daemon=True).start()
+    return ok({"started": True, "total": len(todo)})
+
+
+@app.post("/api/outline/{pid}/generate-all/cancel")
+def outline_generate_all_cancel(pid: int) -> dict:
+    job = _OUTLINE_JOBS.get(pid)
+    if not job or not job.get("running"):
+        return ok({"cancelled": False, "message": "当前没有进行中的批量生成"})
+    job["cancel"] = True
+    return ok({"cancelled": True})
+
+
+# ---------------------------------------------------------------------------
 # 创建实训
 # ---------------------------------------------------------------------------
 class TrainingIn(BaseModel):
@@ -684,6 +1114,12 @@ def training_history(project_id: Optional[int] = Query(None)) -> dict:
              "status": ((v.get("pkg") or {}).get("status") or "draft")}
             for t, v in _store_items("trainings", project_id)]
     return ok(rows)
+
+
+@app.get("/api/training/templates")
+def training_templates() -> dict:
+    """实训场景模板：供前端一键填入场景描述。"""
+    return ok(edu.training_templates())
 
 
 @app.get("/api/training/{tid}")
@@ -827,6 +1263,14 @@ def review_history(project_id: Optional[int] = Query(None)) -> dict:
                      "total": ai_total, "ai_total": ai_total,
                      "final_total": v.get("final_total", ai_total),
                      "status": v.get("status") or "ai", "ts": v["ts"]})
+    return ok(rows)
+
+
+@app.get("/api/review/rubrics")
+def review_rubrics() -> dict:
+    """评分量规模板列表（复用 edu.RUBRIC_TEMPLATES）。"""
+    rows = [{"key": k, "name": (v or {}).get("name") or k, "rows": (v or {}).get("rows") or []}
+            for k, v in edu.RUBRIC_TEMPLATES.items()]
     return ok(rows)
 
 
@@ -1017,6 +1461,39 @@ def assistant_chat(body: ChatIn) -> dict:
                "steps": len(res.get("intermediate_steps") or [])})
 
 
+class AssistantSaveIn(BaseModel):
+    project_id: Optional[int] = None
+    title: str = "AI 助手回答"
+    content: str
+    task_id: Optional[int] = None
+
+
+@app.post("/api/assistant/save")
+def assistant_save(body: AssistantSaveIn) -> dict:
+    """把 AI 回答保存为当前课程的文本资料（教师可见），可在备课/答疑中引用。"""
+    text = (body.content or "").strip()
+    if not text:
+        raise HTTPException(400, "内容为空，无法保存")
+    title = (body.title or "AI 助手回答").strip()[:40] or "AI 助手回答"
+    name = title + ".txt"
+    try:
+        fid = db.save_file(
+            name=name, ext="TXT", kind="doc", content=text.encode("utf-8"),
+            size=len(text.encode("utf-8")), chars=len(text), parsed_text=text,
+            project_id=body.project_id, visibility="teacher", category="其他",
+            ai_context=1,
+        )
+    except Exception as e:
+        raise HTTPException(500, f"保存失败：{e}")
+    if body.task_id:
+        task = db.get_task(body.task_id)
+        if task:
+            meta = task.get("meta") or {}
+            meta["saved_file_id"] = fid
+            db.update_task(body.task_id, meta=meta)
+    return ok({"id": fid, "name": name})
+
+
 # ---------------------------------------------------------------------------
 # 智谱智能体对话（POST /v1/agents）
 # ---------------------------------------------------------------------------
@@ -1079,6 +1556,57 @@ def student_dashboard(project_id: Optional[int] = Query(None), student: str = Qu
         "my_qa": my_qa, "my_reviews": my_reviews, "trainings": trainings,
         "lessons": lessons, "tutor_threads": tutor_threads,
     })
+
+
+@app.get("/api/student/wrong")
+def student_wrong(project_id: Optional[int] = Query(None), student: str = Query("")) -> dict:
+    """错题本：由真实评审低分维度与答疑错因派生，无数据时返回空列表。"""
+    stu_filter = (student or "").strip()
+
+    def _stu(t: dict) -> str:
+        return ((t.get("meta") or {}).get("student") or "").strip()
+
+    items: list[dict[str, Any]] = []
+    for t in db.list_tasks(project_id=project_id, kind="review", limit=200):
+        if stu_filter and _stu(t) != stu_filter:
+            continue
+        meta = t.get("meta") or {}
+        ai = meta.get("ai") or {}
+        topic = meta.get("file") or t.get("prompt") or "作业"
+        for d in ai.get("dimensions") or []:
+            try:
+                score = float(d.get("score") or 0)
+                mx = float(d.get("max") or 0)
+            except (TypeError, ValueError):
+                continue
+            if mx <= 0 or score / mx >= 0.6:
+                continue
+            items.append({
+                "topic": topic,
+                "knowledge_point": d.get("name") or d.get("dimension") or "",
+                "mastery": f"{round(score / mx * 100)}%",
+                "last_error": (d.get("evidence") or d.get("suggestion") or "")[:60],
+                "status": "待订正",
+                "ts": t.get("created_at") or 0,
+            })
+    for t in db.list_tasks(project_id=project_id, kind="qa", limit=200):
+        if stu_filter and _stu(t) != stu_filter:
+            continue
+        meta = t.get("meta") or {}
+        et = (meta.get("error_type") or "").strip()
+        if not et:
+            continue
+        items.append({
+            "topic": (t.get("prompt") or "答疑")[:40],
+            "knowledge_point": meta.get("knowledge_point") or "",
+            "mastery": "—",
+            "last_error": et,
+            "status": "已讲解",
+            "ts": t.get("created_at") or 0,
+        })
+    items.sort(key=lambda x: x.get("ts") or 0, reverse=True)
+    corrected = len([i for i in items if i["status"] == "已讲解"])
+    return ok({"items": items, "total": len(items), "corrected": corrected})
 
 
 # ---------------------------------------------------------------------------

@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>一键备课 · 致壹 智能教育工作台</title>
-<link rel="stylesheet" href="assets/css/site.css?v=1795481000">
+<link rel="stylesheet" href="assets/css/site.css?v=1795620000">
 </head>
 <body data-page="lesson">
 <div class="app">
@@ -21,10 +21,7 @@
       <div class="ctx">
         <div><span class="k">当前课程</span><b data-fill="course.name">—</b></div>
         <div><span class="k">授课对象</span><b data-fill="course.classWithSize">—</b></div>
-        <div><span class="k">课时</span><b data-fill="course.totalHours">—</b></div>
         <div><span class="k">进度</span><b data-fill="course.progress">—</b></div>
-        <div><span class="k">教材</span><b data-fill="course.textbook">—</b></div>
-        <div><span class="k">可用资料</span><b data-fill="course.resourceCount">—</b></div>
       </div>
 
       <div class="card" style="margin-bottom:14px">
@@ -57,12 +54,9 @@
             </div>
 
             <div class="field">
-              <label>本次使用的课程资料 <span class="mini" id="docCount">—</span></label>
-              <div class="checks" id="docChecks">
-                <div class="mini" style="padding:10px 0">暂无数据</div>
-              </div>
-              <button type="button" class="btn sm" id="docToggle" style="align-self:flex-start;margin-top:6px">展开资料预览</button>
-              <div id="docPreview" class="mini" style="display:none;margin-top:6px"></div>
+              <label>本次使用的课程资料</label>
+              <div class="checks" id="docChecks"><span class="mini">加载中…</span></div>
+              <span class="hint" id="docHint">按所选资料生成，未选则使用课程全部信息。</span>
             </div>
 
             <div class="grid g3">
@@ -145,19 +139,7 @@
         </div>
       </div>
 
-      <div class="sticky-bar">
-        <div class="grow">
-          <span class="est">预计生成 <b id="estCount">5</b> 项成果</span>
-          <span class="mini" id="estList" style="margin-left:8px">教案 · PPT · 课堂练习 · 答案与解析 · 评分量规</span>
-        </div>
-        <button class="btn" type="button" id="stickyReset">清空参数</button>
-        <button class="btn primary" type="button" id="stickyGen">生成备课包</button>
-      </div>
 
-      <div class="card" id="lessonVersions" data-versions style="margin-top:14px">
-        <div class="card-h"><h2>版本历史</h2><div class="right"><span class="mini ver-now" data-tpl="当前 {ver}">—</span><span class="mini">教师修改与 AI 重新生成均会留痕</span></div></div>
-        <div class="card-b"><div class="mini" style="padding:10px 0">暂无数据</div></div>
-      </div>
 
     </main>
   </div>
@@ -165,9 +147,9 @@
 
 <div class="toast"></div>
 <script src="assets/js/data.js?v=1795420906"></script>
-<script src="assets/js/site.js?v=1795490000"></script>
-<script src="assets/js/api.js?v=1795420906"></script>
-<script src="assets/js/live.js?v=1795490000"></script>
+<script src="assets/js/site.js?v=1795600000"></script>
+<script src="assets/js/api.js?v=1795700003"></script>
+<script src="assets/js/live.js?v=1795700002"></script>
 <script>
 (function(){
   function $id(id){ return document.getElementById(id); }
@@ -179,59 +161,16 @@
   });
 
   function syncOut(){
-    var boxes = document.querySelectorAll("#outChecks input");
-    var names = [];
-    Array.prototype.forEach.call(boxes, function(b){
+    document.querySelectorAll("#outChecks input").forEach(function(b){
       b.closest("label").classList.toggle("on", b.checked);
-      if (b.checked) names.push(b.parentElement.textContent.trim());
     });
-    var c = $id("estCount"), l = $id("estList");
-    if (c) c.textContent = names.length;
-    if (l) l.textContent = names.length ? names.join(" · ") : "未选择输出物";
-  }
-
-  function syncDocs(){
-    var boxes = document.querySelectorAll("#docChecks input");
-    var n = 0;
-    Array.prototype.forEach.call(boxes, function(b){
-      b.closest("label").classList.toggle("on", b.checked);
-      if (b.checked) n++;
-    });
-    var c = $id("docCount");
-    if (c) c.textContent = "已选 " + n + " / " + boxes.length;
   }
 
   document.addEventListener("change", function(e){
     if (e.target.closest && e.target.closest("#outChecks")) syncOut();
-    if (e.target.closest && e.target.closest("#docChecks")) syncDocs();
   });
 
-  var tg = $id("docToggle");
-  if (tg) tg.addEventListener("click", function(){
-    var p = $id("docPreview");
-    var open = p.style.display === "none";
-    if (open){
-      p.innerHTML = Array.prototype.map.call(document.querySelectorAll("#docChecks label"), function(l){
-        return "<div>· " + l.textContent.trim() + " — " + (l.getAttribute("data-doc") || "") + "</div>";
-      }).join("");
-      p.style.display = "block";
-      tg.textContent = "收起资料预览";
-    } else {
-      p.style.display = "none";
-      tg.textContent = "展开资料预览";
-    }
-  });
-
-  var gen = $id("stickyGen"), reset = $id("stickyReset");
-  if (gen && form) gen.addEventListener("click", function(){
-    if (form.requestSubmit) form.requestSubmit();
-    else form.dispatchEvent(new Event("submit", { cancelable: true, bubbles: true }));
-  });
-  if (reset && form) reset.addEventListener("click", function(){
-    form.reset(); syncOut(); syncDocs();
-  });
-
-  syncOut(); syncDocs();
+  syncOut();
 })();
 </script>
 </body>

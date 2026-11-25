@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>课程资源 · 致壹 智能教育工作台</title>
-<link rel="stylesheet" href="assets/css/site.css?v=1795481000">
+<link rel="stylesheet" href="assets/css/site.css?v=1795620000">
 </head>
 <body data-page="files">
 <div class="app">
@@ -18,9 +18,15 @@
         <div class="right"><button class="btn primary" type="button" data-demo="已打开本地上传（示例）">＋ 上传资料</button></div>
       </div>
 
+      <div class="grid g3" style="margin-bottom:14px">
+        <div class="kpi"><div class="label">资料总数</div><div class="value">—</div><div class="foot">当前课程</div></div>
+        <div class="kpi"><div class="label">已解析正文</div><div class="value">—</div><div class="foot">可用于备课检索</div></div>
+        <div class="kpi"><div class="label">本地占用</div><div class="value">—</div><div class="foot">仅保存在本机</div></div>
+      </div>
+
       <div class="card" style="margin-bottom:14px">
         <div class="card-b">
-          <form data-sim="#fileOut" data-msg="资料已加入课程（示例）">
+          <form data-sim="#fileOut" data-msg="资料已加入课程">
             <div class="grid g3">
               <div class="field"><label>选择文件</label><input type="file" multiple></div>
               <div class="field"><label>资料类型</label><select><option>教材</option><option>课程标准</option><option>案例</option><option>课件</option><option>作业模板</option><option>表格</option></select></div>
@@ -31,17 +37,14 @@
               <span class="mini">支持 PDF / DOCX / PPTX / XLSX / CSV / TXT，单个文件不超过 50 MB。</span>
             </div>
           </form>
-          <div class="rule" id="fileOut" hidden style="margin-top:12px">资料已加入课程（静态演示）。真实版本会解析正文，作为备课与答疑的检索依据。</div>
+          <div class="rule" id="fileOut" hidden style="margin-top:12px">资料已加入课程，正文会作为备课与答疑的检索依据。</div>
         </div>
       </div>
 
       <div class="card">
         <div class="card-h">
           <h2>全部资料</h2>
-          <div class="right">
-            <select style="width:auto"><option>全部类型</option><option>教材</option><option>标准</option><option>案例</option><option>课件</option><option>模板</option></select>
-            <select style="width:auto"><option>全部可见范围</option><option>师生可见</option><option>教师可见</option></select>
-          </div>
+
         </div>
         <div class="table-wrap">
           <table>
@@ -53,20 +56,14 @@
         </div>
       </div>
 
-      <div class="grid g3" style="margin-top:14px">
-        <div class="kpi"><div class="label">资料总数</div><div class="value">—</div><div class="foot">当前课程</div></div>
-        <div class="kpi"><div class="label">已解析正文</div><div class="value">—</div><div class="foot">可用于备课检索</div></div>
-        <div class="kpi"><div class="label">本地占用</div><div class="value">—</div><div class="foot">仅保存在本机</div></div>
-      </div>
-
     </main>
   </div>
 </div>
 
 <div class="toast"></div>
 <script src="assets/js/data.js?v=1795420906"></script>
-<script src="assets/js/site.js?v=1795490000"></script>
-<script src="assets/js/api.js?v=1795420906"></script>
-<script src="assets/js/live.js?v=1795490000"></script>
+<script src="assets/js/site.js?v=1795600000"></script>
+<script src="assets/js/api.js?v=1795700003"></script>
+<script src="assets/js/live.js?v=1795700002"></script>
 </body>
 </html>

@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>学情分析 · 致壹 智能教育工作台</title>
-<link rel="stylesheet" href="assets/css/site.css?v=1795481000">
+<link rel="stylesheet" href="assets/css/site.css?v=1795620000">
 </head>
 <body data-page="analytics">
 <div class="app">
@@ -16,32 +16,33 @@
       <div class="page-head">
         <div><h1>学情分析</h1><p class="sub" data-page-sub>把答疑、评审与实训数据汇总为可执行的教学决策</p></div>
         <div class="right">
-          <button class="icon-btn" type="button" title="导出报告" aria-label="导出报告" data-demo="已导出学情报告（示例）">⤓</button>
+          <button class="btn" type="button" title="导出报告">导出报告</button>
           <a class="btn" href="lesson.html">带入备课本</a>
-          <button class="btn" type="button" data-demo="讲评课已生成（示例）">生成讲评课</button>
-          <button class="btn primary" type="button" data-demo="下一课方案已生成（示例）">生成下一课方案</button>
         </div>
-      </div>
-
-      <div class="state is-stale" id="staleNote" data-updated="" hidden>
-        <div class="state-ic">⏳</div>
-        <div><b>学情数据可能已过期</b><span id="staleText">数据更新时间待加载。</span></div>
-        <div class="state-actions"><button class="btn sm" type="button" data-demo="已重新分析学情（示例）">重新分析</button></div>
       </div>
 
       <div class="ctx">
         <div><span class="k">当前课程</span><b data-fill="course.name">—</b></div>
         <div><span class="k">授课对象</span><b data-fill="course.classWithSize">—</b></div>
         <div><span class="k">进度</span><b data-fill="course.progress">—</b></div>
-        <div><span class="k">课程资料</span><b data-fill="course.resourceCount">—</b></div>
       </div>
 
       <div class="card" style="margin-bottom:14px">
         <div class="card-b" style="display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end">
-          <div class="field" style="margin:0;min-width:170px"><label>班级</label><select data-fill="course.class"><option>市场营销 24-1</option><option>市场营销 24-2</option><option>电子商务 24-1</option></select></div>
-          <div class="field" style="margin:0;min-width:150px"><label>时间范围</label><select><option>近 30 天</option><option>近 7 天</option><option>全部</option></select></div>
-          <div class="field" style="margin:0;min-width:160px"><label>知识点</label><select><option>全部知识点</option><option>参照群体</option><option>锚定效应</option><option>消费者态度</option></select></div>
-          <div class="field" style="margin:0;min-width:150px"><label>数据来源</label><select><option>全部来源</option><option>答疑</option><option>评审</option><option>实训</option></select></div>
+          <div class="field" style="margin:0;min-width:130px"><label>时间范围</label>
+            <select id="anaDays"><option value="7">近 7 天</option><option value="30" selected>近 30 天</option><option value="">全部</option></select>
+          </div>
+          <div class="field" style="margin:0;min-width:190px"><label>知识点</label>
+            <input type="text" id="anaKp" placeholder="按知识点过滤，可留空">
+          </div>
+          <div class="field" style="margin:0"><label>数据来源</label>
+            <div class="checks" id="anaSrc">
+              <label class="chk on"><input type="checkbox" value="答疑" checked>答疑</label>
+              <label class="chk on"><input type="checkbox" value="评审" checked>评审</label>
+              <label class="chk on"><input type="checkbox" value="实训" checked>实训</label>
+            </div>
+          </div>
+          <span style="flex:1"></span>
           <button class="btn" type="button" data-demo="筛选已应用">应用筛选</button>
         </div>
       </div>
@@ -109,37 +110,12 @@
         </div>
       </div>
 
-      <div class="card" id="masteryCard" style="margin-bottom:14px">
-        <div class="card-h"><h2>班级知识点掌握</h2><div class="right"><span class="mini">暂无数据</span></div></div>
-        <div class="table-wrap">
-          <table>
-            <thead><tr><th>知识点</th><th>掌握率</th><th>错题人数</th><th>最近错误</th><th>趋势</th></tr></thead>
-            <tbody>
-              <tr><td colspan="5" class="mini">暂无数据</td></tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-
       <div class="split">
         <div class="card" id="actionCenter">
           <div class="card-h"><h2>下一课行动中心</h2><div class="right"><span class="tag acc" id="actionLessonTag">—</span></div></div>
           <div class="card-b">
-            <h3>本节课薄弱知识点</h3>
-            <div class="stack" id="weakStack" style="gap:6px;margin-bottom:10px">
-              <div class="mini" style="padding:10px 0">暂无数据</div>
-            </div>
-            <div class="evidence" data-evbox id="actionEv"></div>
-            <div class="hr"></div>
-            <h3>建议讲评时间</h3>
-            <p class="mini" id="reviewTime" style="margin:0 0 12px">暂无数据</p>
-            <h3>补偿练习</h3>
-            <div class="stack" id="remedialStack" style="gap:6px;margin-bottom:12px">
-              <div class="mini" style="padding:10px 0">暂无数据</div>
-            </div>
-            <h3>课堂追问</h3>
-            <div class="stack" id="questionStack" style="gap:6px;margin-bottom:14px">
-              <div class="mini" style="padding:10px 0">暂无数据</div>
+            <div class="stack" id="weakStack" style="gap:6px;margin-bottom:14px">
+              <div class="mini" style="padding:10px 0">点击「应用筛选」生成下一课方案</div>
             </div>
             <div class="form-actions">
               <a class="btn" href="lesson.html">带入下一课备课</a>
@@ -181,7 +157,7 @@
         var t = el.querySelector(".t");
         var label = t && t.querySelector("b") ? t.querySelector("b").textContent : "";
         var val = t && t.querySelector("span") ? t.querySelector("span").textContent : "";
-        ev = (label || "该项") + (val ? "（" + val + "）" : "") + "：数据来自当前课程近 30 天的答疑与评审记录，点击可查看原始证据（示例）。";
+        ev = (label || "该项") + (val ? "（" + val + "）" : "") + "：数据来自当前课程近 30 天的答疑与评审记录。";
       }
       box.textContent = ev;
       box.classList.add("on");
@@ -189,33 +165,6 @@
         '<div class="cite-box" style="margin-top:8px"><div class="mini">暂无引用依据</div></div>');
     });
   });
-})();
-
-/* 下一课行动中心：点击薄弱知识点查看证据 */
-(function(){
-  var center = document.getElementById("actionCenter");
-  var box = document.getElementById("actionEv");
-  if (!center || !box) return;
-  center.addEventListener("click", function(e){
-    var el = e.target.closest(".rule.clickable[data-ev]");
-    if (!el) return;
-    box.textContent = el.getAttribute("data-ev");
-    box.classList.add("on");
-  });
-})();
-
-/* 数据过期：上次更新超过 7 天时给出提示 */
-(function(){
-  var note = document.getElementById("staleNote");
-  if (!note) return;
-  var up = new Date(note.getAttribute("data-updated") || "");
-  if (isNaN(up.getTime())) return;
-  var days = Math.floor((Date.now() - up.getTime()) / 86400000);
-  if (days > 7){
-    note.hidden = false;
-    document.getElementById("staleText").textContent =
-      "数据更新于 " + (up.getMonth() + 1) + "-" + up.getDate() + "，已 " + days + " 天未更新，讲评结论可能不再准确。";
-  }
 })();
 
 /* 无数据状态：条形区域为空时显示 */
@@ -240,8 +189,8 @@
 })();
 </script>
 <script src="assets/js/data.js?v=1795420906"></script>
-<script src="assets/js/site.js?v=1795490000"></script>
-<script src="assets/js/api.js?v=1795420906"></script>
-<script src="assets/js/live.js?v=1795490000"></script>
+<script src="assets/js/site.js?v=1795600000"></script>
+<script src="assets/js/api.js?v=1795700003"></script>
+<script src="assets/js/live.js?v=1795700002"></script>
 </body>
 </html>
