@@ -63,6 +63,22 @@ def _json_call(system: str, human: str) -> dict[str, Any]:
         return parse_json(raw2)
 
 
+def _as_list(value: Any) -> list:
+    """模型可能把数组写成字符串，这里统一成列表。"""
+    if not value:
+        return []
+    if isinstance(value, str):
+        parts = re.split(r"[\n；;]+", value)
+        return [p.strip("•·- ").strip() for p in parts if p.strip()]
+    if isinstance(value, (list, tuple)):
+        return [x for x in value if x is not None]
+    return [value]
+
+
+def _as_dict(value: Any) -> dict:
+    return value if isinstance(value, dict) else {}
+
+
 # ---------------------------------------------------------------------------
 # 课程资料文本抽取
 # ---------------------------------------------------------------------------
@@ -215,6 +231,87 @@ _BASE_RULE = (
 # ---------------------------------------------------------------------------
 # 1) 一键备课包
 # ---------------------------------------------------------------------------
+_PPT_REQUIRED_KINDS = {
+    "cover": "封面", "objectives": "学习目标", "agenda": "课堂流程",
+    "quiz": "课堂练习", "homework": "分层作业", "summary": "总结", "board": "板书设计",
+}
+
+
+def ppt_structure_issues(pkg: dict[str, Any]) -> list[str]:
+    """检查课件结构是否达标；返回问题列表，空列表表示通过。"""
+    slides = ((pkg.get("ppt") or {}).get("slides")) or []
+    slides = [s for s in slides if isinstance(s, dict)]
+    issues: list[str] = []
+    if len(slides) < 14:
+        issues.append(f"课件只有 {len(slides)} 页，少于 14 页")
+    kinds = [str(s.get("kind") or "").strip() for s in slides]
+    for kind, label in _PPT_REQUIRED_KINDS.items():
+        if kind not in kinds:
+            issues.append(f"缺少{label}页（kind={kind}）")
+    flow = [r for r in (pkg.get("flow45") or []) if isinstance(r, dict)]
+    if flow and kinds.count("activity") < min(len(flow), 3):
+        issues.append("活动页数量不足，未覆盖课堂流程")
+    thin = [s for s in slides
+            if s.get("kind") in ("concept", "example")
+            and not 2 <= len(_as_list(s.get("bullets"))) <= 6]
+    if thin:
+        issues.append(f"有 {len(thin)} 页知识讲解页要点不在 2-6 条之间")
+    short = [s for s in slides if len(str(s.get("notes") or "")) < 80]
+    if short and len(short) > max(2, len(slides) // 3):
+        issues.append("多页讲稿过短（不足 80 字）")
+    return issues[:6]
+
+
+def regenerate_ppt_only(pkg: dict[str, Any], topic: str, ctx: str,
+                        issues: list[str]) -> dict[str, Any]:
+    """课件结构不达标时，仅重生成 ppt 部分；失败则保留原内容。"""
+    flow = [r for r in (pkg.get("flow45") or []) if isinstance(r, dict)]
+    outline = "；".join(
+        f"{r.get('time', '')} {r.get('phase', '')}（{r.get('activity', '')}）" for r in flow
+    )
+    blueprint = ["第1页 cover 封面",
+                 "第2页 objectives 学习目标",
+                 "第3页 agenda 课堂流程（含 table）"]
+    n = 4
+    for r in flow[:6]:
+        blueprint.append(f"第{n}页 activity {r.get('phase', '')}（写 duration_min/teacher_action/student_action/notes）")
+        n += 1
+    # 知识讲解页补足到至少 15 页，保证结构校验（≥14 页）可一次通过
+    content_n = max(3, min(8, 15 - n - 4))
+    for i in range(content_n):
+        blueprint.append(f"第{n + i}页 {'concept' if i < content_n - 1 else 'example'} "
+                         f"知识讲解/案例分析（3-5 条要点，至少 1 页含 table）")
+    n += content_n
+    blueprint += [f"第{n}页 quiz 课堂练习", f"第{n + 1}页 homework 分层作业（基础/提升/挑战）",
+                  f"第{n + 2}页 board 板书设计", f"第{n + 3}页 summary 总结"]
+    human = f"""重新生成这份课件的 PPT 部分，其余成果保持不变。
+
+课程上下文：
+{ctx}
+
+本次课题：{topic}
+课堂流程：{outline or '未提供'}
+
+上一版课件的问题：{'；'.join(issues)}
+
+请严格按下面的页面清单逐页输出，不得合并或省略任何一页：
+{chr(10).join(blueprint)}
+
+只输出一个 JSON 对象：{{"ppt": {{"title": "课件标题", "slides": [...]}}}}
+slides 数组长度必须与页面清单一致（共 {len(blueprint)} 页），顺序一致。
+每页字段：kind、layout、title、key_takeaway、bullets、table、visual、duration_min、
+teacher_action、student_action、notes。
+要求：知识讲解页每页 3-5 条要点且每条不超过 20 字；至少 2 页含 table（headers/rows 可直接排版）；
+每页 notes 必须 120-180 个汉字（少于 120 字视为不合格），口语化并写出提问、举例或互动，
+例如：“同学们先看屏幕上这个计数器，点按钮数字没变，问题出在哪？对，状态没有声明……”"""
+    data = _json_call(_BASE_RULE, human)
+    ppt = data.get("ppt") if isinstance(data, dict) else None
+    if isinstance(ppt, dict) and ppt.get("slides"):
+        pkg["ppt"] = ppt
+        pkg.setdefault("meta", {})["ppt_regenerated"] = True
+    return pkg
+
+
 def generate_lesson_package(project_id: int, topic: str, extra: str = "", *,
                             lesson_type: str = "新授课", hours: str = "1 课时",
                             student_level: str = "", style: str = "",
@@ -224,7 +321,7 @@ def generate_lesson_package(project_id: int, topic: str, extra: str = "", *,
                             dual_check: bool = False) -> dict[str, Any]:
     ctx = course_context(project_id, file_ids=file_ids)
     outs = outputs or list(LESSON_OUTPUTS)
-    human = f"""请为下面这节课生成完整备课包。
+    human = f"""请为下面这节课生成一份可直接上课的完整备课包（含课件）。
 
 课程上下文：
 {ctx}
@@ -249,7 +346,17 @@ def generate_lesson_package(project_id: int, topic: str, extra: str = "", *,
     "steps": [{{"phase": "环节", "minutes": 8, "teacher": "教师活动", "student": "学生活动", "design_intent": "设计意图"}}],
     "homework": "作业布置"
   }},
-  "ppt": {{"title": "课件标题", "slides": [{{"title": "页标题", "bullets": ["要点1", "要点2"], "notes": "逐页讲稿，150 字以内"}}]}},
+  "ppt": {{"title": "课件标题", "slides": [
+    {{"kind": "cover", "layout": "title", "title": "课件标题",
+      "key_takeaway": "本页一句话结论（不超过 30 字）",
+      "bullets": ["3-5 条，每条不超过 20 字"],
+      "table": {{"headers": ["列名"], "rows": [["单元格"]]}},
+      "visual": {{"type": "diagram|chart|photo|none", "prompt": "可画出的具体画面描述"}},
+      "duration_min": 5,
+      "teacher_action": "教师做什么",
+      "student_action": "学生做什么",
+      "notes": "120-180 字口语化讲稿，含提问或互动"}}
+  ]}},
   "questions": {{
     "basic": [{{"q": "基础题", "answer": "答案", "hint1": "第一层提示", "hint2": "关键步骤提示"}}],
     "applied": [{{"q": "应用题", "answer": "答案", "hint1": "第一层提示", "hint2": "关键步骤提示"}}],
@@ -260,7 +367,18 @@ def generate_lesson_package(project_id: int, topic: str, extra: str = "", *,
   "sources": [{{"content": "教案/PPT/题目", "source": "引用的资料名或“课程通用要求”"}}]
 }}
 
-要求：45 分钟流程 5-7 个环节；PPT 8-12 页；每类题 2 道；评分标准总分 100。
+课件（ppt.slides）硬性要求：
+1. 共 14-18 页，kind 只能取 cover/objectives/agenda/concept/example/activity/quiz/homework/summary/board；
+2. 必备页：cover 封面 1 页、objectives 学习目标 1 页、agenda 课堂流程 1 页、
+   activity 活动页（flow45 每个环节至少 1 页，写清 duration_min、teacher_action、student_action）、
+   quiz 课堂练习 1-2 页、homework 分层作业 1 页、summary 总结 1 页、board 板书设计 1 页；
+3. concept/example 知识讲解页 4-8 页，每页 bullets 3-5 条、每条不超过 20 字，并给出 key_takeaway；
+4. 至少 2 页提供 table（课堂流程、对比表或量规表），headers 与 rows 要能直接排版；
+5. 确有图示价值时填写 visual，type 用 diagram/chart/photo，prompt 描述可画出的具体画面，否则填 none；
+6. notes 每页 120-180 字，口语化，写出提问、举例或互动；
+7. homework 页按基础/提升/挑战三档分层布置；board 页给出主板书结构与分支要点。
+
+其他要求：45 分钟流程 5-7 个环节；每类题 2 道；评分标准总分 100。
 alignment 必须覆盖 lesson_plan.objectives 中的每一条目标：按知识点拆分时可以拆成多行，
 但 objective 字段要直接复制对应的目标原文（同一目标可出现在多行），不要改写措辞。
 另外输出 "checks" 字段，对以下 6 项给出 true/false：objectives_covered、qa_matched、
@@ -270,6 +388,22 @@ out_of_scope、consistent、untraceable（true 表示存在无法追溯的资料
     data["meta"] = {"lesson_type": lesson_type, "hours": hours, "student_level": student_level,
                     "style": style, "outputs": outs, "model": model or "默认",
                     "review_model": review_model or "", "dual_check": bool(dual_check)}
+    issues = ppt_structure_issues(data)
+    if issues:
+        # 结构不达标时自动重生成一次课件，其余产物保持不变；只有变好才采纳
+        try:
+            retry = regenerate_ppt_only(data, topic, ctx, issues)
+            if isinstance(retry, dict) and isinstance(retry.get("ppt"), dict):
+                new_issues = ppt_structure_issues({**data, "ppt": retry["ppt"]})
+                if len(new_issues) <= len(issues):
+                    data["ppt"] = retry["ppt"]
+                    data["meta"]["ppt_regenerated"] = True
+                    data["meta"]["ppt_issues_before"] = issues
+                    data["meta"]["ppt_issues_after"] = new_issues
+                else:
+                    data["meta"]["ppt_regen_rejected"] = new_issues
+        except Exception as exc:  # noqa: BLE001 - 重生成失败不影响主流程
+            data["meta"]["ppt_regen_error"] = f"{exc.__class__.__name__}: {exc}"
     data["checks"] = lesson_checks(data)
     return data
 
@@ -278,7 +412,10 @@ _SECTION_PROMPT = {
     "lesson_plan": '{"objectives":["..."],"key_points":["..."],"difficulties":["..."],'
                    '"preparation":["..."],"steps":[{"phase":"","minutes":8,"teacher":"",'
                    '"student":"","design_intent":""}],"homework":""}',
-    "ppt": '{"title":"","slides":[{"title":"","bullets":[""],"notes":""}]}',
+    "ppt": '{"title":"","slides":[{"kind":"concept","layout":"bullets","title":"",'
+           '"key_takeaway":"","bullets":[""],"table":{"headers":[""],"rows":[[""]]},'
+           '"visual":{"type":"none","prompt":""},"duration_min":5,"teacher_action":"",'
+           '"student_action":"","notes":""}]}',
     "questions": '{"basic":[{"q":"","answer":"","hint1":"","hint2":""}],'
                  '"applied":[...],"extension":[...]}',
     "rubric": '[{"dimension":"","weight":25,"excellent":"","good":"","pass":"","fail":""}]',
@@ -439,9 +576,13 @@ def export_lesson_docx(pkg: dict[str, Any], course: str) -> bytes:
     ppt = pkg.get("ppt") or {}
     d.add_heading("三、PPT 大纲与逐页讲稿", 1)
     for i, s in enumerate(ppt.get("slides") or [], 1):
+        if not isinstance(s, dict):
+            continue
         d.add_heading(f"第 {i} 页 · {s.get('title', '')}", 2)
-        for b in s.get("bullets") or []:
+        for b in _as_list(s.get("bullets")):
             d.add_paragraph(str(b), style="List Bullet")
+        if s.get("key_takeaway"):
+            d.add_paragraph(f"要点：{s['key_takeaway']}")
         if s.get("notes"):
             d.add_paragraph(f"讲稿：{s['notes']}")
 
@@ -481,30 +622,492 @@ def export_lesson_docx(pkg: dict[str, Any], course: str) -> bytes:
 
 
 def export_lesson_pptx(pkg: dict[str, Any], course: str) -> bytes:
+    """把备课包渲染成可直接上课的课件：统一主题 + 多种版式。
+
+    使用 pkg 中的 flow45 / lesson_plan.steps / questions / rubric / alignment
+    以及扩展后的 ppt.slides（kind、table、visual、duration、师生活动、讲稿）。
+    """
+    import math
+
     from pptx import Presentation
-    from pptx.util import Pt
+    from pptx.dml.color import RGBColor
+    from pptx.enum.shapes import MSO_SHAPE
+    from pptx.enum.text import MSO_ANCHOR, PP_ALIGN
+    from pptx.util import Inches, Pt
+    from pptx.oxml.ns import qn
+    from lxml import etree
+
+    EMU = 914400
+    W, H = 12192000, 6858000
+    FONT = "微软雅黑"
+    C_PRIMARY = RGBColor(0x1F, 0x4E, 0x79)
+    C_ACCENT = RGBColor(0xE6, 0x9A, 0x2C)
+    C_TEXT = RGBColor(0x22, 0x2B, 0x38)
+    C_MUTED = RGBColor(0x6B, 0x72, 0x80)
+    C_LIGHT = RGBColor(0xF4, 0xF7, 0xFB)
+    C_LINE = RGBColor(0xD7, 0xDE, 0xE8)
+    C_WHITE = RGBColor(0xFF, 0xFF, 0xFF)
+    C_SOFT = RGBColor(0xD6, 0xE4, 0xF0)
+    C_BOARD = RGBColor(0x1E, 0x3A, 0x34)
 
     prs = Presentation()
-    prs.slide_width = 12192000  # 16:9
-    prs.slide_height = 6858000
-    ppt = pkg.get("ppt") or {}
+    prs.slide_width = W
+    prs.slide_height = H
+    blank = prs.slide_layouts[6]
+    page = {"n": 0}
 
-    s0 = prs.slides.add_slide(prs.slide_layouts[0])
-    s0.shapes.title.text = ppt.get("title") or pkg.get("topic", "课程课件")
-    s0.placeholders[1].text = f"{course}｜致壹教育工作台生成"
+    def set_font(run, size, bold=False, color=C_TEXT, name=FONT):
+        f = run.font
+        f.size = Pt(size)
+        f.bold = bold
+        f.name = name
+        if color is not None:
+            f.color.rgb = color
+        rPr = None
+        for attr in ("_r", "_element"):
+            el = getattr(run, attr, None)
+            if el is not None and hasattr(el, "get_or_add_rPr"):
+                rPr = el.get_or_add_rPr()
+                break
+        if rPr is None:
+            return
+        ea = rPr.find(qn("a:ea"))
+        if ea is None:
+            ea = etree.SubElement(rPr, qn("a:ea"))
+            latin = rPr.find(qn("a:latin"))
+            if latin is not None:
+                latin.addnext(ea)
+        ea.set("typeface", name)
 
-    for s in ppt.get("slides") or []:
-        slide = prs.slides.add_slide(prs.slide_layouts[1])
-        slide.shapes.title.text = str(s.get("title", ""))
-        tf = slide.placeholders[1].text_frame
-        tf.clear()
-        bullets = s.get("bullets") or [""]
-        for i, b in enumerate(bullets):
+    def text(slide, l, t, w, h, value, size=16, bold=False, color=C_TEXT,
+             align=PP_ALIGN.LEFT, anchor=MSO_ANCHOR.TOP, line=1.18):
+        box = slide.shapes.add_textbox(Inches(l), Inches(t), Inches(w), Inches(h))
+        tf = box.text_frame
+        tf.word_wrap = True
+        tf.vertical_anchor = anchor
+        tf.margin_left = 0
+        tf.margin_right = 0
+        tf.margin_top = 0
+        tf.margin_bottom = 0
+        lines = str(value).split("\n")
+        for i, raw in enumerate(lines):
             p = tf.paragraphs[0] if i == 0 else tf.add_paragraph()
-            p.text = str(b)
-            p.font.size = Pt(20)
-        if s.get("notes"):
-            slide.notes_slide.notes_text_frame.text = str(s["notes"])
+            p.alignment = align
+            p.line_spacing = line
+            r = p.add_run()
+            r.text = raw
+            set_font(r, size, bold, color)
+        return box
+
+    def rect(slide, l, t, w, h, fill=None, line=None, shape=MSO_SHAPE.RECTANGLE):
+        sp = slide.shapes.add_shape(shape, Inches(l), Inches(t), Inches(w), Inches(h))
+        sp.shadow.inherit = False
+        if fill is None:
+            sp.fill.background()
+        else:
+            sp.fill.solid()
+            sp.fill.fore_color.rgb = fill
+        if line is None:
+            sp.line.fill.background()
+        else:
+            sp.line.color.rgb = line
+            sp.line.width = Pt(1.2)
+        return sp
+
+    def bg(slide, color):
+        sp = rect(slide, 0, 0, W / EMU, H / EMU, fill=color)
+        tree = slide.shapes._spTree
+        tree.remove(sp._element)
+        tree.insert(2, sp._element)
+
+    def header(slide, title, kicker=None):
+        rect(slide, 0, 0, W / EMU, 0.12, fill=C_PRIMARY)
+        if kicker:
+            text(slide, 0.62, 0.42, 10.5, 0.3, kicker, 11, True, C_ACCENT)
+        text(slide, 0.62, 0.7 if kicker else 0.52, 11.6, 0.8, title, 25, True, C_PRIMARY)
+        rect(slide, 0.62, 1.52, 1.1, 0.06, fill=C_ACCENT)
+
+    def footer(slide, light=False):
+        page["n"] += 1
+        if not light:
+            rect(slide, 0, H / EMU - 0.05, W / EMU, 0.05, fill=C_PRIMARY)
+        color = C_SOFT if light else C_MUTED
+        text(slide, 0.62, H / EMU - 0.55, 9.5, 0.3,
+             f"致壹智能教育工作台 · {course}", 9, False, color)
+        text(slide, 12.0, H / EMU - 0.55, 0.8, 0.3, f"{page['n']:02d}", 9, False,
+             color, PP_ALIGN.RIGHT)
+
+    def as_list(value) -> list:
+        return _as_list(value)
+
+    def as_dict(value) -> dict:
+        return _as_dict(value)
+
+    def bullets(slide, l, t, w, h, items, size=19, color=C_TEXT):
+        items = [str(x) for x in as_list(items) if str(x).strip()][:6]
+        if not items:
+            return
+        if max(len(x) for x in items) > 30:
+            size = max(14, size - 3)
+        box = slide.shapes.add_textbox(Inches(l), Inches(t), Inches(w), Inches(h))
+        tf = box.text_frame
+        tf.word_wrap = True
+        tf.margin_left = 0
+        tf.margin_right = 0
+        tf.margin_top = 0
+        tf.margin_bottom = 0
+        for i, item in enumerate(items):
+            p = tf.paragraphs[0] if i == 0 else tf.add_paragraph()
+            p.space_after = Pt(10)
+            p.line_spacing = 1.25
+            r = p.add_run()
+            r.text = "• " + item
+            set_font(r, size, False, color)
+        return box
+
+    def callout(slide, value, t=6.15, l=0.62, w=12.1):
+        rect(slide, l, t, w, 0.42, fill=C_LIGHT)
+        rect(slide, l, t, 0.08, 0.42, fill=C_ACCENT)
+        text(slide, l + 0.2, t + 0.06, w - 0.35, 0.32, value, 12, True, C_PRIMARY)
+
+    def table(slide, l, t, w, headers, rows, size=11, col_w=None, row_h=0.36):
+        headers = as_list(headers) or ["—"]
+        if isinstance(rows, str):
+            rows = [re.split(r"\s*[|｜,，\t]\s*", ln.strip())
+                    for ln in rows.splitlines() if ln.strip()]
+        norm_rows = []
+        for row in as_list(rows)[:8]:
+            if isinstance(row, (list, tuple)):
+                norm_rows.append([str(c) for c in row])
+            elif isinstance(row, dict):
+                norm_rows.append([str(v) for v in row.values()])
+            elif row is not None:
+                norm_rows.append([str(row)])
+        rows = norm_rows
+        headers = [str(x) for x in headers]
+        ncol = len(headers)
+        if not ncol:
+            return
+        height = row_h * (len(rows) + 1)
+        shape = slide.shapes.add_table(len(rows) + 1, ncol, Inches(l), Inches(t),
+                                       Inches(w), Inches(height))
+        tbl = shape.table
+        if col_w:
+            for j, cw in enumerate(col_w[:ncol]):
+                tbl.columns[j].width = Inches(cw)
+        for j, head in enumerate(headers):
+            cell = tbl.cell(0, j)
+            cell.text = ""
+            cell.fill.solid()
+            cell.fill.fore_color.rgb = C_PRIMARY
+            p = cell.text_frame.paragraphs[0]
+            p.alignment = PP_ALIGN.CENTER
+            r = p.add_run()
+            r.text = head
+            set_font(r, size, True, C_WHITE)
+            cell.margin_left = Inches(0.07)
+            cell.margin_right = Inches(0.05)
+            cell.margin_top = Inches(0.03)
+            cell.margin_bottom = Inches(0.03)
+        for i, row in enumerate(rows, start=1):
+            for j in range(ncol):
+                cell = tbl.cell(i, j)
+                cell.text = ""
+                cell.fill.solid()
+                cell.fill.fore_color.rgb = C_WHITE if i % 2 else C_LIGHT
+                p = cell.text_frame.paragraphs[0]
+                p.line_spacing = 1.1
+                r = p.add_run()
+                r.text = row[j] if j < len(row) else ""
+                set_font(r, max(8, size - 1), False, C_TEXT)
+                cell.margin_left = Inches(0.07)
+                cell.margin_right = Inches(0.05)
+                cell.margin_top = Inches(0.03)
+                cell.margin_bottom = Inches(0.03)
+
+    def visual_box(slide, l, t, w, h, visual):
+        desc = str((as_dict(visual)).get("prompt") or "")
+        rect(slide, l, t, w, h, fill=C_LIGHT, line=C_LINE)
+        text(slide, l + 0.22, t + 0.18, w - 0.44, 0.3, "图示建议", 11, True, C_MUTED)
+        text(slide, l + 0.22, t + 0.52, w - 0.44, h - 0.7,
+             desc or "可在此放置示意图 / 实物图 / 板书照片", 12, False, C_TEXT)
+
+    def page_cover(title, meta_lines):
+        s = prs.slides.add_slide(blank)
+        bg(s, C_PRIMARY)
+        rect(s, 0, 0, 0.22, H / EMU, fill=C_ACCENT)
+        text(s, 0.9, 1.55, 11.6, 1.7, title, 38, True, C_WHITE, line=1.12)
+        text(s, 0.9, 3.35, 11.2, 0.42, course, 18, False, C_SOFT)
+        text(s, 0.9, 3.95, 11.2, 1.0, "\n".join(meta_lines), 12, False, C_SOFT)
+        rect(s, 0.9, 5.45, 3.4, 0.07, fill=C_ACCENT)
+        text(s, 0.9, 5.7, 10.5, 0.35, "致壹智能教育工作台 · AI 备课", 11, False, C_SOFT)
+        page["n"] += 1
+
+    def page_objectives(items):
+        s = prs.slides.add_slide(blank)
+        header(s, "学习目标", "OBJECTIVES")
+        y = 1.9
+        for i, item in enumerate(items[:5]):
+            rect(s, 0.62, y, 0.55, 0.55, fill=C_PRIMARY, shape=MSO_SHAPE.OVAL)
+            text(s, 0.62, y + 0.1, 0.55, 0.35, str(i + 1), 16, True, C_WHITE,
+                 PP_ALIGN.CENTER)
+            text(s, 1.38, y + 0.06, 10.8, 0.62, item, 17, False, C_TEXT)
+            y += 0.92
+        footer(s)
+
+    def page_agenda(flow, steps):
+        s = prs.slides.add_slide(blank)
+        header(s, "课堂流程", "AGENDA")
+        rows = [[r.get("time", ""), r.get("phase", ""), r.get("activity", ""),
+                 r.get("goal", "")] for r in flow[:7]]
+        table(s, 0.5, 1.85, 12.3, ["时间", "环节", "课堂活动", "达成目标"], rows,
+              size=11, col_w=[1.9, 1.7, 4.9, 3.8], row_h=0.52)
+        minutes = sum(int(r.get("minutes") or 0) for r in steps)
+        if minutes:
+            callout(s, f"合计约 {minutes} 分钟；每个环节的活动页见后文")
+        footer(s)
+
+    def page_activity(row, step, idx):
+        s = prs.slides.add_slide(blank)
+        header(s, f"{row.get('phase') or '课堂环节'}｜{row.get('time') or ''}",
+               f"环节 {idx}")
+        duration = ""
+        if step and step.get("minutes"):
+            duration = f"{step.get('minutes')} 分钟"
+        elif row.get("time"):
+            duration = str(row.get("time"))
+        if duration:
+            rect(s, 10.35, 0.6, 2.3, 0.52, fill=C_ACCENT,
+                 shape=MSO_SHAPE.ROUNDED_RECTANGLE)
+            text(s, 10.35, 0.7, 2.3, 0.32, duration, 12, True, C_WHITE,
+                 PP_ALIGN.CENTER)
+        teacher = str((step or {}).get("teacher") or row.get("activity") or "—")
+        student = str((step or {}).get("student") or "跟随活动完成任务，记录关键结论")
+        rect(s, 0.62, 1.85, 5.75, 3.25, fill=C_LIGHT)
+        text(s, 0.88, 1.98, 5.2, 0.3, "教师活动", 12, True, C_PRIMARY)
+        text(s, 0.88, 2.4, 5.2, 2.5, teacher, 15, False, C_TEXT)
+        rect(s, 6.75, 1.85, 5.95, 3.25, fill=C_LIGHT)
+        text(s, 7.0, 1.98, 5.4, 0.3, "学生活动", 12, True, C_PRIMARY)
+        text(s, 7.0, 2.4, 5.4, 2.5, student, 15, False, C_TEXT)
+        text(s, 0.62, 5.4, 11.8, 0.42,
+             "达成目标：" + str(row.get("goal") or "—"), 13, True, C_PRIMARY)
+        if step and step.get("design_intent"):
+            text(s, 0.62, 5.88, 11.8, 0.5,
+                 "设计意图：" + str(step.get("design_intent")), 11, False, C_MUTED)
+        footer(s)
+
+    def page_content(slide_data, label):
+        s = prs.slides.add_slide(blank)
+        header(s, str(slide_data.get("title") or label), label)
+        items = as_list(slide_data.get("bullets"))
+        tb = as_dict(slide_data.get("table"))
+        vis = as_dict(slide_data.get("visual"))
+        has_tbl = bool(tb.get("rows"))
+        has_vis = str(vis.get("type") or "none") != "none" and bool(vis.get("prompt"))
+        left_w = 7.3 if (has_tbl or has_vis) else 11.6
+        bullets(s, 0.62, 1.9, left_w, 3.5, items, size=19)
+        if has_tbl:
+            table(s, 8.25, 1.92, 4.45, tb.get("headers") or [], tb.get("rows") or [],
+                  size=10, row_h=0.4)
+        elif has_vis:
+            visual_box(s, 8.25, 1.9, 4.45, 3.5, vis)
+        if slide_data.get("key_takeaway"):
+            callout(s, "结论｜" + str(slide_data["key_takeaway"]))
+        if slide_data.get("notes"):
+            s.notes_slide.notes_text_frame.text = str(slide_data["notes"])
+        footer(s)
+
+    def page_quiz(title, items):
+        s = prs.slides.add_slide(blank)
+        header(s, title, "QUIZ")
+        y = 1.9
+        for i, q in enumerate(items[:4]):
+            text(s, 0.62, y, 11.9, 0.42, f"{i + 1}. {q.get('q', '')}", 15, True, C_TEXT)
+            hint = str(q.get("hint1") or "")
+            if hint:
+                text(s, 0.95, y + 0.44, 11.2, 0.32, "提示：" + hint, 11, False, C_MUTED)
+                y += 1.0
+            else:
+                y += 0.78
+        keys = [f"{i + 1}. 答案：{q.get('answer', '')}"
+                for i, q in enumerate(items[:4])]
+        s.notes_slide.notes_text_frame.text = "\n".join(keys)
+        footer(s)
+
+    def page_rubric(rows):
+        s = prs.slides.add_slide(blank)
+        header(s, "评分量规", "RUBRIC")
+        data = [[r.get("dimension", ""), f"{r.get('weight', '')}%", r.get("excellent", ""),
+                 r.get("good", ""), r.get("pass", ""), r.get("fail", "")]
+                for r in rows[:6]]
+        table(s, 0.45, 1.82, 12.4, ["维度", "权重", "优秀", "良好", "合格", "待改进"],
+              data, size=9, col_w=[1.55, 0.75, 2.6, 2.55, 2.45, 2.45], row_h=0.55)
+        footer(s)
+
+    def page_homework(slide_hw, plan_hw):
+        s = prs.slides.add_slide(blank)
+        header(s, "分层作业", "HOMEWORK")
+        items = [str(b) for b in as_list((slide_hw or {}).get("bullets")) if str(b).strip()]
+        levels = ["基础", "提升", "挑战"]
+        groups = [[], [], []]
+        if items:
+            per = max(1, math.ceil(len(items) / 3))
+            for i, item in enumerate(items):
+                groups[min(i // per, 2)].append(item)
+        x = 0.62
+        for gi, name in enumerate(levels):
+            rect(s, x, 1.85, 3.85, 3.5, fill=C_LIGHT, line=C_LINE)
+            rect(s, x, 1.85, 3.85, 0.55, fill=C_PRIMARY)
+            text(s, x + 0.2, 1.95, 3.4, 0.35, name + "任务", 13, True, C_WHITE)
+            bullets(s, x + 0.22, 2.6, 3.45, 2.5, groups[gi] or ["按课堂内容完成对应练习"], size=13)
+            x += 4.1
+        if plan_hw:
+            callout(s, "统一要求：" + str(plan_hw)[:70], t=5.65)
+        if slide_hw and slide_hw.get("notes"):
+            s.notes_slide.notes_text_frame.text = str(slide_hw["notes"])
+        footer(s)
+
+    def page_board(slide_bd, key_points):
+        s = prs.slides.add_slide(blank)
+        bg(s, C_BOARD)
+        text(s, 0.62, 0.5, 11.5, 0.55, "板书设计", 24, True, C_WHITE)
+        rect(s, 0.62, 1.15, 2.2, 0.06, fill=C_ACCENT)
+        topic = str(pkg.get("topic") or (slide_bd or {}).get("title") or "本课主题")
+        rect(s, 2.6, 1.55, 8.1, 0.75, line=C_WHITE, shape=MSO_SHAPE.ROUNDED_RECTANGLE)
+        text(s, 2.8, 1.7, 7.7, 0.45, topic, 17, True, C_WHITE, PP_ALIGN.CENTER)
+        branches = [str(b) for b in as_list((slide_bd or {}).get("bullets"))
+                    if str(b).strip()] or [str(k) for k in key_points]
+        for i, b in enumerate(branches[:5]):
+            col = i % 3
+            rowi = i // 3
+            bx = 0.65 + col * 4.15
+            by = 2.85 + rowi * 1.85
+            rect(s, bx, by, 3.75, 1.35, line=C_WHITE)
+            text(s, bx + 0.18, by + 0.15, 3.4, 1.05, b, 12, False, C_WHITE)
+        page["n"] += 1
+        text(s, 12.0, H / EMU - 0.55, 0.8, 0.3, f"{page['n']:02d}", 9, False,
+             C_SOFT, PP_ALIGN.RIGHT)
+
+    def page_summary(slide_sum, objectives, takeaways):
+        s = prs.slides.add_slide(blank)
+        header(s, "课堂小结", "SUMMARY")
+        items = [str(b) for b in as_list((slide_sum or {}).get("bullets"))
+                 if str(b).strip()] or takeaways[:5] or objectives[:4]
+        bullets(s, 0.62, 1.95, 11.7, 3.4, items, size=20)
+        if slide_sum and slide_sum.get("key_takeaway"):
+            callout(s, "一句话总结｜" + str(slide_sum["key_takeaway"]))
+        if slide_sum and slide_sum.get("notes"):
+            s.notes_slide.notes_text_frame.text = str(slide_sum["notes"])
+        footer(s)
+
+    def page_alignment(rows):
+        s = prs.slides.add_slide(blank)
+        header(s, "教学对齐表", "ALIGNMENT")
+        data = [[r.get("knowledge_point", ""), r.get("objective", ""),
+                 r.get("activity", ""), r.get("assessment", "")] for r in rows[:8]]
+        table(s, 0.45, 1.82, 12.4, ["知识点", "对应目标", "对应活动", "评价方式"],
+              data, size=9, col_w=[2.3, 4.4, 3.2, 2.5], row_h=0.5)
+        footer(s)
+
+    def page_sources(rows):
+        s = prs.slides.add_slide(blank)
+        header(s, "资料与依据", "SOURCES")
+        y = 1.95
+        for i, r in enumerate(rows[:7]):
+            text(s, 0.62, y, 11.9, 0.38,
+                 f"{i + 1}. {r.get('source', '')}", 13, True, C_TEXT)
+            if r.get("content"):
+                text(s, 0.95, y + 0.38, 11.4, 0.3,
+                     "用于：" + str(r.get("content")), 10, False, C_MUTED)
+                y += 0.9
+            else:
+                y += 0.55
+        footer(s)
+
+    ppt = pkg.get("ppt") or {}
+    slides = [s for s in (ppt.get("slides") or []) if isinstance(s, dict)]
+    plan = pkg.get("lesson_plan") or {}
+    flow = [r for r in (pkg.get("flow45") or []) if isinstance(r, dict)]
+    steps = [r for r in (plan.get("steps") or []) if isinstance(r, dict)]
+    questions = pkg.get("questions") or {}
+    rubric = [r for r in (pkg.get("rubric") or []) if isinstance(r, dict)]
+    alignment = [r for r in (pkg.get("alignment") or []) if isinstance(r, dict)]
+    sources = [r for r in (pkg.get("sources") or []) if isinstance(r, dict)]
+    meta = pkg.get("meta") or {}
+
+    def by_kind(*kinds):
+        return [s for s in slides if str(s.get("kind") or "") in kinds]
+
+    cover = (by_kind("cover") or [None])[0]
+    title = ((cover or {}).get("title") or ppt.get("title")
+             or pkg.get("topic") or "课程课件")
+    page_cover(title, [
+        f"课型：{meta.get('lesson_type', '—')}    课时：{meta.get('hours', '—')}",
+        f"学生基础：{meta.get('student_level') or '未填写'}",
+    ])
+
+    objectives = [str(x) for x in (plan.get("objectives") or []) if str(x).strip()]
+    obj_slide = (by_kind("objectives") or [None])[0]
+    if not objectives and obj_slide:
+        objectives = [str(b) for b in as_list(obj_slide.get("bullets")) if str(b).strip()]
+    if objectives:
+        page_objectives(objectives)
+
+    if flow:
+        page_agenda(flow, steps)
+        for i, row in enumerate(flow):
+            matched = None
+            for st in steps:
+                ph = str(st.get("phase") or "")
+                if ph and (ph in str(row.get("phase") or "")
+                           or str(row.get("phase") or "") in ph):
+                    matched = st
+                    break
+            if matched is None and i < len(steps):
+                matched = steps[i]
+            page_activity(row, matched, i + 1)
+
+    handled = {"cover", "objectives", "agenda", "quiz", "homework", "summary", "board"}
+    takeaways = []
+    for sd in slides:
+        kind = str(sd.get("kind") or "concept")
+        if kind in handled:
+            continue
+        if sd.get("key_takeaway"):
+            takeaways.append(str(sd["key_takeaway"]))
+        page_content(sd, "案例分析" if kind == "example" else "知识讲解")
+
+    basic = [q for q in (questions.get("basic") or []) if isinstance(q, dict)]
+    applied = [q for q in (questions.get("applied") or []) if isinstance(q, dict)]
+    extension = [q for q in (questions.get("extension") or []) if isinstance(q, dict)]
+    quiz_slide = (by_kind("quiz") or [None])[0]
+    if basic or applied:
+        page_quiz("课堂练习 · 基础与应用", basic + applied)
+        if extension:
+            page_quiz("课堂练习 · 拓展提升", extension)
+    elif quiz_slide:
+        page_content(quiz_slide, "课堂练习")
+
+    if rubric:
+        page_rubric(rubric)
+
+    hw_slide = (by_kind("homework") or [None])[0]
+    if hw_slide or plan.get("homework"):
+        page_homework(hw_slide, plan.get("homework"))
+
+    board_slide = (by_kind("board") or [None])[0]
+    kp = [str(k) for k in (plan.get("key_points") or []) if str(k).strip()]
+    if board_slide or kp:
+        page_board(board_slide, kp)
+
+    sum_slide = (by_kind("summary") or [None])[0]
+    if sum_slide or takeaways or objectives:
+        page_summary(sum_slide, objectives, takeaways)
+
+    if alignment:
+        page_alignment(alignment)
+    if sources:
+        page_sources(sources)
 
     buf = io.BytesIO()
     prs.save(buf)

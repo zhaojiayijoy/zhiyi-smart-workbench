@@ -96,9 +96,9 @@ def build_llm(temperature: float | None = None, review_model: bool = False):
         top_p = 0.95
 
     try:
-        max_tokens = int(os.getenv("LLM_MAX_TOKENS", "4096"))
+        max_tokens = int(os.getenv("LLM_MAX_TOKENS", "8192"))
     except (ValueError, TypeError):
-        max_tokens = 4096
+        max_tokens = 8192
 
     thinking = os.getenv("LLM_THINKING", "disabled")  # disabled | enabled
     reasoning_effort = os.getenv("LLM_REASONING_EFFORT", "max")  # max/high/medium/low

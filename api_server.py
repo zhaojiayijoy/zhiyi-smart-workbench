@@ -213,7 +213,7 @@ def get_settings() -> dict:
         # 生成参数
         "temperature": float(os.getenv("LLM_TEMPERATURE", "0.4")),
         "top_p": float(os.getenv("LLM_TOP_P", "0.95")),
-        "max_tokens": int(os.getenv("LLM_MAX_TOKENS", "4096")),
+        "max_tokens": int(os.getenv("LLM_MAX_TOKENS", "8192")),
         "thinking": os.getenv("LLM_THINKING", "disabled"),
         "reasoning_effort": os.getenv("LLM_REASONING_EFFORT", "max"),
         # 审核模型（双模型一致性检查）

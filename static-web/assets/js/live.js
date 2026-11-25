@@ -325,9 +325,44 @@
       '<h3>教学流程</h3><div class="stack" style="gap:8px">' + (steps || '<div class="mini">暂无流程</div>') + '</div>' +
       (lp.homework ? '<h3 style="margin-top:10px">作业</h3><div class="mini">' + h(lp.homework) + '</div>' : "");
 
+    var KIND_LABEL = {
+      cover: "封面", objectives: "学习目标", agenda: "课堂流程", concept: "概念讲解",
+      example: "案例分析", activity: "课堂活动", quiz: "课堂练习",
+      homework: "分层作业", summary: "课堂小结", board: "板书设计"
+    };
+    function arr(v) {
+      if (!v) return [];
+      if (typeof v === "string") return v.split(/[\n；;]+/).map(function (x) { return x.replace(/^[•·\-\s]+/, "").trim(); }).filter(Boolean);
+      return Array.isArray(v) ? v : [v];
+    }
     var slides = (ppt.slides || []).map(function (s, i) {
-      return '<div class="rule"><b>P' + (i + 1) + " " + h(s.title || "") + '</b><br>' +
-        h((s.bullets || []).join("；")) + (s.notes ? '<div class="mini">讲稿：' + h(s.notes) + '</div>' : "") + '</div>';
+      var kind = s.kind || "concept";
+      var bullets = arr(s.bullets);
+      var tblObj = s.table && typeof s.table === "object" ? s.table : {};
+      var rows = arr(tblObj.rows).map(function (r) { return arr(r); });
+      var head = '<div class="mini" style="margin-bottom:2px">P' + (i + 1) + " · " +
+        h(KIND_LABEL[kind] || "内容") + (s.duration_min ? " · " + h(s.duration_min) + " 分钟" : "") +
+        "</div><b>" + h(s.title || "") + "</b>";
+      var body = bullets.length
+        ? '<div class="mini" style="margin-top:4px">' + bullets.map(function (b) {
+            return "• " + h(b);
+          }).join("<br>") + "</div>"
+        : "";
+      var tbl = rows.length
+        ? '<div class="table-wrap" style="margin-top:6px"><table><thead><tr>' +
+          arr(tblObj.headers).map(function (x) { return "<th>" + h(x) + "</th>"; }).join("") +
+          "</tr></thead><tbody>" + rows.map(function (r) {
+            return "<tr>" + r.map(function (c) { return '<td class="mini">' + h(c) + "</td>"; }).join("") + "</tr>";
+          }).join("") + "</tbody></table></div>"
+        : "";
+      var vis = (s.visual && typeof s.visual === "object" && s.visual.prompt && s.visual.type !== "none")
+        ? '<div class="mini" style="margin-top:4px">图示：' + h(s.visual.prompt) + "</div>" : "";
+      var acts = (s.teacher_action || s.student_action)
+        ? '<div class="mini" style="margin-top:4px">教师：' + h(s.teacher_action || "—") +
+          "｜学生：" + h(s.student_action || "—") + "</div>" : "";
+      var take = s.key_takeaway ? '<div class="mini" style="margin-top:4px">结论：' + h(s.key_takeaway) + "</div>" : "";
+      var notes = s.notes ? '<div class="mini" style="margin-top:4px">讲稿：' + h(s.notes) + "</div>" : "";
+      return '<div class="rule">' + head + body + tbl + vis + acts + take + notes + "</div>";
     }).join("");
     var pptHtml = '<div class="grid g2">' + (slides || '<div class="mini">暂无课件</div>') + '</div>';
 
