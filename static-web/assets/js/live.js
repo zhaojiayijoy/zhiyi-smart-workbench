@@ -264,29 +264,6 @@
         if (ctx[3]) ctx[3].textContent = cur.progress || "—";
         if (ctx[4]) ctx[4].textContent = o.files_total + " 份";
       }).catch(function () {});
-      API.files.list(p).then(function (files) {
-        var tb = document.querySelectorAll("table tbody");
-        var fileTbody = tb[1]; // 课程资料表
-        if (!fileTbody) return;
-        var rows = (files || []).slice(0, 6);
-        if (!rows.length) { fileTbody.innerHTML = '<tr><td colspan="4" class="mini">暂无资料，去「课程资源」上传。</td></tr>'; return; }
-        fileTbody.innerHTML = rows.map(function (f) {
-          var vis = f.visibility === "both" || f.visibility === "student" ? '<span class="tag acc">师生</span>' : '<span class="tag warn">教师</span>';
-          return '<tr><td>' + h(f.name) + '</td><td>' + h(f.category || f.ext || "") + '</td><td>' + vis + '</td><td>' + fmtTime(f.created_at) + '</td></tr>';
-        }).join("");
-      }).catch(function () {});
-      API.tasks.list(p).then(function (tasks) {
-        var host = document.querySelectorAll(".card-b.tight")[1]; // 关联记录容器
-        if (!host) return;
-        var rows = (tasks || []).slice(0, 4);
-        if (!rows.length) { host.innerHTML = '<div class="mini">暂无关联记录。</div>'; return; }
-        host.innerHTML = rows.map(function (t) {
-          var href = ({ lesson: "lesson.html", training: "training.html", review: "review.html", qa: "tutor.html", nextlesson: "analytics.html" })[t.kind] || "tasks.html";
-          return '<div class="list-item"><div class="li-ic">' + (KIND_IC[t.kind] || "•") + '</div><div style="flex:1"><div class="li-t">' +
-            h(kindLabel(t.kind) + "：" + (t.prompt || "")) + '</div><div class="li-s">' + fmtTime(t.created_at) + '</div></div>' +
-            '<a class="btn sm ghost" href="' + href + '">查看</a></div>';
-        }).join("");
-      }).catch(function () {});
     }
     document.addEventListener("click", function (e) {
       var b = e.target.closest("[data-switch-course]");
@@ -1236,17 +1213,17 @@
           }
         }
         // 最近活动
-        var acts = document.querySelectorAll(".card-b.tight .list-item");
-        if (acts.length && acts[0].parentNode) {
-          acts[0].parentNode.innerHTML = rows.slice(0, 4).map(function (t) {
+        var acts = $("#recentActs");
+        if (acts) {
+          acts.innerHTML = rows.length ? rows.slice(0, 4).map(function (t) {
             return '<div class="list-item"><div class="li-ic">' + (KIND_IC[t.kind] || "•") + '</div><div style="flex:1"><div class="li-t">' + h(t.prompt || "") + '</div><div class="li-s">' + fmtTime(t.created_at) + ' · ' + kindLabel(t.kind) + '</div></div></div>';
-          }).join("");
+          }).join("") : '<div class="mini" style="padding:6px 0">暂无数据</div>';
         }
         // 本周待办
-        var todos = document.querySelectorAll(".card .stack .rule");
-        if (todos.length && todos[0].parentNode) {
+        var todos = $("#weekTodos");
+        if (todos) {
           var pending = rows.filter(function (t) { return t.status !== "ok"; }).slice(0, 5);
-          todos[0].parentNode.innerHTML = pending.length ? pending.map(function (t) { return '<div class="rule">' + h(kindLabel(t.kind) + "：" + (t.prompt || "")) + '</div>'; }).join("") : '<div class="rule">暂无待办，全部完成 🎉</div>';
+          todos.innerHTML = pending.length ? pending.map(function (t) { return '<div class="rule">' + h(kindLabel(t.kind) + "：" + (t.prompt || "")) + '</div>'; }).join("") : '<div class="rule">暂无待办，全部完成 🎉</div>';
         }
       }).catch(function () {});
     }
