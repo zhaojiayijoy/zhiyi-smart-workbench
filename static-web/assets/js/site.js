@@ -953,6 +953,33 @@
     });
   }
 
+  /* 可折叠卡片：点标题栏展开/收起，支持 #hash 定位自动展开 */
+  function initFolds() {
+    function setOpen(card, open) {
+      card.classList.toggle("open", open);
+      var head = card.querySelector("[data-fold-head]");
+      if (head) head.setAttribute("aria-expanded", open ? "true" : "false");
+    }
+    document.addEventListener("click", function (e) {
+      var head = e.target.closest("[data-fold-head]");
+      if (!head) return;
+      var card = head.closest(".card");
+      if (!card) return;
+      setOpen(card, !card.classList.contains("open"));
+    });
+    function openByHash() {
+      var id = (location.hash || "").slice(1);
+      if (!id) return;
+      var el = document.getElementById(id);
+      if (!el) return;
+      var card = el.closest(".card");
+      if (!card || !card.querySelector("[data-fold-head]")) return;
+      setOpen(card, true);
+    }
+    window.addEventListener("hashchange", openByHash);
+    openByHash();
+  }
+
   document.addEventListener("DOMContentLoaded", function () {
     if (!window.EDU) return;
     buildSidebar();
@@ -965,6 +992,7 @@
     initBars();
     initChecks();
     initHashTabs();
+    initFolds();
     fillCourseFields();
     Edu.onCourseChange(function () { fillCourseFields(); renderTopCourseSummary(); });
     initLive();

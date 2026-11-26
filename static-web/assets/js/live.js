@@ -469,12 +469,26 @@
         if (pc) pc.textContent = rows.length + " 条";
         if (!tb) return;
         if (!rows.length) { tb.innerHTML = '<tr><td colspan="6" class="mini">暂无备课包</td></tr>'; return; }
-        tb.innerHTML = rows.map(function (r) {
+        var cells = rows.map(function (r) {
           var pct = (r.checks && r.checks.consistency_pct);
           return '<tr><td>' + h(r.topic) + '</td><td>' + fmtTime(r.ts) + '</td><td>' + h(r.model || "") + '</td>' +
             '<td>' + (typeof pct === "number" ? pct + "%" : "—") + '</td><td><span class="tag">待审核</span></td>' +
             '<td><button class="btn sm" type="button" data-open-lesson="' + r.task_id + '">打开</button></td></tr>';
-        }).join("");
+        });
+        var shown = 3;
+        function paint() {
+          var more = cells.length > 3
+            ? '<tr><td colspan="6"><button class="btn sm ghost" type="button" data-pack-more="1">' +
+              (shown >= cells.length ? "收起" : "展开全部（" + cells.length + " 条）") + '</button></td></tr>'
+            : "";
+          tb.innerHTML = cells.slice(0, shown).join("") + more;
+        }
+        tb.onclick = function (e) {
+          if (!e.target.closest("[data-pack-more]")) return;
+          shown = shown >= cells.length ? 3 : cells.length;
+          paint();
+        };
+        paint();
       }).catch(function () {});
     }
     document.addEventListener("click", function (e) {

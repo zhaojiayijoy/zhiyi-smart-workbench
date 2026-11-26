@@ -346,6 +346,15 @@ tbody tr:focus-visible,.tq:focus-visible{outline:2px solid var(--accent);outline
 .recent-grid a.list-item:hover .li-t{color:var(--accent)}
 .recent-grid .li-s{font-size:11.5px;color:var(--text-3)}
 .recent-grid .li-t{font-size:12.5px;font-weight:600;transition:color .12s}
+/* 可折叠卡片：默认收起，点标题栏展开 */
+.card.fold > .card-b{display:none}
+.card.fold.open > .card-b{display:block}
+.card.fold > .table-wrap{display:none}
+.card.fold.open > .table-wrap{display:block}
+.card.fold .card-h[data-fold-head]{cursor:pointer;user-select:none}
+.card.fold .card-h[data-fold-head]:hover h2{color:var(--accent)}
+.fold-caret{font-size:10px;color:var(--text-3);transition:transform .18s;display:inline-block}
+.card.fold.open .fold-caret{transform:rotate(180deg)}
 /* 合并后的「最近动态」分栏标题 */
 .recent-h{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:12.5px;color:var(--text);border-bottom:1px solid var(--line);padding-bottom:5px;margin-bottom:2px}
 .recent-h b{font-weight:600}

@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>教学工具 · 致壹 智能教育工作台</title>
-<link rel="stylesheet" href="assets/css/site.css?v=1795700050">
+<link rel="stylesheet" href="assets/css/site.css?v=1795700060">
 </head>
 <body data-page="tools">
 <div class="app">
@@ -37,44 +37,30 @@
         </div>
       </div>
 
-      <div class="grid g3">
-        <div class="card">
-          <div class="card-h"><h2>评分量规模板</h2></div>
-          <div class="card-b">
-            <p class="mini" style="margin:0 0 10px">提供洞察报告、促销方案、实训任务三类量规，可直接用于作业评审。</p>
-            <div class="stack" style="gap:6px">
-              <div class="rule">洞察报告量规 · 4 维度 / 100 分</div>
-              <div class="rule">促销方案量规 · 4 维度 / 100 分</div>
-              <div class="rule">实训任务量规 · 5 维度 / 100 分</div>
-            </div>
-            <div class="form-actions" style="margin-top:12px"><button class="btn" type="button" data-demo="已导出量规模板（示例）">导出模板</button></div>
-          </div>
-        </div>
-
-        <div class="card">
-          <div class="card-h"><h2>成绩汇总</h2></div>
-          <div class="card-b">
-            <p class="mini" style="margin:0 0 10px">按班级汇总已发布的终评成绩，导出 Excel 用于教务报送。</p>
-            <div class="field"><label>班级</label><select><option>全部班级</option></select></div>
-            <div class="form-actions"><button class="btn primary" type="button" data-demo="已导出成绩汇总（示例）">导出 Excel</button></div>
-          </div>
-        </div>
-
-        <div class="card">
-          <div class="card-h"><h2>错题归因</h2></div>
-          <div class="card-b">
-            <p class="mini" style="margin:0 0 10px">把学生的错题按知识点和错误类型归类，生成讲评顺序。</p>
-            <div class="form-actions" style="margin-top:12px"><a class="btn" href="analytics.html">查看学情分析</a></div>
-          </div>
-        </div>
-      </div>
-
-      <div class="card" style="margin-top:14px">
-        <div class="card-h"><h2>课堂小工具</h2><div class="right"><span class="mini">即点即用</span></div></div>
+      <div class="card">
+        <div class="card-h"><h2>快捷入口</h2><div class="right"><span class="mini">常用模板与课堂工具</span></div></div>
         <div class="card-b">
-          <div class="grid g3">
-            <div class="rule"><b>课堂计时</b><br>小组练习倒计时 5 分钟<div class="form-actions" style="margin-top:8px"><button class="btn sm" type="button" id="timerBtn">开始</button></div><div class="mini" id="timerResult" style="margin-top:6px"></div></div>
-            <div class="rule"><b>练习生成</b><br>按知识点生成课堂练习<div class="form-actions" style="margin-top:8px"><a class="btn sm" href="lesson.html">去生成</a></div></div>
+          <div class="grid g2">
+            <div class="rule">
+              <b>评分量规模板</b>
+              <div class="mini" style="margin:2px 0 6px">洞察报告、促销方案、实训任务三类量规，可直接用于作业评审</div>
+              <div class="form-actions" style="margin:0"><button class="btn sm" type="button" data-demo="已导出量规模板（示例）">导出模板</button></div>
+            </div>
+            <div class="rule">
+              <b>成绩汇总</b>
+              <div class="mini" style="margin:2px 0 6px">按班级汇总已发布的终评成绩，导出 Excel 用于教务报送</div>
+              <div class="form-actions" style="margin:0"><button class="btn sm" type="button" data-demo="已导出成绩汇总（示例）">导出 Excel</button></div>
+            </div>
+            <div class="rule">
+              <b>错题归因</b>
+              <div class="mini" style="margin:2px 0 6px">按知识点与错误类型归类错题，生成讲评顺序</div>
+              <div class="form-actions" style="margin:0"><a class="btn sm" href="analytics.html">查看学情分析</a></div>
+            </div>
+            <div class="rule">
+              <b>课堂计时</b>
+              <div class="mini" style="margin:2px 0 6px">小组练习倒计时 5 分钟</div>
+              <div class="form-actions" style="margin:0"><button class="btn sm" type="button" id="timerBtn">开始</button><span class="mini" id="timerResult"></span></div>
+            </div>
           </div>
         </div>
       </div>
@@ -85,9 +71,9 @@
 
 <div class="toast"></div>
 <script src="assets/js/data.js?v=1795420906"></script>
-<script src="assets/js/site.js?v=1795700040"></script>
+<script src="assets/js/site.js?v=1795700060"></script>
 <script src="assets/js/api.js?v=1795700003"></script>
-<script src="assets/js/live.js?v=1795700003"></script>
+<script src="assets/js/live.js?v=1795700004"></script>
 <script>
 (function(){
   var btn = document.getElementById('timerBtn'), out = document.getElementById('timerResult'), t = null;
