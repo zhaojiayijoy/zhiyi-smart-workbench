@@ -194,6 +194,222 @@
   }
 
   /* ---------- 侧栏 ---------- */
+  function escHtml(s) {
+    return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+    });
+  }
+
+  /* ---------- 项目右键菜单：分享 / 删除（侧栏「课程项目」子项目） ---------- */
+  var projMenuEl = null;
+
+  function closeProjMenu() {
+    if (projMenuEl && projMenuEl.parentNode) projMenuEl.parentNode.removeChild(projMenuEl);
+    projMenuEl = null;
+  }
+
+  function copyText(text, cb) {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(function () { cb(true); }, function () { cb(fallbackCopy(text)); });
+      return;
+    }
+    cb(fallbackCopy(text));
+  }
+
+  function fallbackCopy(text) {
+    try {
+      var ta = document.createElement("textarea");
+      ta.value = text;
+      ta.style.cssText = "position:fixed;left:-9999px;top:0;opacity:0";
+      document.body.appendChild(ta);
+      ta.select();
+      var ok = document.execCommand("copy");
+      document.body.removeChild(ta);
+      return ok;
+    } catch (e) { return false; }
+  }
+
+  function confirmDialog(title, text, okLabel, onOk) {
+    var mask = document.createElement("div");
+    mask.className = "modal-mask on";
+    mask.innerHTML =
+      '<div class="modal" style="max-width:440px">' +
+        '<div class="modal-h"><b>' + escHtml(title) + '</b><button class="x" type="button" data-cb-cancel>×</button></div>' +
+        '<div class="modal-b"><p class="sub" style="white-space:pre-line;line-height:1.7">' + escHtml(text) + '</p></div>' +
+        '<div class="modal-f">' +
+          '<button class="btn" type="button" data-cb-cancel>取消</button>' +
+          '<button class="btn primary" type="button" data-cb-ok style="background:#9C3A34;border-color:#9C3A34">' +
+            escHtml(okLabel) + '</button>' +
+        '</div>' +
+      '</div>';
+    document.body.appendChild(mask);
+    function close() {
+      if (mask.parentNode) mask.parentNode.removeChild(mask);
+      document.removeEventListener("keydown", onKey);
+    }
+    function onKey(e) { if (e.key === "Escape") close(); }
+    mask.addEventListener("click", function (e) {
+      if (e.target === mask || e.target.closest("[data-cb-cancel]")) { close(); return; }
+      if (e.target.closest("[data-cb-ok]")) { close(); onOk(); }
+    });
+    document.addEventListener("keydown", onKey);
+  }
+
+  function shareProjectInfo(proj) {
+    var url = location.origin + location.pathname.replace(/[^/]*$/, "") + "courses.html";
+    var text = "课程项目：" + proj.name + "\n教学轮次：第 " + (proj.round || 1) + " 轮\n查看地址：" + url;
+    copyText(text, function (ok) {
+      toast(ok ? "分享内容已复制到剪贴板" : "分享内容：" + text.replace(/\n/g, " · "));
+    });
+  }
+
+  function deleteProjectById(proj, onDone) {
+    if (!Edu.isLive() || !window.EduAPI || !EduAPI.courses || typeof EduAPI.courses.remove !== "function") {
+      toast("未连接本地接口，暂不能删除项目");
+      return;
+    }
+    confirmDialog("删除项目",
+      "确认删除项目「" + proj.name + "」？\n\n删除后该项目下的资料与任务会保留在课程库中（不再归属此项目），其下的历史轮次会转为独立项目。",
+      "确认删除",
+      function () {
+        EduAPI.courses.remove(proj.id).then(function () {
+          return EduAPI.courses.list();
+        }).then(function (list) {
+          Edu.state.courses = list || [];
+          if (String(Edu.state.selectedCourseId) === String(proj.id)) {
+            Edu.selectCourse(list && list.length ? list[0].id : null);
+          }
+          var pick = document.querySelector("#coursePick");
+          if (pick) {
+            var visible = currentCourses();
+            pick.innerHTML = visible.length ? visible.map(function (c) {
+              return '<option value="' + c.id + '">' + escHtml(c.name) +
+                (c.class || c.class_name ? " · " + escHtml(c.class || c.class_name) : "") + '</option>';
+            }).join("") : '<option value="">（暂无课程）</option>';
+            if (Edu.state.selectedCourseId) pick.value = String(Edu.state.selectedCourseId);
+          }
+          renderTopCourseSummary();
+          toast("已删除「" + proj.name + "」");
+          if (typeof onDone === "function") onDone();
+        }).catch(function (err) {
+          toast("删除失败：" + (err && err.message ? err.message : err));
+        });
+      });
+  }
+
+  function openProjMenu(x, y, proj, onDone) {
+    closeProjMenu();
+    var m = document.createElement("div");
+    m.className = "ctx-menu";
+    m.innerHTML =
+      '<div class="ctx-h">' + escHtml(proj.name || "未命名项目") + '</div>' +
+      '<button type="button" class="ctx-item" data-ctx="share">分享项目</button>' +
+      '<button type="button" class="ctx-item danger" data-ctx="del">删除项目</button>';
+    m.style.left = Math.max(8, Math.min(x, window.innerWidth - 190)) + "px";
+    m.style.top = Math.max(8, Math.min(y, window.innerHeight - 130)) + "px";
+    document.body.appendChild(m);
+    projMenuEl = m;
+    m.addEventListener("click", function (e) {
+      var b = e.target.closest("[data-ctx]");
+      if (!b) return;
+      var act = b.getAttribute("data-ctx");
+      closeProjMenu();
+      if (act === "share") shareProjectInfo(proj);
+      else deleteProjectById(proj, onDone);
+    });
+  }
+
+  document.addEventListener("click", closeProjMenu);
+  document.addEventListener("keydown", function (e) { if (e.key === "Escape") closeProjMenu(); });
+  window.addEventListener("resize", closeProjMenu);
+  window.addEventListener("scroll", closeProjMenu, true);
+
+  /* 侧栏「课程项目」：可展开/收起，展开后列出当前课程的项目轮次 */
+  var SIDE_PROJ_KEY = "edu.sideProjects";
+
+  function initSideProjects(sec) {
+    var head = sec.querySelector("[data-proj-toggle]");
+    var body = sec.querySelector(".nav-sec-b");
+    var countEl = sec.querySelector("[data-proj-count]");
+    if (!head || !body) return;
+
+    function load() {
+      var c = getSelectedCourse();
+      if (!c) {
+        if (countEl) countEl.hidden = true;
+        body.innerHTML = '<div class="nav-sec-empty">还没有课程项目，<a href="courses.html#newCourse">新建一个</a></div>';
+        return;
+      }
+      if (!Edu.isLive() || !window.EduAPI || !EduAPI.courses || typeof EduAPI.courses.rounds !== "function") {
+        if (countEl) countEl.hidden = true;
+        body.innerHTML = '<div class="nav-sec-empty">未连接本地接口，暂无法读取项目</div>' +
+          '<a class="nav-sec-all" href="courses.html">查看课程项目 ›</a>';
+        return;
+      }
+      EduAPI.courses.rounds(c.id).then(function (res) {
+        var rounds = (res && res.rounds) || [];
+        if (countEl) { countEl.textContent = rounds.length; countEl.hidden = !rounds.length; }
+        var html = rounds.map(function (r) {
+          var on = String(r.id) === String(c.id);
+          var prog = (r.current_session && r.total_sessions)
+            ? "第 " + r.current_session + "/" + r.total_sessions + " 次课"
+            : "进度待完善";
+          return '<button type="button" class="nav-proj' + (on ? " on" : "") + '" data-proj-id="' + escHtml(r.id) +
+              '" data-proj-name="' + escHtml(r.name || "未命名项目") + '" data-proj-round="' + (r.round || 1) + '">' +
+              '<span class="p-name">' + escHtml(r.name || "未命名课程") + '</span>' +
+              '<span class="p-meta">第 ' + (r.round || 1) + ' 轮 · ' + prog +
+                (r.status === "archived" ? " · 已归档" : "") + '</span>' +
+            '</button>';
+        }).join("");
+        body.innerHTML = (html || '<div class="nav-sec-empty">还没有可展示的项目</div>') +
+          '<a class="nav-sec-all" href="courses.html">全部课程项目 ›</a>';
+      }).catch(function () {
+        body.innerHTML = '<div class="nav-sec-empty">课程项目加载失败</div>' +
+          '<a class="nav-sec-all" href="courses.html">查看课程项目 ›</a>';
+      });
+    }
+
+    function setOpen(on, persist) {
+      sec.classList.toggle("open", on);
+      head.setAttribute("aria-expanded", on ? "true" : "false");
+      if (persist !== false) { try { localStorage.setItem(SIDE_PROJ_KEY, on ? "1" : "0"); } catch (e) {} }
+      if (on) load();
+    }
+
+    head.addEventListener("click", function () {
+      setOpen(!sec.classList.contains("open"));
+    });
+
+    body.addEventListener("click", function (e) {
+      var b = e.target.closest("[data-proj-id]");
+      if (!b) return;
+      var id = b.getAttribute("data-proj-id");
+      var name = b.querySelector(".p-name");
+      Edu.selectCourse(id);
+      toast("已切换到「" + (name ? name.textContent : "") + "」");
+    });
+
+    // 右键：分享 / 删除该项目
+    body.addEventListener("contextmenu", function (e) {
+      var b = e.target.closest("[data-proj-id]");
+      if (!b) return;
+      e.preventDefault();
+      openProjMenu(e.clientX, e.clientY, {
+        id: b.getAttribute("data-proj-id"),
+        name: b.getAttribute("data-proj-name") || "",
+        round: b.getAttribute("data-proj-round") || ""
+      }, load);
+    });
+
+    Edu.onCourseChange(function () {
+      if (sec.classList.contains("open")) load();
+    });
+
+    var saved;
+    try { saved = localStorage.getItem(SIDE_PROJ_KEY); } catch (e) {}
+    setOpen(saved !== "0", false);
+  }
+
   function buildSidebar() {
     var aside = document.querySelector(".sidebar");
     if (!aside) return;
@@ -203,6 +419,16 @@
     groups.forEach(function (g) {
       nav += '<div class="nav-label">' + g.label + "</div>";
       g.items.forEach(function (it) {
+        if (!isStudent && it.page === "courses") {
+          nav += '<div class="nav-sec" id="navProjects">' +
+              '<button class="nav-sec-h' + (page === "courses" ? " active" : "") + '" type="button" data-proj-toggle aria-expanded="false">' +
+                ic(it.icon) + '<span class="lbl">' + it.text + '</span>' +
+                '<span class="cnt" data-proj-count hidden></span><span class="caret">▾</span>' +
+              '</button>' +
+              '<div class="nav-sec-b"><div class="nav-sec-empty">展开后加载项目…</div></div>' +
+            '</div>';
+          return;
+        }
         var on = it.page === page;
         if (isStudent && page === "student" && it.href.indexOf("#") > -1) {
           on = it.href.split("#")[1] === hash;
@@ -211,16 +437,32 @@
       });
     });
     var u = (isStudent ? window.EDU.student : window.EDU.teacher) || {};
+    var newBtn = isStudent
+      ? '<button type="button" data-go="student.html#tasks">' + ic("plus", 14) + " 我的学习任务</button>"
+      : '<button type="button" data-new-task>' + ic("plus", 14) + " 新建教学任务</button>";
     aside.innerHTML =
       '<a class="brand" href="' + (isStudent ? "student.html" : "index.html") + '">' +
         '<div class="mark">致</div>' +
         '<div><div class="name">' + window.EDU.brand.name + '</div><div class="sub">' + window.EDU.brand.sub + "</div></div>" +
       "</a>" +
-      '<div class="side-new"><button type="button" data-go="' + (isStudent ? "student.html#tasks" : "index.html") + '">' +
-        ic("plus", 14) + (isStudent ? " 我的学习任务" : " 新建教学任务") + "</button></div>" +
+      '<div class="side-new">' + newBtn + "</div>" +
       '<nav class="nav">' + nav + "</nav>" +
       '<div class="side-foot"><div class="avatar">' + (u.initials || "") + "</div>" +
         "<div><b>" + (isStudent ? (u.name || "学生") : "本地用户") + "</b><span>" + (isStudent ? (u.class || "") : "教师 · 单租户") + "</span></div></div>";
+
+    var projSec = aside.querySelector("#navProjects");
+    if (projSec) initSideProjects(projSec);
+
+    var newTaskBtn = aside.querySelector("[data-new-task]");
+    if (newTaskBtn) {
+      newTaskBtn.addEventListener("click", function () {
+        if (page === "index" && window.EduNewTask && typeof window.EduNewTask.open === "function") {
+          window.EduNewTask.open();
+          return;
+        }
+        location.href = "index.html#newTask";
+      });
+    }
   }
 
   /* ---------- 顶栏 ---------- */

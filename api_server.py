@@ -403,7 +403,7 @@ def _unique_project_name(base: str) -> str:
 
 @app.post("/api/courses/{cid}/rounds/archive")
 def archive_course_round(cid: int, body: RoundIn) -> dict:
-    """归档当前轮次：打包 ZIP + 标记旧项目 + 以子项目形式创建新一轮。"""
+    """归档当前轮次：打包 ZIP + 标记旧项目为历史轮次 + 创建新一轮（保留教学进度）。"""
     p = db.get_project(cid)
     if not p:
         raise HTTPException(404, "课程不存在")
@@ -442,9 +442,9 @@ def archive_course_round(cid: int, body: RoundIn) -> dict:
         objectives=body.objectives or p.get("objectives"),
         key_points=body.key or body.key_points or p.get("key_points"),
         difficulties=body.diff or body.difficulties or p.get("difficulties"),
-        progress="",
+        progress=(p.get("progress") or ""),
         class_size=(body.classSize if body.classSize is not None else p.get("class_size")),
-        current_session=0,
+        current_session=int(p.get("current_session") or 0),
         total_sessions=(body.totalSessions if body.totalSessions is not None
                         else p.get("total_sessions")),
         note=(body.note if body.note is not None else p.get("note")),

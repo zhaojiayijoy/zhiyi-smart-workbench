@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>工作台首页 · 致壹 智能教育工作台</title>
-<link rel="stylesheet" href="assets/css/site.css?v=1795620000">
+<link rel="stylesheet" href="assets/css/site.css?v=1795700030">
 </head>
 <body data-page="index">
 <div class="app">
@@ -21,25 +21,9 @@
           <textarea placeholder="输入课题、上传资料，或描述你要完成的教学任务。" rows="3"></textarea>
           <button class="btn primary" type="submit">发送</button>
         </form>
-      </section>
 
-      <div class="card" id="projectCard" style="margin-top:14px">
-        <div class="card-h">
-          <h2>课程项目</h2>
-          <div class="right">
-            <span class="mini" id="projectMeta">—</span>
-            <button class="btn primary sm" type="button" id="btnNewTask">＋ 新建教学任务</button>
-          </div>
-        </div>
-        <div class="card-b">
-          <p class="mini" style="margin-bottom:10px" id="projectTip">点击项目名称可展开或收起；「新建教学任务」会自动打包当前项目，并以当前课程项目名称创建新一轮。</p>
-          <div class="proj-list" id="projectList"><div class="mini">加载中…</div></div>
-        </div>
-      </div>
-
-      <div class="card">
-        <div class="card-h"><h2>教学功能</h2><div class="right"><span class="mini">选择一项开始</span></div></div>
-        <div class="card-b">
+        <div class="hero-quick">
+          <div class="hero-quick-h"><span>教学功能 · 选择一项开始</span></div>
           <div class="quick">
             <a href="lesson.html"><span class="qi">✦</span><span><b>一键备课</b><span>生成教案、PPT、练习和评分标准</span></span></a>
             <a href="training.html"><span class="qi">◈</span><span><b>创建实训</b><span>生成 Word、Excel、PPT 实训任务</span></span></a>
@@ -49,25 +33,7 @@
             <a href="analytics.html"><span class="qi">◔</span><span><b>学情分析</b><span>查看薄弱知识点和下一课建议</span></span></a>
           </div>
         </div>
-      </div>
-
-      <div class="card" id="nextLesson" style="margin-top:14px">
-        <div class="card-h"><h2>下一节课</h2><div class="right"><span class="tag acc" id="nextLessonTag">待排课</span></div></div>
-        <div class="card-b next-lesson">
-          <div>
-            <div class="nl-t" id="nextLessonTitle">尚未开始备课</div>
-            <div class="nl-meta"><b data-fill="course.name">—</b> · <span data-fill="course.classWithSize">—</span> · <span data-fill="course.totalHours">—</span></div>
-            <div class="nl-tags">
-              <span class="pill" data-fill="course.progress">进度待完善</span>
-              <span class="pill">建议先看学情，再生成备课包</span>
-            </div>
-          </div>
-          <div class="row">
-            <a class="btn" href="analytics.html">查看学情</a>
-            <a class="btn" href="lesson.html">继续备课</a>
-          </div>
-        </div>
-      </div>
+      </section>
 
       <div class="recent-grid">
         <div class="card">
@@ -112,7 +78,7 @@
 <div class="toast"></div>
 
 <script src="assets/js/data.js?v=1795420906"></script>
-<script src="assets/js/site.js?v=1795600000"></script>
+<script src="assets/js/site.js?v=1795700040"></script>
 <script src="assets/js/api.js?v=1795700003"></script>
 <script src="assets/js/live.js?v=1795700002"></script>
 <script>
@@ -127,53 +93,23 @@
     if(e.key === 'Enter' && !e.shiftKey){ e.preventDefault(); form.dispatchEvent(new Event('submit')); }
   });
 })();
-
-(function(){
-  function renderNext(){
-    var t = document.getElementById('nextLessonTitle');
-    var tag = document.getElementById('nextLessonTag');
-    if (!t) return;
-    var c = (window.Edu && Edu.getSelectedCourse) ? Edu.getSelectedCourse() : null;
-    if (c && c.currentSession && c.totalSessions){
-      var n = Math.min(Number(c.currentSession) + 1, Number(c.totalSessions));
-      t.textContent = '第 ' + n + ' 次课 · 待确定课题';
-      tag.textContent = '第 ' + n + ' / ' + c.totalSessions + ' 次课';
-    } else {
-      t.textContent = '下一节课待安排';
-      tag.textContent = '补全课程进度';
-    }
-  }
-  renderNext();
-  if (window.Edu && Edu.onCourseChange) Edu.onCourseChange(renderNext);
-  window.addEventListener('load', renderNext);
-  setTimeout(renderNext, 1500);
-})();
 </script>
 <script>
-/* ===== 课程项目：可展开/收起的项目按钮 + 新建教学任务（自动打包当前项目） ===== */
+/* ===== 新建教学任务：自动打包当前项目，并以当前项目名称创建新一轮 =====
+   入口在左侧栏「＋ 新建教学任务」按钮（任意页面点击都会回到本页弹窗）。 */
 (function(){
   "use strict";
 
-  var listBox = document.getElementById('projectList');
-  var meta = document.getElementById('projectMeta');
   var mask = document.getElementById('newTaskModal');
   var intro = document.getElementById('ntIntro');
   var rule = document.getElementById('ntRule');
   var stateEl = document.getElementById('ntState');
   var confirmBtn = document.getElementById('ntConfirm');
-  var openId = null;   // 渲染后自动展开的项目 id
-  var pendingOpen = null;
 
   function esc(s){
     return String(s == null ? "" : s).replace(/[&<>"']/g, function(c){
       return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];
     });
-  }
-
-  function fmtDate(ts){
-    if (!ts) return "";
-    var d = new Date(Number(ts) * 1000);
-    return d.getFullYear() + "-" + ("0" + (d.getMonth() + 1)).slice(-2) + "-" + ("0" + d.getDate()).slice(-2);
   }
 
   function cur(){
@@ -182,69 +118,7 @@
 
   function liveReady(){
     return !!(window.Edu && Edu.isLive() && window.EduAPI &&
-      EduAPI.courses && typeof EduAPI.courses.rounds === "function");
-  }
-
-  function courseLabel(c){
-    return (c && (c.name || "未命名课程")) || "未命名课程";
-  }
-
-  /** 渲染可展开/收起的课程项目按钮 */
-  function renderProjects(){
-    if (!listBox) return;
-    var openNow = pendingOpen;
-    pendingOpen = null;
-    var c = cur();
-    if (!c){
-      listBox.innerHTML = '<div class="mini">还没有课程项目，先去 <a href="courses.html#newCourse">创建课程项目</a>。</div>';
-      if (meta) meta.textContent = "—";
-      return;
-    }
-    if (!liveReady()){
-      listBox.innerHTML = '<div class="mini">未连接本地接口，暂时无法读取课程项目与归档包。</div>';
-      if (meta) meta.textContent = "演示模式";
-      return;
-    }
-    EduAPI.courses.rounds(c.id).then(function(res){
-      var rounds = (res && res.rounds) || [];
-      if (meta) meta.textContent = courseLabel(c) + " · " + rounds.length + " 轮";
-      if (!rounds.length){
-        listBox.innerHTML = '<div class="mini">还没有可展示的项目。点击右上角「新建教学任务」会自动打包当前项目并创建新一轮。</div>';
-        return;
-      }
-      listBox.innerHTML = rounds.map(function(r){
-        var isCur = String(r.id) === String(c.id);
-        var prog = (r.current_session && r.total_sessions)
-          ? "第 " + r.current_session + " / " + r.total_sessions + " 次课"
-          : "进度待完善";
-        var status = r.status === "archived"
-          ? '<span class="tag warn">已归档</span>'
-          : '<span class="tag ok">进行中</span>';
-        var dl = r.zip_file_id
-          ? '<a class="btn sm ghost" href="' + EduAPI.files.downloadUrl(r.zip_file_id) + '">下载归档包</a>'
-          : "";
-        var actions = isCur
-          ? '<a class="btn sm" href="lesson.html">继续备课</a><a class="btn sm ghost" href="courses.html">课程项目</a>'
-          : '<button class="btn sm" type="button" data-use-proj="' + r.id + '">设为当前项目</button>';
-        var open = String(r.id) === String(openNow);
-        return '<details class="proj"' + (open ? ' open' : '') + '>' +
-            '<summary>' +
-              '<span class="proj-name">' + esc(courseLabel(r)) + '</span>' +
-              (isCur ? '<span class="tag acc">当前</span>' : '') +
-              status +
-              '<span class="caret">▾</span>' +
-            '</summary>' +
-            '<div class="proj-body">' +
-              '<div class="proj-meta">第 ' + r.round + ' 轮 · ' + prog +
-                ' · 资料 ' + r.file_count + ' 份 · 任务 ' + r.task_count + ' 个' +
-                (r.archived_at ? " · 归档于 " + fmtDate(r.archived_at) : "") + '</div>' +
-              '<div class="proj-actions">' + actions + dl + '</div>' +
-            '</div>' +
-          '</details>';
-      }).join("");
-    }).catch(function(){
-      listBox.innerHTML = '<div class="mini">课程项目加载失败，请确认本地接口已启动。</div>';
-    });
+      EduAPI.courses && typeof EduAPI.courses.archiveRound === "function");
   }
 
   function syncPick(list){
@@ -262,10 +136,10 @@
     var c = cur();
     if (!c){ toast("请先创建或选择课程项目"); return; }
     if (!liveReady()){ toast("未连接本地接口，无法自动打包当前项目"); return; }
-    var name = courseLabel(c);
+    var name = c.name || "未命名课程";
     intro.textContent = "当前项目：" + name;
-    rule.textContent = "确认后会把「" + name + "」的当前项目自动打包归档为子项目，并以「" + name +
-      "」为新项目名称创建新一轮教学任务；课程档案与教学资料保留，教学进度清零。";
+    rule.textContent = "确认后会把「" + name + "」的当前项目自动打包归档为历史轮次，并以「" + name +
+      "」为新项目名称创建新一轮教学任务；课程档案、教学资料与教学进度都会保留，历史轮次可在「课程项目」中查看。";
     stateEl.textContent = "";
     confirmBtn.disabled = false;
     confirmBtn.textContent = "打包并新建任务";
@@ -285,16 +159,14 @@
       return EduAPI.courses.list().then(function(list){
         Edu.state.courses = list || [];
         if (next && next.id){
-          pendingOpen = String(next.id);
           Edu.selectCourse(next.id);
           syncPick(list);
           closeModal();
-          toast("已打包当前项目，并创建「" + courseLabel(next) + "」新一轮");
+          toast("已打包当前项目，并创建「" + (next.name || c.name || "新项目") + "」新一轮");
         } else {
           closeModal();
           toast("当前项目已打包归档");
         }
-        renderProjects();
       });
     }).catch(function(err){
       stateEl.textContent = "打包失败：" + (err && err.message ? err.message : err);
@@ -303,7 +175,8 @@
     });
   }
 
-  document.getElementById('btnNewTask').addEventListener('click', openModal);
+  window.EduNewTask = { open: openModal };
+
   confirmBtn.addEventListener('click', doArchive);
   mask.addEventListener('click', function(e){
     if (e.target === mask || e.target.closest('[data-nt-close]')) closeModal();
@@ -311,20 +184,12 @@
   document.addEventListener('keydown', function(e){
     if (e.key === 'Escape') closeModal();
   });
-  listBox.addEventListener('click', function(e){
-    var b = e.target.closest('[data-use-proj]');
-    if (!b) return;
-    Edu.selectCourse(b.getAttribute('data-use-proj'));
-    syncPick();
-    toast("已切换到「" + courseLabel(cur()) + "」");
-    renderProjects();
-  });
 
-  renderProjects();
-  if (window.Edu && Edu.onCourseChange){
-    Edu.onCourseChange(function(){ renderProjects(); });
+  // 从其它页面点击侧栏「新建教学任务」跳回本页时自动打开弹窗
+  if (location.hash === '#newTask'){
+    try { history.replaceState(null, '', location.pathname + location.search); } catch (e) {}
+    setTimeout(openModal, 200);
   }
-  window.addEventListener('load', function(){ setTimeout(renderProjects, 800); });
 })();
 </script>
 </body>

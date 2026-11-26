@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>课程项目 · 致壹 智能教育工作台</title>
-<link rel="stylesheet" href="assets/css/site.css?v=1795620000">
+<link rel="stylesheet" href="assets/css/site.css?v=1795700030">
 </head>
 <body data-page="courses">
 <div class="app">
@@ -97,7 +97,7 @@
               <div class="checks">
                 <label class="chk on"><input type="checkbox" id="nf_archivePrev">把当前课程打包归档为子项目，并创建它的新一轮</label>
               </div>
-              <span class="hint" id="archiveHint">归档后会为新轮次保留课程档案与教学资料，旧项目可在上方「教学轮次」中下载归档包。</span>
+              <span class="hint" id="archiveHint">归档后会为新轮次保留课程档案、教学资料与当前教学进度；旧项目作为历史轮次保留，可在上方「教学轮次」中查看并下载归档包。</span>
             </div>
 
             <div class="form-actions">
@@ -153,7 +153,7 @@
 
 <div class="toast"></div>
 <script src="assets/js/data.js?v=1795420906"></script>
-<script src="assets/js/site.js?v=1795600000"></script>
+<script src="assets/js/site.js?v=1795700040"></script>
 <script src="assets/js/api.js?v=1795700003"></script>
 <script src="assets/js/live.js?v=1795700002"></script>
 <script>
@@ -196,10 +196,10 @@
       hint.textContent = "未连接本地接口，归档与轮次功能不可用。";
     } else if (done) {
       hint.textContent = "当前课程已完成（第 " + c.currentSession + " / " + c.totalSessions +
-        " 次课），提交后会自动打包归档，并创建「" + (c.name || "当前课程") + "」的新一轮。";
+        " 次课），提交后会打包归档为历史轮次，并沿用当前教学进度创建「" + (c.name || "当前课程") + "」的新一轮。";
     } else {
       hint.textContent = "当前课程尚未标记完成（第 " + (c.currentSession || 0) + " / " +
-        (c.totalSessions || 0) + " 次课）；勾选后也会打包归档并创建新一轮。";
+        (c.totalSessions || 0) + " 次课）；勾选后也会打包归档为历史轮次，并沿用当前教学进度创建新一轮。";
     }
   }
 
@@ -385,7 +385,6 @@
       '</tr>';
     }).join("");
   }
-
   /** 绑定：全部课程表格的切换按钮 + 表单实时草稿 + 表单提交 */
   function bindLocal(){
     // 表格行切换（事件委托）
