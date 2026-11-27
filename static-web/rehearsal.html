@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>AI 课堂预演 · 致壹 智能教育工作台</title>
+<link rel="stylesheet" href="assets/css/site.css?v=1795700140">
+<style>
+  /* 三栏布局：左配置 + 中时间轴 + 右风险修补 */
+  .rh-head{display:flex;gap:16px;align-items:flex-end;flex-wrap:wrap;margin-bottom:14px}
+  .rh-head h1{margin:0;font-size:22px;letter-spacing:-.3px}
+  .rh-meta{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+  .rh-mode-tag{background:rgba(129,167,145,.22);color:var(--accent);padding:3px 9px;border-radius:10px;font-size:11.5px;border:1px solid rgba(129,167,145,.35)}
+  .rh-mock-tag{background:rgba(184,120,62,.22);color:var(--accent-soft);padding:3px 9px;border-radius:10px;font-size:11.5px;border:1px solid rgba(184,120,62,.35)}
+  .rh-grid{display:grid;grid-template-columns:280px 1fr 340px;gap:14px;align-items:start}
+  @media (max-width:1200px){.rh-grid{grid-template-columns:1fr}}
+  .rh-col{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px 14px}
+  .rh-col h3{margin:0 0 10px;font-size:13px;color:var(--text);letter-spacing:.03em}
+  .rh-section{margin-bottom:14px}
+  .rh-section .mini{margin:4px 0 8px;line-height:1.5}
+  .rh-field{margin-bottom:10px}
+  .rh-field label{display:block;font-size:11.5px;color:var(--text-3);margin-bottom:5px;letter-spacing:.02em}
+  .rh-field .value{font-size:13px;color:var(--text-2);line-height:1.5}
+  .rh-persona{display:flex;align-items:center;gap:8px;padding:6px 8px;border:1px solid var(--line);border-radius:8px;margin-bottom:6px;cursor:pointer;transition:.15s}
+  .rh-persona:hover{border-color:var(--accent);background:var(--hover)}
+  .rh-persona.on{border-color:var(--accent);background:rgba(129,167,145,.12)}
+  .rh-persona .avatar{width:26px;height:26px;border-radius:50%;display:grid;place-items:center;font-size:13px;font-weight:600;color:#fff;flex-shrink:0}
+  .rh-persona .label{font-size:12.5px;color:var(--text)}
+  .rh-persona .desc{font-size:11px;color:var(--text-3);line-height:1.4}
+  /* 时间轴 */
+  .rh-timeline{position:relative;padding-left:28px}
+  .rh-stage{position:relative;padding-bottom:16px;border-left:2px dashed var(--line);margin-left:10px}
+  .rh-stage::before{content:"";position:absolute;left:-7px;top:4px;width:12px;height:12px;border-radius:50%;background:var(--panel-2);border:2px solid var(--accent)}
+  .rh-stage:last-child{border-left-color:transparent}
+  .rh-stage-head{display:flex;align-items:center;gap:8px;margin-bottom:4px}
+  .rh-stage-name{font-size:13px;color:var(--text);font-weight:600}
+  .rh-stage-min{font-size:11px;color:var(--text-3);background:var(--panel-2);padding:1px 7px;border-radius:8px}
+  .rh-stage-obj{font-size:11.5px;color:var(--text-3);margin-bottom:6px;line-height:1.5}
+  .rh-event{background:var(--panel-2);border:1px solid var(--line);border-radius:8px;padding:8px 10px;margin-bottom:7px}
+  .rh-event-head{display:flex;gap:6px;align-items:center;margin-bottom:4px}
+  .rh-event .pchip{font-size:11px;padding:1px 7px;border-radius:8px;font-weight:600}
+  .rh-event .etag{font-size:11px;color:var(--text-3)}
+  .rh-event q{font-size:12.5px;color:var(--text);line-height:1.6;display:block;margin:3px 0;font-style:italic}
+  .rh-event .ev{font-size:11px;color:var(--text-3);line-height:1.4}
+  .rh-event .ev b{color:var(--text-2);font-weight:500}
+  .rh-event .resp{font-size:11.5px;color:var(--accent);margin-top:4px;padding-top:4px;border-top:1px dashed var(--line)}
+  /* 风险 */
+  .rh-sum{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+  .rh-sum-chip{background:var(--panel-2);border:1px solid var(--line);border-radius:8px;padding:6px 10px;font-size:11.5px;color:var(--text-2)}
+  .rh-sum-chip b{color:var(--text);margin-right:4px}
+  .rh-sum-chip.high b{color:#D98F7A}
+  .rh-sum-chip.med b{color:#D9B87A}
+  .rh-risks .rh-risk{border:1px solid var(--line);border-radius:9px;padding:9px 10px;margin-bottom:9px;background:var(--panel-2)}
+  .rh-risk-head{display:flex;align-items:center;gap:6px;margin-bottom:4px}
+  .rh-risk-level{font-size:10.5px;padding:1px 7px;border-radius:8px;font-weight:600;border:1px solid}
+  .rh-risk-level.high{color:#D98F7A;border-color:#D98F7A;background:rgba(217,143,122,.12)}
+  .rh-risk-level.medium{color:#D9B87A;border-color:#D9B87A;background:rgba(217,184,122,.12)}
+  .rh-risk-level.low{color:#8FA094;border-color:#8FA094;background:rgba(143,160,148,.12)}
+  .rh-risk-title{font-size:12.5px;color:var(--text);font-weight:600;line-height:1.4;flex:1}
+  .rh-risk-meta{font-size:11px;color:var(--text-3);line-height:1.5;margin-bottom:6px}
+  .rh-risk-meta b{color:var(--text-2)}
+  .rh-risk-patches{display:flex;gap:6px;flex-wrap:wrap}
+  .rh-risk-patches button{font-size:11px;background:var(--panel);border:1px solid var(--line);border-radius:7px;padding:3px 8px;color:var(--text-2);cursor:pointer}
+  .rh-risk-patches button:hover{border-color:var(--accent);color:var(--text)}
+  .rh-risk-patches button.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+  /* 修补卡片 */
+  .rh-patches .rh-patch{border:1px solid var(--line);border-radius:9px;padding:9px 10px;margin-bottom:8px;background:var(--panel-2)}
+  .rh-patch-head{display:flex;gap:6px;align-items:center;margin-bottom:4px}
+  .rh-patch-art{font-size:10.5px;color:var(--accent);background:rgba(129,167,145,.14);padding:1px 7px;border-radius:8px}
+  .rh-patch-status{font-size:10.5px;padding:1px 7px;border-radius:8px;background:var(--panel);color:var(--text-3);border:1px solid var(--line)}
+  .rh-patch-status.applied{background:rgba(129,167,145,.14);color:var(--accent);border-color:rgba(129,167,145,.35)}
+  .rh-patch-status.rejected{background:rgba(217,143,122,.14);color:#D98F7A;border-color:rgba(217,143,122,.35)}
+  .rh-patch-reason{font-size:11.5px;color:var(--text-2);line-height:1.5;margin-bottom:6px}
+  .rh-patch-before,.rh-patch-after{font-size:11px;line-height:1.5;padding:5px 7px;border-radius:6px;margin-bottom:4px;font-family:ui-monospace,monospace;white-space:pre-wrap}
+  .rh-patch-before{background:rgba(217,143,122,.08);color:var(--text-2);border-left:2px solid rgba(217,143,122,.4)}
+  .rh-patch-after{background:rgba(129,167,145,.12);color:var(--text);border-left:2px solid rgba(129,167,145,.5)}
+  .rh-patch-actions{display:flex;gap:6px;margin-top:6px}
+  .rh-patch-actions button{font-size:11px;padding:4px 10px;border-radius:7px;border:1px solid var(--line);background:var(--panel-2);color:var(--text);cursor:pointer}
+  .rh-patch-actions button.primary{background:var(--accent);color:#fff;border-color:var(--accent)}
+  .rh-patch-actions button:hover{border-color:var(--accent)}
+  .rh-patch-actions button[disabled]{opacity:.4;cursor:not-allowed}
+  /* 历史记录 */
+  .rh-history-item{display:flex;align-items:center;gap:8px;padding:7px 9px;border:1px solid var(--line);border-radius:8px;margin-bottom:6px;cursor:pointer;transition:.15s}
+  .rh-history-item:hover{border-color:var(--accent);background:var(--hover)}
+  .rh-history-item .time{font-size:11px;color:var(--text-3);flex-shrink:0}
+  .rh-history-item .sum{font-size:11.5px;color:var(--text-2);line-height:1.4}
+  .rh-history-item .sum b{color:var(--accent)}
+  /* 运行进度 */
+  .rh-progress{margin-bottom:10px;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--panel-2)}
+  .rh-progress .psteps{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px}
+  .rh-progress .pstep{font-size:11px;padding:2px 8px;border-radius:8px;background:var(--panel);border:1px solid var(--line);color:var(--text-3)}
+  .rh-progress .pstep.done{background:rgba(129,167,145,.14);color:var(--accent);border-color:rgba(129,167,145,.4)}
+  .rh-progress .pstep.cur{background:rgba(184,120,62,.14);color:var(--accent-soft);border-color:rgba(184,120,62,.4);animation:pulse 1.2s infinite}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.55}}
+  .rh-prog-bar{height:6px;background:var(--panel);border-radius:4px;overflow:hidden;margin-top:8px}
+  .rh-prog-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent-soft));transition:.3s}
+  .rh-empty{text-align:center;padding:24px 10px;color:var(--text-3);font-size:12px;line-height:1.7}
+  .rh-fail{color:#D98F7A;margin-top:8px;font-size:11px}
+</style>
+</head>
+<body data-page="rehearsal">
+<div class="app">
+  <aside class="sidebar"></aside>
+  <div class="main">
+    <header class="topbar"></header>
+    <main class="content">
+
+      <div class="rh-head">
+        <div>
+          <h1>AI 课堂预演</h1>
+          <div class="mini" style="margin-top:3px">基于当前备课包模拟学生反应，提前发现课堂风险。模拟结果仅用于教学准备。</div>
+        </div>
+        <div class="rh-meta">
+          <span class="rh-mode-tag" id="rhMode">单模型预演</span>
+          <span class="rh-mock-tag" id="rhMock">模拟数据</span>
+        </div>
+      </div>
+
+      <div class="rh-grid">
+        <!-- 左：配置 + 历史 -->
+        <div class="rh-col">
+          <div class="rh-section">
+            <h3>预演配置</h3>
+            <div class="rh-field"><label>当前课程</label><div class="value" id="rhCourseName">—</div></div>
+            <div class="rh-field"><label>备课包</label><div class="value" id="rhLessonPkg">尚未生成</div></div>
+            <div class="rh-field"><label>课堂阶段</label><div class="value" id="rhStageCount">—</div></div>
+            <div class="rh-field"><label>模拟学生（多选）</label>
+              <div id="rhPersonas"></div>
+            </div>
+            <div class="rh-field"><label>双模型审核</label>
+              <div class="checks" style="padding-top:3px"><label class="chk on"><input id="rhDual" type="checkbox" checked>开启（DeepSeek 模拟 + 智谱审核）</label></div>
+            </div>
+            <button class="btn primary" id="rhRun" style="width:100%">开始预演</button>
+            <button class="btn ghost" id="rhDemo" style="width:100%;margin-top:6px">快速体验演示预演</button>
+          </div>
+          <div class="rh-section" id="rhProgressWrap" style="display:none">
+            <h3>运行进度</h3>
+            <div class="rh-progress">
+              <div class="psteps" id="rhPsteps"></div>
+              <div class="rh-prog-bar"><div class="rh-prog-fill" id="rhProgFill" style="width:0%"></div></div>
+              <div class="rh-fail" id="rhFail" style="display:none"></div>
+            </div>
+          </div>
+          <div class="rh-section">
+            <h3>预演历史</h3>
+            <div id="rhHistory"></div>
+          </div>
+        </div>
+
+        <!-- 中：课堂时间轴 -->
+        <div class="rh-col">
+          <h3>课堂时间轴</h3>
+          <div id="rhTimeline" class="rh-timeline"></div>
+          <div id="rhTimelineEmpty" class="rh-empty" style="display:none">
+            <div>还没有课堂阶段。</div>
+            <div>请先完成「一键备课」，再回到这里开始预演。</div>
+          </div>
+        </div>
+
+        <!-- 右：风险 + 修补 -->
+        <div class="rh-col">
+          <h3>风险与修补</h3>
+          <div class="rh-sum" id="rhSum"></div>
+          <div id="rhEmpty" class="rh-empty" style="display:block">
+            开始预演后，这里会显示课堂风险和可执行修补方案。
+          </div>
+          <div id="rhRisks" class="rh-risks" style="display:none"></div>
+          <h3 style="margin-top:14px">修补方案</h3>
+          <div id="rhPatches" class="rh-patches"></div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+</div>
+
+<div class="toast"></div>
+
+<script src="assets/js/data.js?v=1795420906"></script>
+<script src="assets/js/site.js?v=1795700140"></script>
+<script src="assets/js/api.js?v=1795700003"></script>
+<script src="assets/js/live.js?v=1795700007"></script>
+<script src="assets/js/rehearsal.js?v=1795700100"></script>
+</body>
+</html>

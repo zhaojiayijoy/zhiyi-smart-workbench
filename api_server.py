@@ -32,6 +32,7 @@ if str(ROOT) not in sys.path:
 os.chdir(ROOT)
 
 from app import db, edu, agent  # noqa: E402
+from app import db, rehearsal_engine  # noqa: E402
 from app.config import ROOT as CFG_ROOT, EXPORT_DIR  # noqa: E402
 
 API_PORT = int(os.getenv("EDU_API_PORT", "8700"))
@@ -1897,6 +1898,119 @@ def export_grades(project_id: Optional[int] = Query(None),
     return _file_resp(edu.export_grades_xlsx(rows, class_name),
                       f"成绩汇总_{time.strftime('%Y%m%d')}.xlsx",
                       "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+
+
+# ---------- AI 课堂预演 ----------
+@app.post("/api/rehearsals", summary="创建课堂预演")
+def api_create_rehearsal(body: dict):
+    cid = int(body.get("courseId") or 0)
+    if not cid or not db.get_project(cid):
+        raise HTTPException(400, "课程不存在")
+    personas = body.get("personas") or ["novice", "challenger", "operator"]
+    lp_id = body.get("lessonPackageId")
+    # 先落库，然后异步执行
+    rid = db.create_rehearsal(
+        course_id=cid, lesson_package_id=int(lp_id) if lp_id else None,
+        personas=personas, generation_model="deepseek", review_model="zhipu",
+    )
+    # 同步执行（简单部署下不用 asyncio）
+    try:
+        rehearsal_engine.run_rehearsal(rehearsal_id=rid, course_id=cid, personas=personas, use_review_model=True)
+    except Exception as exc:
+        db.update_rehearsal(rid, status="failed", error=str(exc))
+    return {"ok": True, "id": rid}
+
+
+@app.get("/api/rehearsals", summary="列出某课程全部预演")
+def api_list_rehearsals(courseId: int):
+    return {"ok": True, "items": db.list_rehearsals(course_id=courseId)}
+
+
+@app.get("/api/rehearsals/{rid}", summary="读取预演详情")
+def api_get_rehearsal(rid: int):
+    s = db.get_rehearsal(int(rid))
+    if not s:
+        raise HTTPException(404, "预演记录不存在")
+    return {"ok": True, "item": s}
+
+
+@app.post("/api/rehearsals/{rid}/run", summary="重新运行预演（失败后重试）")
+def api_run_rehearsal(rid: int):
+    s = db.get_rehearsal(int(rid))
+    if not s:
+        raise HTTPException(404, "预演记录不存在")
+    db.update_rehearsal(int(rid), status="running", error=None)
+    try:
+        rehearsal_engine.run_rehearsal(
+            rehearsal_id=int(rid), course_id=int(s["course_id"]),
+            personas=s.get("personas") or ["novice", "challenger", "operator"],
+            use_review_model=True,
+        )
+    except Exception as exc:
+        db.update_rehearsal(int(rid), status="failed", error=str(exc))
+    return {"ok": True}
+
+
+@app.post("/api/rehearsals/{rid}/demo", summary="生成演示预演（不调 LLM）")
+def api_demo_rehearsal(rid: int):
+    s = db.get_rehearsal(int(rid))
+    if not s:
+        raise HTTPException(404, "预演记录不存在")
+    rehearsal_engine.create_demo_rehearsal(int(s["course_id"]), s.get("personas"))
+    return {"ok": True}
+
+
+@app.post("/api/rehearsals/{rid}/patches/{pid}/apply", summary="应用某个修补（生成备课包新草稿）")
+def api_apply_patch(rid: int, pid: str, body: dict = {}):
+    s = db.get_rehearsal(int(rid))
+    if not s:
+        raise HTTPException(404, "预演记录不存在")
+    session = db.update_rehearsal_patch(int(rid), pid, "applied")
+    if not session:
+        raise HTTPException(404, "修补不存在")
+    # 修补写回：找到关联备课包，更新 artifacts（作为 v2 草稿）
+    risk = next((r for r in session.get("risks", []) if pid in r.get("patches", [])), None)
+    patch = next((p for p in session.get("patches", []) if p.get("patchId") == pid), None)
+    lesson_ref = f"lesson_package_{s.get('lesson_package_id') or 'latest_'+str(s['course_id'])}"
+    current_lesson = db.get_task(int(s["lesson_package_id"])) if s.get("lesson_package_id") else None
+    old_payload = (current_lesson or {}).get("answer") or {}
+    # 生成 v2 payload（把 patch 的 after 追加进去）
+    new_section = (patch or {}).get("after", "")
+    target = (patch or {}).get("targetSection") or "课堂修改"
+    if new_section and isinstance(old_payload, dict):
+        # 按目标物追加
+        key_map = {"lesson_plan": "教案", "ppt": "PPT大纲", "exercise": "课堂练习",
+                   "training_task": "实训任务要求", "rubric": "评分量规"}
+        key = key_map.get((patch or {}).get("targetArtifact"), "教案")
+        section_map = (patch or {}).get("targetSection", "")
+        existing = old_payload.get(key, "")
+        if isinstance(existing, str):
+            old_payload[key] = existing + f"\n\n### 修补草稿 v2（{target}）\n{new_section}"
+        elif isinstance(existing, list):
+            old_payload[key] = existing + [f"[v2草稿] {target}: {new_section}"]
+        else:
+            old_payload[key] = new_section
+    # 保存为新 artifacts v2 草稿
+    db.save_artifact("lesson_package_v2", str(s["course_id"]), old_payload, project_id=int(s["course_id"]))
+    return {"ok": True, "session": session, "patchedRef": f"{lesson_ref}_v2_draft"}
+
+
+@app.post("/api/rehearsals/{rid}/patches/{pid}/reject", summary="拒绝修补（不应用）")
+def api_reject_patch(rid: int, pid: str):
+    s = db.update_rehearsal_patch(int(rid), pid, "rejected")
+    return {"ok": bool(s), "session": s}
+
+
+@app.post("/api/rehearsals/{rid}/patches/{pid}/undo", summary="撤销已应用的修补（恢复 pending）")
+def api_undo_patch(rid: int, pid: str):
+    s = db.update_rehearsal_patch(int(rid), pid, "pending")
+    return {"ok": bool(s), "session": s}
+
+
+@app.delete("/api/rehearsals/{rid}", summary="删除预演记录")
+def api_delete_rehearsal(rid: int):
+    db.delete_rehearsal(int(rid))
+    return {"ok": True}
 
 
 # 静态站：同源托管 static-web/，单端口即可访问整站（本地仍可用 8765 预览）

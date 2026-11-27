@@ -662,9 +662,166 @@ def reset_all() -> None:
         c.execute("DELETE FROM files")
         c.execute("DELETE FROM tasks")
         c.execute("DELETE FROM artifacts")
+        c.execute("DELETE FROM rehearsals")
         c.execute("DELETE FROM projects")
         try:
             c.execute("DELETE FROM sqlite_sequence")
         except sqlite3.OperationalError:
             pass
+
+
+# ---------------------------------------------------------------------------
+# rehearsals：AI 课堂预演持久化（SQLite，非破坏性）
+# ---------------------------------------------------------------------------
+_REHEARSAL_SCHEMA = """
+CREATE TABLE IF NOT EXISTS rehearsals (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    course_id INTEGER NOT NULL,
+    lesson_package_id INTEGER,
+    lesson_package_ref TEXT,
+    status TEXT NOT NULL DEFAULT 'configuring',
+    personas TEXT NOT NULL DEFAULT '[]',
+    timeline TEXT NOT NULL DEFAULT '[]',
+    events TEXT NOT NULL DEFAULT '[]',
+    risks TEXT NOT NULL DEFAULT '[]',
+    patches TEXT NOT NULL DEFAULT '[]',
+    summary TEXT,
+    generation_model TEXT NOT NULL DEFAULT '',
+    review_model TEXT NOT NULL DEFAULT '',
+    is_demo INTEGER NOT NULL DEFAULT 0,
+    error TEXT,
+    created_at REAL NOT NULL,
+    completed_at REAL
+);
+CREATE INDEX IF NOT EXISTS idx_rehearsals_course ON rehearsals(course_id, created_at DESC);
+"""
+
+
+def _ensure_rehearsal_table(conn: sqlite3.Connection) -> None:
+    conn.executescript(_REHEARSAL_SCHEMA)
+
+
+def _conn_rehearsals() -> sqlite3.Connection:
+    conn = _conn()
+    _ensure_rehearsal_table(conn)
+    return conn
+
+
+def create_rehearsal(*, course_id: int, lesson_package_id: Optional[int] = None,
+                     lesson_package_ref: str = "", personas: Optional[list[str]] = None,
+                     generation_model: str = "", review_model: str = "",
+                     is_demo: bool = False) -> int:
+    with _conn_rehearsals() as c:
+        cur = c.execute(
+            "INSERT INTO rehearsals(course_id,lesson_package_id,lesson_package_ref,"
+            "personas,generation_model,review_model,is_demo,created_at,status)"
+            " VALUES (?,?,?,?,?,?,?,?,?)",
+            (int(course_id),
+             int(lesson_package_id) if lesson_package_id is not None else None,
+             lesson_package_ref,
+             json.dumps(personas or [], ensure_ascii=False),
+             generation_model, review_model,
+             int(bool(is_demo)), time.time(), "configuring"),
+        )
+        return int(cur.lastrowid)
+
+
+def update_rehearsal(rehearsal_id: int, *, status: Optional[str] = None,
+                     timeline: Optional[list] = None, events: Optional[list] = None,
+                     risks: Optional[list] = None, patches: Optional[list] = None,
+                     summary: Optional[dict] = None, error: Optional[str] = None,
+                     completed_at: Optional[float] = None) -> None:
+    sets, args = [], []
+    for col, val in (
+        ("status", status), ("summary", summary), ("error", error),
+    ):
+        if val is not None:
+            sets.append(f"{col}=?")
+            args.append(json.dumps(val, ensure_ascii=False) if col == "summary" else val)
+    for col, val in (("timeline", timeline), ("events", events),
+                     ("risks", risks), ("patches", patches)):
+        if val is not None:
+            sets.append(f"{col}=?")
+            args.append(json.dumps(val, ensure_ascii=False))
+    if completed_at is not None:
+        sets.append("completed_at=?")
+        args.append(completed_at)
+    if not sets:
+        return
+    args.append(int(rehearsal_id))
+    with _conn_rehearsals() as c:
+        c.execute(f"UPDATE rehearsals SET {','.join(sets)} WHERE id=?", args)
+
+
+def get_rehearsal(rehearsal_id: int) -> Optional[dict[str, Any]]:
+    with _conn_rehearsals() as c:
+        r = c.execute("SELECT * FROM rehearsals WHERE id=?", (int(rehearsal_id),)).fetchone()
+    if not r:
+        return None
+    d = _d(r)
+    for col in ("personas", "timeline", "events", "risks", "patches"):
+        try:
+            d[col] = json.loads(d.get(col) or "[]")
+        except Exception:
+            d[col] = []
+    for col in ("summary",):
+        try:
+            d[col] = json.loads(d[col]) if d.get(col) else None
+        except Exception:
+            d[col] = None
+    return d
+
+
+def list_rehearsals(course_id: Optional[int] = None, limit: int = 50) -> list[dict[str, Any]]:
+    clauses, args = [], []
+    if course_id is not None:
+        clauses.append("course_id=?")
+        args.append(int(course_id))
+    where = ("WHERE " + " AND ".join(clauses)) if clauses else ""
+    with _conn_rehearsals() as c:
+        rows = c.execute(
+            f"SELECT * FROM rehearsals {where}"
+            " ORDER BY created_at DESC, id DESC LIMIT ?",
+            tuple(args) + (int(limit),),
+        ).fetchall()
+    out = []
+    for r in rows:
+        d = _d(r)
+        for col in ("personas", "timeline", "events", "risks", "patches"):
+            try:
+                d[col] = json.loads(d.get(col) or "[]")
+            except Exception:
+                d[col] = []
+        try:
+            d["summary"] = json.loads(d["summary"]) if d.get("summary") else None
+        except Exception:
+            d["summary"] = None
+        out.append(d)
+    return out
+
+
+def delete_rehearsal(rehearsal_id: int) -> None:
+    with _conn_rehearsals() as c:
+        c.execute("DELETE FROM rehearsals WHERE id=?", (int(rehearsal_id),))
+
+
+def update_rehearsal_patch(rehearsal_id: int, patch_id: str, status: str,
+                           applied_at: Optional[float] = None) -> Optional[dict[str, Any]]:
+    """更新某预演记录中单个修补的状态，返回更新后的 session。"""
+    session = get_rehearsal(rehearsal_id)
+    if not session:
+        return None
+    patches = session.get("patches") or []
+    for p in patches:
+        if p.get("patchId") == patch_id:
+            p["status"] = status
+            if applied_at is not None:
+                p["appliedAt"] = applied_at
+            if status == "applied":
+                p["appliedAt"] = p.get("appliedAt") or time.time()
+            elif status in ("rejected", "pending") and "appliedAt" in p:
+                del p["appliedAt"]
+            break
+    update_rehearsal(rehearsal_id, patches=patches)
+    return get_rehearsal(rehearsal_id)
 

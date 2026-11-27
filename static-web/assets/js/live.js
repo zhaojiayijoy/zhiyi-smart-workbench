@@ -390,6 +390,23 @@
         notify("已按原参数生成新版备课包");
       }).catch(function (err) { busy(b, false); notify("重生成失败：" + (err.message || err)); });
     });
+    // 课堂预演入口（备课包结果页）
+    var rhBtn = out.querySelector("#btnGoRehearsal");
+    var rhHint = out.querySelector("#rehearsalHint");
+    if (rhBtn) {
+      if (!taskId) {
+        rhBtn.disabled = true; rhBtn.style.opacity = ".5";
+        if (rhHint) rhHint.textContent = "请先生成备课包后再开始预演";
+      } else {
+        rhBtn.addEventListener("click", function () {
+          var c = Edu.getSelectedCourse();
+          if (!c) { notify("请先选择课程"); return; }
+          sessionStorage.setItem("rhCourseId", String(c.id));
+          sessionStorage.setItem("rhLessonPackageId", String(taskId));
+          location.href = "rehearsal.html";
+        });
+      }
+    }
   }
 
   function initLesson() {

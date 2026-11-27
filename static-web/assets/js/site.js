@@ -32,6 +32,7 @@
         { href: "courses.html", icon: "book", text: "课程项目", page: "courses" },
         { href: "outline.html", icon: "file", text: "备课大纲", page: "outline" },
         { href: "lesson.html", icon: "spark", text: "一键备课", page: "lesson" },
+        { href: "rehearsal.html", icon: "eye", text: "课堂预演", page: "rehearsal" },
         { href: "training.html", icon: "tool", text: "创建实训", page: "training" },
         { href: "tutor.html", icon: "chat", text: "学生答疑", page: "tutor" },
         { href: "review.html", icon: "check", text: "作业评审", page: "review" },
