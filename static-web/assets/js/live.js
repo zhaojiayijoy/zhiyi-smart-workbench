@@ -390,6 +390,26 @@
         notify("已按原参数生成新版备课包");
       }).catch(function (err) { busy(b, false); notify("重生成失败：" + (err.message || err)); });
     });
+    // 发布给学生 / 撤回（学生端只显示已发布）
+    var pubBtn = out.querySelector("#btnPublishLesson");
+    var pubTag = out.querySelector("#lessonPubTag");
+    function syncPub(published) {
+      if (pubTag) { pubTag.textContent = published ? "已发布" : "草稿"; pubTag.className = "tag" + (published ? " ok" : ""); }
+      if (pubBtn) pubBtn.textContent = published ? "撤回发布" : "发布给学生";
+    }
+    syncPub(!!(pkg && pkg._published));
+    if (pubBtn) {
+      pubBtn.addEventListener("click", function () {
+        if (!taskId) { notify("请先生成备课包"); return; }
+        var next = (pubTag && pubTag.textContent === "已发布") ? "draft" : "published";
+        busy(pubBtn, true, "提交中…");
+        API.lesson.status(taskId, next).then(function (r) {
+          busy(pubBtn, false);
+          syncPub(!!r.published);
+          notify(r.published ? "已发布到学生空间" : "已撤回，学生端不再显示");
+        }).catch(function (err) { busy(pubBtn, false); notify("操作失败：" + (err.message || err)); });
+      });
+    }
     // 课堂预演入口（备课包结果页）
     var rhBtn = out.querySelector("#btnGoRehearsal");
     var rhHint = out.querySelector("#rehearsalHint");

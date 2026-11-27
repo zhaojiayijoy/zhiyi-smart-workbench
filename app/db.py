@@ -208,6 +208,18 @@ def _conn() -> sqlite3.Connection:
             created_at REAL NOT NULL,
             PRIMARY KEY (kind, ref)
         );
+        CREATE TABLE IF NOT EXISTS students (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            project_id INTEGER NOT NULL,
+            student_no TEXT NOT NULL,
+            name TEXT NOT NULL,
+            class_name TEXT NOT NULL DEFAULT '',
+            source_file TEXT NOT NULL DEFAULT '',
+            row_no INTEGER NOT NULL DEFAULT 0,
+            created_at REAL NOT NULL,
+            updated_at REAL NOT NULL,
+            UNIQUE(project_id, student_no)
+        );
         """
     )
     # 3) 对旧库：补 ALTER TABLE project_id 列，补默认项目并迁移归属
@@ -221,6 +233,7 @@ def _conn() -> sqlite3.Connection:
         CREATE INDEX IF NOT EXISTS idx_tasks_created ON tasks(created_at DESC);
         CREATE INDEX IF NOT EXISTS idx_artifacts_project ON artifacts(kind, project_id);
         CREATE INDEX IF NOT EXISTS idx_projects_parent ON projects(parent_id);
+        CREATE INDEX IF NOT EXISTS idx_students_project ON students(project_id, student_no);
         """
     )
     return conn
@@ -825,3 +838,62 @@ def update_rehearsal_patch(rehearsal_id: int, patch_id: str, status: str,
     update_rehearsal(rehearsal_id, patches=patches)
     return get_rehearsal(rehearsal_id)
 
+
+
+# ---------------------------------------------------------------------------
+# students（班级学生名单：学号 / 姓名 / 班级）
+# ---------------------------------------------------------------------------
+def import_students(project_id: int, rows: list[dict[str, Any]], source_file: str = "") -> dict[str, int]:
+    """按 (project_id, student_no) upsert 学生记录；返回 {added, updated}。"""
+    now = time.time()
+    added = updated = 0
+    with _conn() as c:
+        for r in rows:
+            no = str(r.get("student_no") or "").strip()
+            name = str(r.get("name") or "").strip()
+            if not no or not name:
+                continue
+            cls = str(r.get("class_name") or "").strip()
+            row_no = int(r.get("row_no") or 0)
+            cur = c.execute(
+                "SELECT id FROM students WHERE project_id=? AND student_no=?",
+                (project_id, no),
+            ).fetchone()
+            if cur:
+                c.execute(
+                    "UPDATE students SET name=?, class_name=?, source_file=?, row_no=?, updated_at=? WHERE id=?",
+                    (name, cls, source_file, row_no, now, cur["id"]),
+                )
+                updated += 1
+            else:
+                c.execute(
+                    "INSERT INTO students (project_id, student_no, name, class_name, source_file, row_no, created_at, updated_at)"
+                    " VALUES (?,?,?,?,?,?,?,?)",
+                    (project_id, no, name, cls, source_file, row_no, now, now),
+                )
+                added += 1
+        c.commit()
+    return {"added": added, "updated": updated}
+
+
+def list_students(project_id: int, limit: int = 2000) -> list[dict[str, Any]]:
+    with _conn() as c:
+        rows = c.execute(
+            "SELECT id, project_id, student_no, name, class_name, source_file, row_no, created_at, updated_at"
+            " FROM students WHERE project_id=? ORDER BY student_no LIMIT ?",
+            (project_id, limit),
+        ).fetchall()
+    return [_d(r) for r in rows]
+
+
+def count_students(project_id: int) -> int:
+    with _conn() as c:
+        row = c.execute("SELECT COUNT(*) AS n FROM students WHERE project_id=?", (project_id,)).fetchone()
+    return int(row["n"] if row else 0)
+
+
+def clear_students(project_id: int) -> int:
+    with _conn() as c:
+        cur = c.execute("DELETE FROM students WHERE project_id=?", (project_id,))
+        c.commit()
+        return int(cur.rowcount or 0)

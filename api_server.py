@@ -8,6 +8,7 @@
 """
 from __future__ import annotations
 
+import csv
 import io
 import json
 import os
@@ -646,6 +647,148 @@ def get_file_text(fid: int) -> dict:
     return ok({"text": db.get_file_text(fid) or ""})
 
 
+# ---------------------------------------------------------------------------
+# 学生名单：xlsx / csv 导入（学号 / 姓名 / 班级）、查看、清空
+# ---------------------------------------------------------------------------
+_STU_HEAD_ALIASES = {
+    "student_no": ("学号", "学籍号", "学生学号", "studentno", "student_no", "no"),
+    "name": ("姓名", "学生姓名", "名字", "name", "student"),
+    "class_name": ("班级", "行政班级", "教学班", "class", "classname", "class_name"),
+}
+
+
+def _norm_head(v: Any) -> str:
+    return re.sub(r"[\s\u3000:：()（）]", "", str(v or "")).lower()
+
+
+def _cell_text(v: Any) -> str:
+    if v is None:
+        return ""
+    if isinstance(v, float) and v.is_integer():
+        return str(int(v))
+    return str(v).strip()
+
+
+def _read_sheet_rows(name: str, data: bytes) -> list[list[Any]]:
+    ext = Path(name).suffix.lower()
+    if ext == ".csv":
+        text = None
+        for enc in ("utf-8-sig", "gbk", "utf-8"):
+            try:
+                text = data.decode(enc)
+                break
+            except UnicodeDecodeError:
+                continue
+        if text is None:
+            raise HTTPException(400, "CSV 编码无法识别，请另存为 UTF-8 后重试")
+        return [row for row in csv.reader(io.StringIO(text))]
+    if ext in (".xlsx", ".xlsm"):
+        from openpyxl import load_workbook
+        wb = load_workbook(io.BytesIO(data), read_only=True, data_only=True)
+        ws = wb.active
+        rows = [list(r) for r in ws.iter_rows(values_only=True)]
+        wb.close()
+        return rows
+    if ext == ".xls":
+        raise HTTPException(400, "不支持旧版 .xls，请另存为 .xlsx 或 .csv 后重试")
+    raise HTTPException(400, "仅支持 .xlsx / .csv 名单文件")
+
+
+def _parse_students(name: str, data: bytes, default_class: str = "") -> dict[str, Any]:
+    rows = _read_sheet_rows(name, data)
+    if not rows:
+        raise HTTPException(400, "文件为空，未读取到任何行")
+
+    head_idx, col_map = -1, {}
+    for i, row in enumerate(rows[:10]):
+        m: dict[str, int] = {}
+        for j, cell in enumerate(row):
+            h = _norm_head(cell)
+            if not h:
+                continue
+            for key, aliases in _STU_HEAD_ALIASES.items():
+                if key not in m and any(h == _norm_head(a) for a in aliases):
+                    m[key] = j
+        if "student_no" in m and "name" in m:
+            head_idx, col_map = i, m
+            break
+    if head_idx < 0:
+        raise HTTPException(400, "未识别到表头：文件前 10 行需包含「学号」和「姓名」两列")
+
+    items: list[dict[str, Any]] = []
+    errors: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    skipped = 0
+    for i in range(head_idx + 1, len(rows)):
+        row = rows[i]
+        excel_row = i + 1
+
+        def pick(key: str) -> str:
+            j = col_map.get(key)
+            return _cell_text(row[j]) if j is not None and j < len(row) else ""
+
+        no, nm = pick("student_no"), pick("name")
+        cls = pick("class_name") or default_class
+        if not no and not nm:
+            skipped += 1
+            continue
+        if not no:
+            errors.append({"row": excel_row, "reason": "缺少学号", "name": nm})
+            continue
+        if not nm:
+            errors.append({"row": excel_row, "reason": "缺少姓名", "student_no": no})
+            continue
+        if no in seen:
+            errors.append({"row": excel_row, "reason": "文件内学号重复", "student_no": no, "name": nm})
+            continue
+        seen.add(no)
+        items.append({"student_no": no, "name": nm, "class_name": cls, "row_no": excel_row})
+    return {"items": items, "errors": errors, "skipped": skipped, "head_row": head_idx + 1}
+
+
+@app.post("/api/students/import")
+def import_students_api(project_id: int = Form(...), file: UploadFile = File(...)) -> dict:
+    if not db.get_project(project_id):
+        raise HTTPException(404, "课程项目不存在")
+    data = file.file.read()
+    if not data:
+        raise HTTPException(400, "文件为空")
+    name = file.filename or "名单"
+    proj = db.get_project(project_id) or {}
+    parsed = _parse_students(name, data, default_class=(proj.get("class_name") or ""))
+    res = db.import_students(project_id, parsed["items"], source_file=name)
+    total = db.count_students(project_id)
+    errs = parsed["errors"][:50]
+    msg = f"新增 {res['added']} 人，更新 {res['updated']} 人"
+    if parsed["errors"]:
+        msg += f"，跳过 {len(parsed['errors'])} 行异常"
+    if parsed["skipped"]:
+        msg += f"，忽略 {parsed['skipped']} 个空行"
+    return ok({
+        "file": name, "added": res["added"], "updated": res["updated"],
+        "skipped": parsed["skipped"], "error_count": len(parsed["errors"]),
+        "errors": errs, "total": total, "message": msg,
+    })
+
+
+@app.get("/api/students")
+def list_students_api(project_id: int = Query(...)) -> dict:
+    items = db.list_students(project_id)
+    classes: list[str] = []
+    for s in items:
+        c = (s.get("class_name") or "").strip()
+        if c and c not in classes:
+            classes.append(c)
+    last = max((s.get("updated_at") or 0) for s in items) if items else 0
+    return ok({"items": items, "total": len(items), "classes": classes, "last_import_at": last})
+
+
+@app.delete("/api/students")
+def clear_students_api(project_id: int = Query(...)) -> dict:
+    n = db.clear_students(project_id)
+    return ok({"deleted": n})
+
+
 @app.post("/api/files")
 def upload_file(project_id: int = Form(...), category: str = Form("资料"),
                 visibility: str = Form("both"), file: UploadFile = File(...)) -> dict:
@@ -770,7 +913,10 @@ def get_lesson(tid: int) -> dict:
     item = _store_get("lessons", tid)
     if not item:
         raise HTTPException(404, "备课包不存在")
-    return ok(item["pkg"])
+    task = db.get_task(tid) or {}
+    pkg = dict(item["pkg"])
+    pkg["_published"] = bool((task.get("meta") or {}).get("published"))
+    return ok(pkg)
 
 
 class LessonRegenIn(BaseModel):
@@ -1546,6 +1692,12 @@ def student_dashboard(project_id: Optional[int] = Query(None), student: str = Qu
     reviews = db.list_tasks(project_id=project_id, kind="review", limit=200)
     trainings = db.list_tasks(project_id=project_id, kind="training", limit=100)
     lessons = db.list_tasks(project_id=project_id, kind="lesson", limit=100)
+    # 学生端只看到已发布的内容：实训按 pkg.status=published，备课包按 meta.published=true
+    def _pkg_status(t: dict) -> str:
+        return str(((t.get("meta") or {}).get("pkg") or {}).get("status") or "")
+
+    trainings = [t for t in trainings if _pkg_status(t) == "published"]
+    lessons = [t for t in lessons if bool((t.get("meta") or {}).get("published"))]
     # 学生相关：过滤 meta.student
     def _stu(t: dict) -> str:
         return ((t.get("meta") or {}).get("student") or "").strip()
@@ -1798,6 +1950,20 @@ def set_training_status(tid: int, body: TrainingStatusIn) -> dict:
         meta["pkg"] = item["pkg"]
         db.update_task(tid, meta=meta)
     return ok({"task_id": tid, "status": body.status})
+
+
+@app.post("/api/lesson/{tid}/status")
+def set_lesson_status(tid: int, body: TrainingStatusIn) -> dict:
+    """备课包发布给学生 / 撤回为草稿（学生端按 meta.published 过滤）。"""
+    if body.status not in ("draft", "published"):
+        raise HTTPException(400, "status 仅支持 draft / published")
+    task = db.get_task(tid)
+    if not task:
+        raise HTTPException(404, "备课包不存在")
+    meta = task.get("meta") or {}
+    meta["published"] = body.status == "published"
+    db.update_task(tid, meta=meta)
+    return ok({"task_id": tid, "published": meta["published"], "status": body.status})
 
 
 # ---------------------------------------------------------------------------

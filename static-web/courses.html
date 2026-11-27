@@ -126,6 +126,28 @@
         </div>
       </div>
 
+      <div class="card" id="rosterCard" style="margin-bottom:14px">
+        <div class="card-h">
+          <h2>学生名单</h2>
+          <div class="right">
+            <span class="mini" id="rosterMeta">—</span>
+            <button class="btn sm" type="button" id="rosterUploadBtn">上传名单</button>
+            <input type="file" id="rosterFile" accept=".xlsx,.csv" hidden>
+            <button class="btn sm ghost" type="button" id="rosterClearBtn">清空名单</button>
+          </div>
+        </div>
+        <div class="card-b">
+          <p class="mini" style="margin-bottom:10px">支持 .xlsx / .csv，需包含「学号」「姓名」两列，「班级」列可选。同一学号再次导入会更新姓名与班级，不会重复计数；缺少学号或姓名的行会跳过并列出。</p>
+          <div class="rule" id="rosterResult" hidden></div>
+          <div class="table-wrap" style="margin-top:10px">
+            <table>
+              <thead><tr><th>学号</th><th>姓名</th><th>班级</th><th>导入来源</th></tr></thead>
+              <tbody id="rosterTbody"><tr><td colspan="4" class="mini">暂无学生名单，点击右上角「上传名单」导入。</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
     </main>
   </div>
 </div>
@@ -133,8 +155,8 @@
 <div class="toast"></div>
 <script src="assets/js/data.js?v=1795420906"></script>
 <script src="assets/js/site.js?v=1795700140"></script>
-<script src="assets/js/api.js?v=1795700003"></script>
-<script src="assets/js/live.js?v=1795700007"></script>
+<script src="assets/js/api.js?v=1795764200"></script>
+<script src="assets/js/live.js?v=1795764200"></script>
 <script>
 /* ===== courses.html 页面专属逻辑 ===== */
 (function(){
@@ -482,6 +504,120 @@
     Edu.onCourseChange(function(){
       if (Edu.isLive() && Edu.state.courses.length) renderAllCourses();
     });
+  });
+})();
+</script>
+<script>
+/* ===== 学生名单：上传 xlsx/csv、查看、清空 ===== */
+(function(){
+  "use strict";
+  var tb = document.getElementById("rosterTbody");
+  var meta = document.getElementById("rosterMeta");
+  var result = document.getElementById("rosterResult");
+  var fileInput = document.getElementById("rosterFile");
+  var upBtn = document.getElementById("rosterUploadBtn");
+  var clearBtn = document.getElementById("rosterClearBtn");
+  if (!tb) return;
+
+  function esc(s){
+    return String(s == null ? "" : s).replace(/[&<>"']/g, function(c){
+      return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];
+    });
+  }
+  function fmtTime(ts){
+    if (!ts) return "—";
+    var d = new Date(Number(ts) * 1000);
+    return (d.getMonth() + 1) + "-" + ("0" + d.getDate()).slice(-2) + " " +
+      ("0" + d.getHours()).slice(-2) + ":" + ("0" + d.getMinutes()).slice(-2);
+  }
+  function curId(){
+    var c = (window.Edu && Edu.getSelectedCourse) ? Edu.getSelectedCourse() : null;
+    return c ? c.id : null;
+  }
+  function liveOk(){
+    return !!(window.EduAPI && EduAPI.students && Edu.isLive && Edu.isLive());
+  }
+
+  function render(res){
+    var items = (res && res.items) || [];
+    if (meta) meta.textContent = items.length
+      ? ("共 " + items.length + " 人 · " + ((res.classes || []).length) + " 个班级 · " + fmtTime(res.last_import_at))
+      : "—";
+    if (!items.length){
+      tb.innerHTML = '<tr><td colspan="4" class="mini">暂无学生名单，点击右上角「上传名单」导入。</td></tr>';
+      return;
+    }
+    tb.innerHTML = items.map(function(s){
+      return "<tr><td>" + esc(s.student_no) + "</td><td>" + esc(s.name) + "</td><td>" +
+        esc(s.class_name || "—") + "</td><td class=\"mini\">" +
+        esc(s.source_file || "—") + (s.row_no ? " · 第 " + s.row_no + " 行" : "") + "</td></tr>";
+    }).join("");
+  }
+
+  function load(){
+    var pid = curId();
+    if (!pid || !liveOk()){
+      if (meta) meta.textContent = "未连接本地接口";
+      tb.innerHTML = '<tr><td colspan="4" class="mini">未连接本地接口，无法读取学生名单。</td></tr>';
+      return;
+    }
+    EduAPI.students.list(pid).then(render).catch(function(){
+      tb.innerHTML = '<tr><td colspan="4" class="mini">读取失败，请稍后重试。</td></tr>';
+    });
+  }
+
+  function showResult(res){
+    if (!result) return;
+    result.hidden = false;
+    var html = "<b>" + esc(res.message || "导入完成") + "</b>";
+    if (res.error_count){
+      html += '<div class="mini" style="margin-top:6px">共 ' + res.error_count + " 行未导入：</div><ul style=\"margin:6px 0 0 18px\">" +
+        (res.errors || []).map(function(e){
+          return "<li class=\"mini\">第 " + e.row + " 行：" + esc(e.reason) +
+            (e.student_no ? "（学号 " + esc(e.student_no) + "）" : "") +
+            (e.name ? "（" + esc(e.name) + "）" : "") + "</li>";
+        }).join("") + "</ul>";
+    }
+    result.innerHTML = html;
+  }
+
+  if (upBtn && fileInput){
+    upBtn.addEventListener("click", function(){ fileInput.click(); });
+    fileInput.addEventListener("change", function(){
+      var f = fileInput.files && fileInput.files[0];
+      if (!f) return;
+      var pid = curId();
+      if (!pid || !liveOk()){ alert("未连接本地接口，无法导入"); return; }
+      upBtn.disabled = true;
+      upBtn.textContent = "导入中…";
+      EduAPI.students.importFile(pid, f).then(function(res){
+        showResult(res);
+        return EduAPI.students.list(pid).then(render);
+      }).catch(function(err){
+        if (result){ result.hidden = false; result.innerHTML = '<span style="color:var(--warn)">导入失败：' + esc(err.message || err) + "</span>"; }
+      }).then(function(){
+        upBtn.disabled = false;
+        upBtn.textContent = "上传名单";
+        fileInput.value = "";
+      });
+    });
+  }
+
+  if (clearBtn){
+    clearBtn.addEventListener("click", function(){
+      var pid = curId();
+      if (!pid || !liveOk()) return;
+      if (!window.confirm("确定清空当前课程的学生名单？此操作不可撤销。")) return;
+      EduAPI.students.clear(pid).then(function(res){
+        if (result){ result.hidden = false; result.innerHTML = "已清空 " + (res.deleted || 0) + " 名学生。"; }
+        load();
+      }).catch(function(err){ alert("清空失败：" + (err.message || err)); });
+    });
+  }
+
+  document.addEventListener("DOMContentLoaded", function(){
+    load();
+    if (window.Edu && Edu.onCourseChange) Edu.onCourseChange(function(){ load(); });
   });
 })();
 </script>

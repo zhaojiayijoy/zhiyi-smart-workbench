@@ -50,6 +50,16 @@
       archiveRound: function (id, p) { return _req("/courses/" + id + "/rounds/archive", { method: "POST", body: p || {} }); },
       remove: function (id) { return _req("/courses/" + id, { method: "DELETE" }); }
     },
+    students: {
+      list: function (pid) { return _req("/students?project_id=" + (pid || "")); },
+      importFile: function (pid, file) {
+        var fd = new FormData();
+        fd.append("project_id", pid);
+        fd.append("file", file);
+        return _req("/students/import", { method: "POST", body: fd, form: true });
+      },
+      clear: function (pid) { return _req("/students?project_id=" + (pid || ""), { method: "DELETE" }); }
+    },
     files: {
       list: function (pid) { return _req("/files?project_id=" + (pid || "")); },
       upload: function (o) {
@@ -77,6 +87,7 @@
       history: function (pid) { return _req("/lesson/history?project_id=" + (pid || "")); },
       get: function (id) { return _req("/lesson/" + id); },
       approve: function (id) { return _req("/lesson/" + id + "/approve", { method: "POST", body: {} }); },
+      status: function (id, status) { return _req("/lesson/" + id + "/status", { method: "POST", body: { status: status } }); },
       regenerateAll: function (id) { return _req("/lesson/" + id + "/regenerate-all", { method: "POST", body: {} }); },
       exportUrl: function (id, type) { return BASE + "/lesson/" + id + "/export?type=" + (type || "docx"); }
     },
