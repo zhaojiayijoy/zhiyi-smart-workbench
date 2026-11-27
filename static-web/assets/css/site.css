@@ -146,6 +146,9 @@ html[data-theme="dark"] .rule{background:var(--panel-2);color:var(--text-2);bord
 html[data-theme="dark"] .form-note{color:var(--text-3)}
 html[data-theme="dark"] .toast{background:#2F3833;color:#FFFFFF;border:1px solid var(--line)}
 html[data-theme="dark"] ::placeholder{color:var(--text-3);opacity:.7}
+/* 暗夜模式：Hero 对话框去掉暖色渐变，换成与背景统一的纯色 */
+html[data-theme="dark"] .hero{background:var(--panel);border:1px solid var(--line);box-shadow:none}
+html[data-theme="dark"] .hero-quick{border-top:1px dashed var(--line)}
 /* 暗夜模式：硬编码深色文字覆盖（非 CSS 变量管辖的元素） */
 html[data-theme="dark"] .recent-grid .card-h h2,
 html[data-theme="dark"] .recent-grid .li-t,
