@@ -1260,22 +1260,20 @@
         });
       }).catch(function () {});
     });
-    // 保存 / 测试连接（data-demo，live 模式 site.js 已跳过 toast）
+    // 测试连接（保留按钮）；模型配置即时自动保存
     document.addEventListener("click", function (e) {
       if (!Edu.isLive()) return;
       var b = e.target.closest("button"); if (!b) return;
       var txt = b.textContent || "";
-      if (b.id === "cfg_save") {
-        e.preventDefault(); e.stopImmediatePropagation(); saveModelSettings(b); return;
-      }
       if (txt.indexOf("测试连接") > -1) {
         e.preventDefault(); e.stopImmediatePropagation(); busy(b, true, "连接中…");
         API.health().then(function (h) { busy(b, false); notify("连接成功：" + (h.model || "默认模型") + (h.llm_configured ? "" : "（未配置密钥）")); }).catch(function (err) { busy(b, false); notify("连接失败：" + (err.message || err)); });
-      } else if (txt.indexOf("保存") > -1 && txt.indexOf("模型") > -1) {
-        e.preventDefault(); e.stopImmediatePropagation(); saveModelSettings(b);
       }
     });
-    function saveModelSettings(btn) {
+    // 模型配置即时保存：select 立即、input 防抖 350ms
+    var cfgTimer = null;
+    var cfgSavedHint = null;
+    function saveModelSettingsImmediate() {
       var pane = $('[data-pane="model"]'); if (!pane) return;
       var body = {};
       $all("input, select", pane).forEach(function (el) {
@@ -1285,18 +1283,42 @@
         else if (lab.indexOf("默认模型") > -1) body.llm_model = el.value;
         else if (lab.indexOf("审核模型") > -1) body.zhipu_model = el.value;
         else if (lab.indexOf("API Key") > -1) body.llm_api_key = el.value;
+        else if (lab.indexOf("温度") > -1) body.temperature = el.value;
+        else if (lab.indexOf("核采样") > -1) body.top_p = el.value;
+        else if (lab.indexOf("最大输出") > -1) body.max_tokens = el.value;
+        else if (lab.indexOf("深度思考") > -1) body.thinking = el.value;
+        else if (lab.indexOf("推理强度") > -1) body.reasoning_effort = el.value;
       });
-      busy(btn, true, "保存中…");
-      API.settings.save(body).then(function (r) { busy(btn, false); notify("已保存并热生效：" + (r.updated || []).join("、")); }).catch(function (err) { busy(btn, false); notify("保存失败：" + (err.message || err)); });
+      cfgSavedHint = cfgSavedHint || document.getElementById("cfgSaved");
+      if (cfgSavedHint) cfgSavedHint.textContent = "保存中…";
+      API.settings.save(body).then(function (r) {
+        if (cfgSavedHint) { cfgSavedHint.textContent = "已保存 · " + new Date().toLocaleTimeString(); setTimeout(function () { if (cfgSavedHint) cfgSavedHint.textContent = ""; }, 1800); }
+      }).catch(function () { if (cfgSavedHint) cfgSavedHint.textContent = ""; });
     }
+    function bindModelAutoSave() {
+      var pane = $('[data-pane="model"]'); if (!pane) return;
+      $all("select", pane).forEach(function (el) {
+        el.addEventListener("change", function () { if (Edu.isLive()) saveModelSettingsImmediate(); });
+      });
+      $all("input", pane).forEach(function (el) {
+        el.addEventListener("input", function () {
+          if (!Edu.isLive()) return;
+          clearTimeout(cfgTimer);
+          cfgTimer = setTimeout(saveModelSettingsImmediate, 350);
+        });
+        el.addEventListener("change", function () {
+          if (!Edu.isLive()) return;
+          clearTimeout(cfgTimer);
+          saveModelSettingsImmediate();
+        });
+      });
+    }
+    bindModelAutoSave();
 
-    // ---------------- 外观（本机持久化） ----------------
+    // ---------------- 外观（本机持久化，即时生效） ----------------
     function prefs() { try { return JSON.parse(localStorage.getItem("edu.prefs") || "{}"); } catch (e) { return {}; } }
     function savePrefs(p) { try { localStorage.setItem("edu.prefs", JSON.stringify(p)); } catch (e) {} }
-    var lookSave = document.getElementById("lookSave");
-    if (lookSave) lookSave.addEventListener("click", function (e) {
-      if (!Edu.isLive()) return;
-      e.preventDefault(); e.stopImmediatePropagation();
+    function applyLook() {
       var dark = document.getElementById("lookDark");
       var font = document.getElementById("lookFont");
       var sidebar = document.getElementById("lookSidebar");
@@ -1306,7 +1328,11 @@
       p.sidebar = sidebar ? sidebar.value : "展开";
       savePrefs(p);
       if (window.Edu && Edu.applyPrefs) Edu.applyPrefs();
-      notify("外观已保存并生效");
+    }
+    ["lookLight","lookDark","lookFont","lookSidebar"].forEach(function (id) {
+      var el = document.getElementById(id);
+      if (!el) return;
+      el.addEventListener("change", function () { if (Edu.isLive()) { applyLook(); notify("外观已更新"); } });
     });
     onLive(function () {
       var p = prefs();
@@ -1352,11 +1378,8 @@
       }).catch(function (err) { busy(resetBtn, false); notify("删除失败：" + (err.message || err)); });
     });
 
-    // ---------------- 高级设置（仅本机保存） ----------------
-    var advSave = document.getElementById("advSave");
-    if (advSave) advSave.addEventListener("click", function (e) {
-      if (!Edu.isLive()) return;
-      e.preventDefault(); e.stopImmediatePropagation();
+    // ---------------- 高级设置（仅本机保存，即时） ----------------
+    function saveAdvanced() {
       var p = prefs();
       p.advanced = {
         concurrency: (document.getElementById("advConcurrency") || {}).value,
@@ -1366,7 +1389,11 @@
         format: (document.getElementById("advFormat") || {}).value
       };
       savePrefs(p);
-      notify("高级设置已保存到本机");
+    }
+    ["advConcurrency","advMaxMB","advLog","advDual","advFormat"].forEach(function (id) {
+      var el = document.getElementById(id);
+      if (!el) return;
+      el.addEventListener("change", function () { if (Edu.isLive()) { saveAdvanced(); notify("高级设置已更新"); } });
     });
   }
 
