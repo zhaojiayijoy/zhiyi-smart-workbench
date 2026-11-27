@@ -220,6 +220,29 @@ def _conn() -> sqlite3.Connection:
             updated_at REAL NOT NULL,
             UNIQUE(project_id, student_no)
         );
+        CREATE TABLE IF NOT EXISTS users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            role TEXT NOT NULL DEFAULT 'student',
+            username TEXT NOT NULL UNIQUE,
+            password_hash TEXT NOT NULL,
+            display_name TEXT NOT NULL DEFAULT '',
+            student_no TEXT NOT NULL DEFAULT '',
+            college TEXT NOT NULL DEFAULT '',
+            major TEXT NOT NULL DEFAULT '',
+            class_name TEXT NOT NULL DEFAULT '',
+            bound INTEGER NOT NULL DEFAULT 0,
+            must_change INTEGER NOT NULL DEFAULT 0,
+            status TEXT NOT NULL DEFAULT 'active',
+            created_at REAL NOT NULL,
+            updated_at REAL NOT NULL
+        );
+        CREATE TABLE IF NOT EXISTS sessions (
+            token TEXT PRIMARY KEY,
+            user_id INTEGER NOT NULL,
+            role TEXT NOT NULL,
+            created_at REAL NOT NULL,
+            expires_at REAL NOT NULL
+        );
         """
     )
     # 3) 对旧库：补 ALTER TABLE project_id 列，补默认项目并迁移归属
@@ -234,6 +257,8 @@ def _conn() -> sqlite3.Connection:
         CREATE INDEX IF NOT EXISTS idx_artifacts_project ON artifacts(kind, project_id);
         CREATE INDEX IF NOT EXISTS idx_projects_parent ON projects(parent_id);
         CREATE INDEX IF NOT EXISTS idx_students_project ON students(project_id, student_no);
+        CREATE INDEX IF NOT EXISTS idx_users_role ON users(role, username);
+        CREATE INDEX IF NOT EXISTS idx_sessions_user ON sessions(user_id);
         """
     )
     return conn
@@ -895,5 +920,115 @@ def count_students(project_id: int) -> int:
 def clear_students(project_id: int) -> int:
     with _conn() as c:
         cur = c.execute("DELETE FROM students WHERE project_id=?", (project_id,))
+        c.commit()
+        return int(cur.rowcount or 0)
+
+
+def list_all_students() -> list[dict[str, Any]]:
+    """全部名单记录（跨课程去重前使用），用于学生账号回填。"""
+    with _conn() as c:
+        rows = c.execute(
+            "SELECT student_no, name, class_name FROM students ORDER BY student_no"
+        ).fetchall()
+    return [_d(r) for r in rows]
+
+
+# ---------------------------------------------------------------------------
+# users / sessions（教师与学生账号、登录会话）
+# ---------------------------------------------------------------------------
+_USER_COLS = ("id, role, username, password_hash, display_name, student_no,"
+              " college, major, class_name, bound, must_change, status, created_at, updated_at")
+
+
+def create_user(*, role: str, username: str, password_hash: str,
+                display_name: str = "", student_no: str = "",
+                college: str = "", major: str = "", class_name: str = "",
+                bound: int = 0, must_change: int = 0) -> int:
+    now = time.time()
+    with _conn() as c:
+        cur = c.execute(
+            "INSERT INTO users (role, username, password_hash, display_name, student_no,"
+            " college, major, class_name, bound, must_change, status, created_at, updated_at)"
+            " VALUES (?,?,?,?,?,?,?,?,?,?,'active',?,?)",
+            (role, username, password_hash, display_name, student_no,
+             college, major, class_name, int(bound), int(must_change), now, now),
+        )
+        c.commit()
+        return int(cur.lastrowid)
+
+
+def get_user_by_username(username: str) -> Optional[dict[str, Any]]:
+    with _conn() as c:
+        r = c.execute(f"SELECT {_USER_COLS} FROM users WHERE username=?", (str(username),)).fetchone()
+    return _d(r) if r else None
+
+
+def get_user(user_id: int) -> Optional[dict[str, Any]]:
+    with _conn() as c:
+        r = c.execute(f"SELECT {_USER_COLS} FROM users WHERE id=?", (int(user_id),)).fetchone()
+    return _d(r) if r else None
+
+
+_USER_FIELDS = {"password_hash", "display_name", "student_no", "college", "major",
+                "class_name", "bound", "must_change", "status"}
+
+
+def update_user(user_id: int, **fields: Any) -> None:
+    sets, args = [], []
+    for k, v in fields.items():
+        if k not in _USER_FIELDS:
+            continue
+        sets.append(f"{k}=?")
+        args.append(v)
+    if not sets:
+        return
+    sets.append("updated_at=?")
+    args.append(time.time())
+    args.append(int(user_id))
+    with _conn() as c:
+        c.execute(f"UPDATE users SET {','.join(sets)} WHERE id=?", args)
+        c.commit()
+
+
+def list_users(role: Optional[str] = None) -> list[dict[str, Any]]:
+    sql = f"SELECT {_USER_COLS} FROM users"
+    args: tuple = ()
+    if role:
+        sql += " WHERE role=?"
+        args = (role,)
+    with _conn() as c:
+        rows = c.execute(sql + " ORDER BY id", args).fetchall()
+    return [_d(r) for r in rows]
+
+
+def create_session(token: str, user_id: int, role: str, expires_at: float) -> None:
+    with _conn() as c:
+        c.execute("INSERT INTO sessions (token, user_id, role, created_at, expires_at) VALUES (?,?,?,?,?)",
+                  (token, int(user_id), role, time.time(), float(expires_at)))
+        c.commit()
+
+
+def get_session(token: str) -> Optional[dict[str, Any]]:
+    with _conn() as c:
+        r = c.execute("SELECT token, user_id, role, created_at, expires_at FROM sessions WHERE token=?",
+                      (str(token),)).fetchone()
+    return _d(r) if r else None
+
+
+def delete_session(token: str) -> None:
+    with _conn() as c:
+        c.execute("DELETE FROM sessions WHERE token=?", (str(token),))
+        c.commit()
+
+
+def delete_user_sessions(user_id: int) -> None:
+    with _conn() as c:
+        c.execute("DELETE FROM sessions WHERE user_id=?", (int(user_id),))
+        c.commit()
+
+
+def purge_expired_sessions(now: Optional[float] = None) -> int:
+    with _conn() as c:
+        cur = c.execute("DELETE FROM sessions WHERE expires_at<?", (now or time.time(),))
         c.commit()
         return int(cur.rowcount or 0)

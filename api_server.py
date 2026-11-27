@@ -21,7 +21,7 @@ from pathlib import Path
 from typing import Any, Optional
 from urllib.parse import quote
 
-from fastapi import FastAPI, HTTPException, UploadFile, File, Form, Query
+from fastapi import FastAPI, HTTPException, UploadFile, File, Form, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response, JSONResponse
 from pydantic import BaseModel, Field
@@ -33,7 +33,7 @@ if str(ROOT) not in sys.path:
 os.chdir(ROOT)
 
 from app import db, edu, agent  # noqa: E402
-from app import db, rehearsal_engine  # noqa: E402
+from app import db, rehearsal_engine, auth  # noqa: E402
 from app.config import ROOT as CFG_ROOT, EXPORT_DIR  # noqa: E402
 
 API_PORT = int(os.getenv("EDU_API_PORT", "8700"))
@@ -45,6 +45,47 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+# ---------------------------------------------------------------------------
+# 登录鉴权：除公开接口外 /api/* 一律需要令牌；学生账号只能访问学生接口
+# ---------------------------------------------------------------------------
+_AUTH_PUBLIC = {"/api/health", "/api/auth/login", "/api/auth/logout"}
+
+
+def _request_token(request: Request) -> str:
+    authz = request.headers.get("authorization") or ""
+    if authz.lower().startswith("bearer "):
+        return authz[7:].strip()
+    return (request.headers.get("x-edu-token") or request.cookies.get("edu_token") or "").strip()
+
+
+@app.middleware("http")
+async def auth_guard(request: Request, call_next):
+    path = request.url.path
+    if request.method == "OPTIONS" or not path.startswith("/api/"):
+        return await call_next(request)
+    if path in _AUTH_PUBLIC:
+        return await call_next(request)
+    token = _request_token(request)
+    user = auth.resolve_token(token)
+    if not user:
+        return JSONResponse(status_code=401,
+                            content={"ok": False, "code": "unauthorized", "error": "未登录或登录已过期"})
+    request.state.user = user
+    request.state.token = token
+    if user.get("role") == "student":
+        allowed = (path.startswith("/api/student/") or path.startswith("/api/auth/")
+                   or (path == "/api/courses" and request.method == "GET"))
+        if not allowed:
+            return JSONResponse(status_code=403,
+                                content={"ok": False, "code": "forbidden", "error": "学生账号无权访问教师端接口"})
+    return await call_next(request)
+
+
+def _user(request: Request) -> dict[str, Any]:
+    return getattr(request.state, "user", {}) or {}
+
 
 # 生成产物的内存热缓存；落库由下方 _store_* 完成，重启后从 SQLite 自动恢复
 STORE: dict[str, dict[str, Any]] = {
@@ -188,6 +229,8 @@ def _file_resp(data: bytes, filename: str, media: str) -> Response:
 @app.on_event("startup")
 def _startup() -> None:
     db.ensure_default_project()
+    # 建默认教师账号、回填学生账号、清理过期会话
+    auth.ensure_bootstrap()
 
 
 # ---------------------------------------------------------------------------
@@ -198,6 +241,76 @@ def health() -> dict:
     key_set = bool(os.getenv("LLM_API_KEY", "") and not os.getenv("LLM_API_KEY", "").startswith("sk-REPLACE"))
     return ok({"name": "致壹 智能教育工作台 API", "llm_configured": key_set,
                "model": os.getenv("LLM_MODEL", ""), "time": int(_now())})
+
+
+# ---------------------------------------------------------------------------
+# 登录 / 身份
+# ---------------------------------------------------------------------------
+class LoginIn(BaseModel):
+    role: str = "teacher"      # teacher | student
+    username: str = ""
+    password: str = ""
+
+
+class BindIn(BaseModel):
+    college: str = ""
+    major: str = ""
+    class_name: str = ""
+
+
+class PasswordIn(BaseModel):
+    old_password: str = ""
+    new_password: str = ""
+
+
+@app.post("/api/auth/login")
+def auth_login(body: LoginIn):
+    role = (body.role or "").strip().lower()
+    if role not in ("teacher", "student"):
+        raise HTTPException(400, "登录身份仅支持教师或学生")
+    user, token = auth.login(role, body.username, body.password)
+    if not user:
+        return err(token, 401)
+    return ok({"token": token, "user": auth.public_user(user)})
+
+
+@app.get("/api/auth/me")
+def auth_me(request: Request) -> dict:
+    return ok(auth.public_user(_user(request)))
+
+
+@app.post("/api/auth/logout")
+def auth_logout(request: Request) -> dict:
+    token = _request_token(request)
+    if token:
+        db.delete_session(token)
+    return ok({"logged_out": True})
+
+
+@app.post("/api/auth/bind")
+def auth_bind(body: BindIn, request: Request) -> dict:
+    user = _user(request)
+    if user.get("role") != "student":
+        raise HTTPException(403, "只有学生账号需要绑定学院、专业与班级")
+    college = (body.college or "").strip()
+    major = (body.major or "").strip()
+    class_name = (body.class_name or "").strip()
+    if not (college and major and class_name):
+        return err("学院、专业、班级均为必填")
+    db.update_user(int(user["id"]), college=college, major=major,
+                   class_name=class_name, bound=1)
+    return ok(auth.public_user(db.get_user(int(user["id"]))))
+
+
+@app.post("/api/auth/password")
+def auth_password(body: PasswordIn, request: Request) -> dict:
+    user = _user(request)
+    if not auth.verify_password(body.old_password or "", user.get("password_hash") or ""):
+        return err("原密码不正确")
+    if len(body.new_password or "") < 6:
+        return err("新密码至少 6 位")
+    auth.reset_password(int(user["id"]), body.new_password)
+    return ok({"token": auth.new_session(int(user["id"]), str(user.get("role") or "student"))})
 
 
 @app.get("/api/settings")
@@ -317,10 +430,14 @@ def _course_out(p: Optional[dict]) -> Optional[dict]:
 
 
 @app.get("/api/courses")
-def list_courses(include_archived: bool = Query(False)) -> dict:
+def list_courses(request: Request, include_archived: bool = Query(False)) -> dict:
     rows = db.list_projects()
     if not include_archived:
         rows = [p for p in rows if (p.get("status") or "active") != "archived"]
+    user = _user(request)
+    if user.get("role") == "student":
+        cls = (user.get("class_name") or "").strip()
+        rows = [p for p in rows if user.get("bound") and cls and (p.get("class_name") or "").strip() == cls]
     return ok([_course_out(p) for p in rows])
 
 
@@ -757,18 +874,50 @@ def import_students_api(project_id: int = Form(...), file: UploadFile = File(...
     proj = db.get_project(project_id) or {}
     parsed = _parse_students(name, data, default_class=(proj.get("class_name") or ""))
     res = db.import_students(project_id, parsed["items"], source_file=name)
+    # 名单里的学号同步开通学生账号（已有账号不覆盖密码与绑定信息）
+    accounts = 0
+    for it in parsed["items"]:
+        if auth.ensure_student_user(it["student_no"], it["name"], it["class_name"]):
+            accounts += 1
     total = db.count_students(project_id)
     errs = parsed["errors"][:50]
     msg = f"新增 {res['added']} 人，更新 {res['updated']} 人"
+    if accounts:
+        msg += f"，新开通 {accounts} 个学生账号"
     if parsed["errors"]:
         msg += f"，跳过 {len(parsed['errors'])} 行异常"
     if parsed["skipped"]:
         msg += f"，忽略 {parsed['skipped']} 个空行"
     return ok({
         "file": name, "added": res["added"], "updated": res["updated"],
+        "accounts_created": accounts,
         "skipped": parsed["skipped"], "error_count": len(parsed["errors"]),
         "errors": errs, "total": total, "message": msg,
     })
+
+
+@app.post("/api/students/reset-passwords")
+def reset_student_passwords(project_id: int = Query(...)) -> dict:
+    """把该课程名单里的学生账号密码重置为初始规则（学号后 6 位），并返回一次性明文清单。"""
+    if not db.get_project(project_id):
+        raise HTTPException(404, "课程项目不存在")
+    rows = db.list_students(project_id)
+    out, reset = [], 0
+    for s in rows:
+        no = str(s.get("student_no") or "").strip()
+        if not no:
+            continue
+        user = db.get_user_by_username(no)
+        pwd = auth.initial_password(no)
+        if user:
+            auth.reset_password(int(user["id"]), pwd)
+            reset += 1
+        else:
+            auth.ensure_student_user(no, s.get("name") or "", s.get("class_name") or "")
+            reset += 1
+        out.append({"student_no": no, "name": s.get("name") or "", "password": pwd})
+    return ok({"items": out, "reset": reset,
+               "message": f"已把 {reset} 个学生账号重置为初始密码（学号后 6 位），请尽快分发并提醒学生修改"})
 
 
 @app.get("/api/students")
@@ -1684,44 +1833,33 @@ def agent_chat(body: AgentChatIn) -> dict:
 
 
 # ---------------------------------------------------------------------------
-# 学生空间汇总
+# 学生空间（一律按登录学生做数据隔离）
 # ---------------------------------------------------------------------------
-@app.get("/api/student/dashboard")
-def student_dashboard(project_id: Optional[int] = Query(None), student: str = Query("")) -> dict:
-    qa = db.list_tasks(project_id=project_id, kind="qa", limit=200)
-    reviews = db.list_tasks(project_id=project_id, kind="review", limit=200)
-    trainings = db.list_tasks(project_id=project_id, kind="training", limit=100)
-    lessons = db.list_tasks(project_id=project_id, kind="lesson", limit=100)
-    # 学生端只看到已发布的内容：实训按 pkg.status=published，备课包按 meta.published=true
-    def _pkg_status(t: dict) -> str:
-        return str(((t.get("meta") or {}).get("pkg") or {}).get("status") or "")
-
-    trainings = [t for t in trainings if _pkg_status(t) == "published"]
-    lessons = [t for t in lessons if bool((t.get("meta") or {}).get("published"))]
-    # 学生相关：过滤 meta.student
-    def _stu(t: dict) -> str:
-        return ((t.get("meta") or {}).get("student") or "").strip()
-    my_qa = [t for t in qa if not student or _stu(t) == student]
-    my_reviews = [t for t in reviews if not student or _stu(t) == student]
-    tutor_threads = [{"thread_id": k, "question": v["question"], "ts": v["ts"]}
-                     for k, v in _store_items("tutors", project_id)]
-    return ok({
-        "my_qa": my_qa, "my_reviews": my_reviews, "trainings": trainings,
-        "lessons": lessons, "tutor_threads": tutor_threads,
-    })
+def _stu_key(t: dict) -> str:
+    return ((t.get("meta") or {}).get("student") or "").strip()
 
 
-@app.get("/api/student/wrong")
-def student_wrong(project_id: Optional[int] = Query(None), student: str = Query("")) -> dict:
+def _student_keys(user: dict) -> set[str]:
+    """学生的可见标识：学号与姓名都算，兼容旧数据里只写姓名的记录。"""
+    keys = {str(user.get("student_no") or "").strip(), str(user.get("display_name") or "").strip()}
+    return {k for k in keys if k}
+
+
+def _published_lessons(project_id: Optional[int]) -> list[dict[str, Any]]:
+    return [t for t in db.list_tasks(project_id=project_id, kind="lesson", limit=100)
+            if bool((t.get("meta") or {}).get("published"))]
+
+
+def _published_trainings(project_id: Optional[int]) -> list[dict[str, Any]]:
+    return [t for t in db.list_tasks(project_id=project_id, kind="training", limit=100)
+            if str(((t.get("meta") or {}).get("pkg") or {}).get("status") or "") == "published"]
+
+
+def _wrong_payload(project_id: Optional[int], keys: set[str]) -> dict[str, Any]:
     """错题本：由真实评审低分维度与答疑错因派生，无数据时返回空列表。"""
-    stu_filter = (student or "").strip()
-
-    def _stu(t: dict) -> str:
-        return ((t.get("meta") or {}).get("student") or "").strip()
-
     items: list[dict[str, Any]] = []
     for t in db.list_tasks(project_id=project_id, kind="review", limit=200):
-        if stu_filter and _stu(t) != stu_filter:
+        if keys and _stu_key(t) not in keys:
             continue
         meta = t.get("meta") or {}
         ai = meta.get("ai") or {}
@@ -1743,7 +1881,7 @@ def student_wrong(project_id: Optional[int] = Query(None), student: str = Query(
                 "ts": t.get("created_at") or 0,
             })
     for t in db.list_tasks(project_id=project_id, kind="qa", limit=200):
-        if stu_filter and _stu(t) != stu_filter:
+        if keys and _stu_key(t) not in keys:
             continue
         meta = t.get("meta") or {}
         et = (meta.get("error_type") or "").strip()
@@ -1759,7 +1897,116 @@ def student_wrong(project_id: Optional[int] = Query(None), student: str = Query(
         })
     items.sort(key=lambda x: x.get("ts") or 0, reverse=True)
     corrected = len([i for i in items if i["status"] == "已讲解"])
-    return ok({"items": items, "total": len(items), "corrected": corrected})
+    return {"items": items, "total": len(items), "corrected": corrected}
+
+
+def _student_courses(user: dict) -> list[dict[str, Any]]:
+    """学生可见课程：完成学籍绑定后，仅返回班级一致的未归档课程。"""
+    if not user.get("bound"):
+        return []
+    cls = (user.get("class_name") or "").strip()
+    if not cls:
+        return []
+    return [_course_out(p) for p in db.list_projects()
+            if (p.get("status") or "active") != "archived"
+            and (p.get("class_name") or "").strip() == cls]
+
+
+@app.get("/api/student/overview")
+def student_overview(request: Request, project_id: Optional[int] = Query(None)) -> dict:
+    """学生空间首页汇总：身份、可访问课程、已发布任务、我的反馈/答疑/错题。"""
+    user = _user(request)
+    if user.get("role") != "student":
+        raise HTTPException(403, "仅学生账号可访问")
+    courses = _student_courses(user)
+    ids = {int(c["id"]) for c in courses if c and c.get("id") is not None}
+    pid = project_id if project_id in ids else (courses[0]["id"] if courses else None)
+    keys = _student_keys(user)
+    lessons = _published_lessons(pid) if pid else []
+    trainings = _published_trainings(pid) if pid else []
+    reviews = ([t for t in db.list_tasks(project_id=pid, kind="review", limit=200)
+                if not keys or _stu_key(t) in keys] if pid else [])
+    qa = ([t for t in db.list_tasks(project_id=pid, kind="qa", limit=200)
+           if not keys or _stu_key(t) in keys] if pid else [])
+    wrong = _wrong_payload(pid, keys) if pid else {"items": [], "total": 0, "corrected": 0}
+    return ok({
+        "profile": auth.public_user(user),
+        "courses": courses,
+        "project_id": pid,
+        "lessons": lessons,
+        "trainings": trainings,
+        "my_reviews": reviews,
+        "my_qa": qa,
+        "wrong": wrong,
+    })
+
+
+@app.get("/api/student/dashboard")
+def student_dashboard(request: Request, project_id: Optional[int] = Query(None),
+                      student: str = Query("")) -> dict:
+    user = _user(request)
+    if user.get("role") == "student":
+        keys = _student_keys(user)
+        allowed = {int(c["id"]) for c in _student_courses(user) if c and c.get("id") is not None}
+        if project_id is not None and int(project_id) not in allowed:
+            raise HTTPException(403, "该课程不在你的班级范围")
+    else:
+        keys = {student.strip()} if student.strip() else set()
+    reviews = [t for t in db.list_tasks(project_id=project_id, kind="review", limit=200)
+               if not keys or _stu_key(t) in keys]
+    qa = [t for t in db.list_tasks(project_id=project_id, kind="qa", limit=200)
+          if not keys or _stu_key(t) in keys]
+    return ok({
+        "my_qa": qa, "my_reviews": reviews,
+        "trainings": _published_trainings(project_id),
+        "lessons": _published_lessons(project_id),
+        "tutor_threads": [],
+    })
+
+
+@app.get("/api/student/wrong")
+def student_wrong(request: Request, project_id: Optional[int] = Query(None),
+                  student: str = Query("")) -> dict:
+    user = _user(request)
+    if user.get("role") == "student":
+        keys = _student_keys(user)
+    else:
+        keys = {student.strip()} if student.strip() else set()
+    return ok(_wrong_payload(project_id, keys))
+
+
+class StudentAskIn(BaseModel):
+    project_id: Optional[int] = None
+    question: str = ""
+    knowledge_point: str = ""
+
+
+@app.post("/api/student/ask")
+def student_ask(body: StudentAskIn, request: Request) -> dict:
+    """学生提问：走 AI 答疑，并把提问记到本人名下（按学号隔离）。"""
+    user = _user(request)
+    if user.get("role") != "student":
+        raise HTTPException(403, "仅学生账号可访问")
+    question = (body.question or "").strip()
+    if not question:
+        return err("请填写问题")
+    allowed = {int(c["id"]) for c in _student_courses(user) if c and c.get("id") is not None}
+    pid = int(body.project_id) if body.project_id in allowed else (min(allowed) if allowed else None)
+    if pid is None:
+        return err("当前班级暂无可用课程，无法提问")
+    display = str(user.get("display_name") or user.get("student_no") or "学生")
+    res = tutor_reply(TutorIn(project_id=pid, question=question, student_mode=True, student=display))
+    if not isinstance(res, dict) or not res.get("ok"):
+        return res
+    tid = (res.get("data") or {}).get("task_id")
+    if tid:
+        task = db.get_task(int(tid)) or {}
+        meta = task.get("meta") or {}
+        meta["student_no"] = str(user.get("student_no") or "")
+        if body.knowledge_point:
+            meta["knowledge_point"] = body.knowledge_point
+        db.update_task(int(tid), meta=meta)
+    return res
 
 
 # ---------------------------------------------------------------------------

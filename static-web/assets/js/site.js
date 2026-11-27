@@ -60,7 +60,8 @@
         { href: "student.html#tasks", icon: "clock", text: "我的任务", page: "student" },
         { href: "student.html#qa", icon: "chat", text: "我的答疑", page: "student" },
         { href: "student.html#feedback", icon: "check", text: "教师反馈", page: "student" },
-        { href: "student.html#review", icon: "book", text: "错题回顾", page: "student" }
+        { href: "student.html#review", icon: "book", text: "错题回顾", page: "student" },
+        { href: "student.html#profile", icon: "user", text: "个人资料", page: "student" }
       ]
     }
   ];
@@ -463,6 +464,17 @@
       });
     });
     var u = (isStudent ? window.EDU.student : window.EDU.teacher) || {};
+    var au = (window.EduAuth && window.EduAuth.user) || null;
+    if (au) {
+      var label = au.display_name || au.username || "";
+      u = {
+        initials: (label || (isStudent ? "生" : "师")).slice(-2),
+        name: label || (isStudent ? "学生" : "教师"),
+        class: isStudent
+          ? [au.college, au.major, au.class_name].filter(Boolean).join(" · ") || "未绑定学籍"
+          : "教师账号"
+      };
+    }
     var newBtn = isStudent
       ? '<button type="button" data-go="student.html#tasks">' + ic("plus", 14) + " 我的学习任务</button>"
       : '<button type="button" data-new-task>' + ic("plus", 14) + " 新建教学任务</button>";
@@ -521,6 +533,13 @@
       (detail ? '<div class="cs-detail">' + detail + '</div>' : '');
   }
 
+  function accountLabel() {
+    var u = (window.EduAuth && window.EduAuth.user) || null;
+    if (!u) return "未登录";
+    var name = u.display_name || u.username || "";
+    return name + (u.role === "student" ? " · 学生" : " · 教师");
+  }
+
   function buildTopbar() {
     var top = document.querySelector(".topbar");
     if (!top) return;
@@ -538,11 +557,9 @@
       '<div class="top-right">' +
         '<label class="course-pick"><span>课程</span><select id="coursePick">' + options + '</select></label>' +
         (isStudent ? "" : '<a class="btn sm" href="courses.html#newCourse">＋ 创建课程</a>') +
-        '<div class="mode-switch">' +
-          '<button type="button" class="' + (isStudent ? "" : "on") + '" data-go="index.html">教师工作台</button>' +
-          '<button type="button" class="' + (isStudent ? "on" : "") + '" data-go="student.html">学生空间</button>' +
-        "</div>" +
-        '<span class="mini" style="white-space:nowrap">' + (isStudent ? "学生 · 本地账号" : "教师 · 本地账号") + "</span>" +
+        '<span class="mini" id="accountTag" style="white-space:nowrap">' + escHtml(accountLabel()) + "</span>" +
+        '<button class="btn sm ghost" type="button" data-acct="password">修改密码</button>' +
+        '<button class="btn sm ghost" type="button" data-acct="logout">退出登录</button>' +
       "</div>";
 
     top.addEventListener("change", function (e) {
@@ -557,6 +574,12 @@
     top.addEventListener("click", function (e) {
       var b = e.target.closest("[data-go]");
       if (b) location.href = b.getAttribute("data-go");
+      var acct = e.target.closest("[data-acct]");
+      if (acct && window.EduAuth) {
+        var act = acct.getAttribute("data-acct");
+        if (act === "logout") { EduAuth.logout(); return; }
+        if (act === "password") { EduAuth.openPassword(); return; }
+      }
       // 点击课程摘要 → 展开下拉
       var cs = e.target.closest(".course-summary");
       if (cs) {

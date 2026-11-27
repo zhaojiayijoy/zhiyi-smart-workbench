@@ -17,6 +17,9 @@
   function _req(path, opts) {
     opts = opts || {};
     var init = { method: opts.method || "GET", headers: {} };
+    var token = null;
+    try { token = localStorage.getItem("edu.token"); } catch (e) { token = null; }
+    if (token) init.headers["Authorization"] = "Bearer " + token;
     if (opts.body !== undefined) {
       if (opts.form) {
         init.body = opts.body; // FormData 不要设 Content-Type
@@ -30,7 +33,14 @@
         var json = null;
         try { json = JSON.parse(text); } catch (e) {}
         if (!res.ok || (json && json.ok === false)) {
-          throw new Error((json && json.error) || ("HTTP " + res.status));
+          // 令牌失效：清掉本地登录态（登录页自身不跳转，交给调用方展示错误）
+          if (res.status === 401 && path.indexOf("/auth/login") < 0 && window.EduAuth) {
+            window.EduAuth.clearSession();
+          }
+          var e = new Error((json && json.error) || ("HTTP " + res.status));
+          e.status = res.status;
+          e.code = json && json.code;
+          throw e;
         }
         return json && json.data !== undefined ? json.data : json;
       });
@@ -40,6 +50,18 @@
   var api = {
     base: BASE,
     health: function () { return _req("/health"); },
+
+    auth: {
+      login: function (role, username, password) {
+        return _req("/auth/login", { method: "POST", body: { role: role, username: username, password: password } });
+      },
+      me: function () { return _req("/auth/me"); },
+      logout: function () { return _req("/auth/logout", { method: "POST" }); },
+      bind: function (p) { return _req("/auth/bind", { method: "POST", body: p }); },
+      password: function (oldPwd, newPwd) {
+        return _req("/auth/password", { method: "POST", body: { old_password: oldPwd, new_password: newPwd } });
+      }
+    },
 
     courses: {
       list: function (includeArchived) { return _req("/courses" + (includeArchived ? "?include_archived=1" : "")); },
@@ -58,7 +80,16 @@
         fd.append("file", file);
         return _req("/students/import", { method: "POST", body: fd, form: true });
       },
-      clear: function (pid) { return _req("/students?project_id=" + (pid || ""), { method: "DELETE" }); }
+      clear: function (pid) { return _req("/students?project_id=" + (pid || ""), { method: "DELETE" }); },
+      resetPasswords: function (pid) { return _req("/students/reset-passwords?project_id=" + (pid || ""), { method: "POST" }); }
+    },
+    student: {
+      overview: function (pid) { return _req("/student/overview" + (pid ? "?project_id=" + pid : "")); },
+      dashboard: function (pid) { return _req("/student/dashboard" + (pid ? "?project_id=" + pid : "")); },
+      wrong: function (pid) { return _req("/student/wrong" + (pid ? "?project_id=" + pid : "")); },
+      ask: function (pid, question, kp) {
+        return _req("/student/ask", { method: "POST", body: { project_id: pid, question: question, knowledge_point: kp || "" } });
+      }
     },
     files: {
       list: function (pid) { return _req("/files?project_id=" + (pid || "")); },
@@ -151,14 +182,6 @@
     settings: {
       get: function () { return _req("/settings"); },
       save: function (p) { return _req("/settings", { method: "POST", body: p }); }
-    },
-    student: {
-      dashboard: function (pid, student) {
-        return _req("/student/dashboard?project_id=" + (pid || "") + "&student=" + encodeURIComponent(student || ""));
-      },
-      wrong: function (pid, student) {
-        return _req("/student/wrong?project_id=" + (pid || "") + "&student=" + encodeURIComponent(student || ""));
-      }
     }
   };
 

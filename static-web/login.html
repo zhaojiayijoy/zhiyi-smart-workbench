@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>登录 · 致壹 智能教育工作台</title>
+<link rel="stylesheet" href="assets/css/site.css?v=1795700180">
+<script src="assets/js/auth.js?v=1795765000"></script>
+<style>
+  body[data-page="login"]{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:28px 16px;
+    background:radial-gradient(1200px 600px at 20% 0%, var(--bg-soft, #F4F1E8), transparent 60%), var(--bg, #F7F5EF)}
+  .login-wrap{width:100%;max-width:940px;display:grid;grid-template-columns:1.05fr .95fr;gap:0;
+    background:var(--panel, #fff);border:1px solid var(--line, #E4DECF);border-radius:18px;overflow:hidden;
+    box-shadow:0 18px 60px rgba(37,50,45,.12)}
+  .login-side{padding:36px 34px;color:#EDF1EC;
+    background:linear-gradient(160deg,#2E4B3F 0%,#20302A 100%)}
+  .login-side .mark{width:44px;height:44px;border-radius:12px;background:#D9C7A3;color:#2E4B3F;font-weight:700;
+    display:grid;place-items:center;font-size:20px;margin-bottom:18px}
+  .login-side h1{font-size:22px;margin:0 0 8px;color:#fff}
+  .login-side p{font-size:13px;line-height:1.8;color:#C9D6CD;margin:0 0 22px}
+  .login-side ul{margin:0;padding-left:18px;font-size:12.5px;line-height:2;color:#C9D6CD}
+  .login-main{padding:34px 34px 28px}
+  .login-main h2{margin:0 0 6px;font-size:19px}
+  .login-main .sub{margin:0 0 18px;color:var(--text-3, #6C7A72);font-size:12.5px}
+  .login-tabs{display:flex;gap:8px;margin-bottom:18px;background:var(--bg-soft,#F2EEE4);padding:4px;border-radius:10px}
+  .login-tabs button{flex:1;border:0;background:transparent;padding:9px 0;border-radius:8px;font-size:13px;
+    color:var(--text-2,#42504A);cursor:pointer}
+  .login-tabs button.on{background:var(--panel,#fff);color:var(--text,#1F2A26);font-weight:600;
+    box-shadow:0 1px 4px rgba(37,50,45,.12)}
+  .login-form .field{margin-bottom:14px}
+  .login-form input{width:100%;padding:10px 12px;border:1px solid var(--line,#E4DECF);border-radius:9px;
+    background:var(--panel,#fff);color:var(--text,#1F2A26);font-size:13.5px}
+  .login-form input:focus{outline:2px solid var(--accent-weak,#CFE0D6);border-color:var(--accent,#365B4C)}
+  .login-form .btn{width:100%;justify-content:center;padding:11px 0;font-size:14px}
+  .login-msg{min-height:18px;font-size:12.5px;margin:2px 0 10px;color:#9C3A34}
+  .login-hint{margin-top:14px;font-size:12px;line-height:1.8;color:var(--text-3,#6C7A72)}
+  .login-foot{margin-top:18px;font-size:11.5px;color:var(--text-3,#6C7A72)}
+  @media (max-width:820px){.login-wrap{grid-template-columns:1fr}.login-side{display:none}}
+</style>
+</head>
+<body data-page="login">
+<div class="login-wrap">
+  <div class="login-side">
+    <div class="mark">致</div>
+    <h1>致壹 智能教育工作台</h1>
+    <p>教师工作台与学生空间已按身份隔离：教师账号进入教学全流程，学生账号进入本班学习空间。</p>
+    <ul>
+      <li>教师：账号 + 密码登录</li>
+      <li>学生：学号 + 密码登录</li>
+      <li>首次登录需绑定学院 / 专业 / 班级</li>
+      <li>学生只能看到本班已发布的任务</li>
+    </ul>
+  </div>
+  <div class="login-main">
+    <h2 id="loginTitle">教师登录</h2>
+    <p class="sub" id="loginSub">使用教师账号进入教学工作台</p>
+    <div class="login-tabs" role="tablist">
+      <button type="button" class="on" data-role="teacher">教师登录</button>
+      <button type="button" data-role="student">学生登录</button>
+    </div>
+    <form class="login-form" id="loginForm" autocomplete="off">
+      <div class="field">
+        <label id="loginUserLabel">教师账号</label>
+        <input id="loginUser" type="text" required placeholder="请输入教师账号">
+      </div>
+      <div class="field">
+        <label>密码</label>
+        <input id="loginPass" type="password" required placeholder="请输入密码">
+      </div>
+      <div class="login-msg" id="loginMsg"></div>
+      <button class="btn primary" type="submit" id="loginBtn">登录</button>
+    </form>
+    <div class="login-hint" id="loginHint">默认教师账号 <b>teacher</b>，初始密码 <b>Zhiyi@2026</b>（可在 .env 中用 EDU_TEACHER_USER / EDU_TEACHER_PASS 覆盖，登录后建议立即修改）。</div>
+    <div class="login-foot">学生初始密码为「学号后 6 位」（学号不足 6 位时即学号本身），首次登录后请自行修改。</div>
+  </div>
+</div>
+
+<script src="assets/js/api.js?v=1795767000"></script>
+<script>
+(function () {
+  "use strict";
+  var role = "teacher";
+  var form = document.getElementById("loginForm");
+  var userEl = document.getElementById("loginUser");
+  var passEl = document.getElementById("loginPass");
+  var btn = document.getElementById("loginBtn");
+  var msg = document.getElementById("loginMsg");
+  var title = document.getElementById("loginTitle");
+  var sub = document.getElementById("loginSub");
+  var userLabel = document.getElementById("loginUserLabel");
+  var hint = document.getElementById("loginHint");
+
+  var COPY = {
+    teacher: { title: "教师登录", sub: "使用教师账号进入教学工作台", label: "教师账号", ph: "请输入教师账号" },
+    student: { title: "学生登录", sub: "使用学号进入本班学习空间", label: "学号", ph: "请输入学号" }
+  };
+
+  function sync() {
+    var c = COPY[role];
+    title.textContent = c.title;
+    sub.textContent = c.sub;
+    userLabel.textContent = c.label;
+    userEl.placeholder = c.ph;
+    userEl.value = "";
+    passEl.value = "";
+    msg.textContent = "";
+    hint.style.display = role === "teacher" ? "" : "none";
+    document.querySelectorAll(".login-tabs button").forEach(function (b) {
+      b.classList.toggle("on", b.getAttribute("data-role") === role);
+    });
+  }
+
+  document.querySelectorAll(".login-tabs button").forEach(function (b) {
+    b.addEventListener("click", function () { role = b.getAttribute("data-role"); sync(); userEl.focus(); });
+  });
+
+  // 越权提示
+  var qs = new URLSearchParams(location.search);
+  if (qs.get("blocked")) {
+    msg.textContent = "该页面不属于当前身份，请使用对应账号登录。";
+  }
+
+  form.addEventListener("submit", function (e) {
+    e.preventDefault();
+    var username = userEl.value.trim();
+    var password = passEl.value;
+    if (!username || !password) { msg.textContent = "请输入账号和密码"; return; }
+    btn.disabled = true;
+    btn.textContent = "登录中…";
+    msg.textContent = "";
+    EduAPI.auth.login(role, username, password).then(function (res) {
+      var token = res && res.token;
+      var user = res && res.user;
+      if (!token || !user) throw new Error("登录返回异常");
+      EduAuth.setSession(token, user);
+      var next = qs.get("next") || "";
+      var home = role === "student" ? "student.html" : "index.html";
+      if (next && !/^https?:/i.test(next) && next.indexOf("login.html") !== 0) {
+        // 只允许回到同身份的空间，避免教师/学生串页
+        var isStudentPage = next.indexOf("student.html") === 0;
+        if ((role === "student") === isStudentPage) home = next;
+      }
+      location.replace(home);
+    }).catch(function (err) {
+      msg.textContent = err.message || "登录失败";
+      btn.disabled = false;
+      btn.textContent = "登录";
+    });
+  });
+
+  sync();
+  userEl.focus();
+})();
+</script>
+</body>
+</html>

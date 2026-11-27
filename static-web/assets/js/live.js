@@ -1409,21 +1409,96 @@
 
   /* ---------------- student ---------------- */
   function initStudent() {
+    var currentPid = null;
+    var profile = null;
+    var courses = [];
+
+    function renderProfile(p) {
+      profile = p || {};
+      var name = profile.display_name || profile.username || "同学";
+      var nameEl = document.getElementById("stuName");
+      if (nameEl) nameEl.textContent = name;
+      var line = document.getElementById("stuClassLine");
+      if (line) {
+        var bits = [profile.college, profile.major, profile.class_name].filter(Boolean);
+        line.textContent = bits.length ? bits.join(" · ")
+          : "尚未绑定学院/专业/班级，绑定后才会匹配本班课程";
+      }
+      var tip = document.getElementById("stuBindTip");
+      if (tip) tip.hidden = !!profile.bound;
+      var box = document.getElementById("stuProfileBox");
+      if (box) {
+        box.innerHTML = [
+          ["姓名", name],
+          ["学号", profile.student_no || profile.username || "—"],
+          ["学院", profile.college || "未填写"],
+          ["专业", profile.major || "未填写"],
+          ["班级", profile.class_name || "未填写"],
+          ["绑定状态", profile.bound ? "已绑定" : "未绑定"]
+        ].map(function (r) {
+          return '<div class="list-item"><div><div class="li-t">' + r[0] +
+            '</div><div class="li-s">' + h(r[1]) + '</div></div></div>';
+        }).join("");
+      }
+      var pick = document.getElementById("coursePick");
+      if (pick && courses.length) {
+        pick.innerHTML = courses.map(function (c) {
+          return '<option value="' + c.id + '">' + h(c.name) +
+            (c.class_name ? " · " + h(c.class_name) : "") + "</option>";
+        }).join("");
+        if (currentPid) pick.value = String(currentPid);
+      }
+    }
+
+    function load(projectId) {
+      var qp = projectId;
+      if (qp === undefined) {
+        try { qp = new URLSearchParams(location.search).get("project_id") || undefined; } catch (e) { qp = undefined; }
+      }
+      return API.student.overview(qp).then(function (d) {
+        courses = d.courses || [];
+        currentPid = d.project_id || null;
+        Edu.state.courses = courses;
+        if (currentPid) Edu.state.selectedCourseId = String(currentPid);
+        renderStudent(d, d.wrong);
+        renderProfile(d.profile);
+        if (d.profile && !d.profile.bound) {
+          EduAuth.openBind({ forced: true, onDone: function () { load(); } });
+        }
+      }).catch(function (err) {
+        notify("学生数据加载失败：" + (err.message || err));
+      });
+    }
+
     var form = $('form[data-sim="#stuAskOut"]');
     if (form) form.addEventListener("submit", function (e) {
       if (!Edu.isLive()) return;
       e.preventDefault(); e.stopImmediatePropagation();
-      var p = pid();
       var q = ($all("textarea", form)[0] || {}).value;
       if (!q || !q.trim()) { notify("请填写问题"); return; }
+      var kpEl = $all("select", form)[0];
       var btn = form.querySelector('[type="submit"]');
       busy(btn, true, "生成中…");
-      API.tutor.reply({ project_id: p ? Number(p) : null, question: q }).then(function (res) {
+      API.student.ask(currentPid, q, kpEl ? kpEl.value : "").then(function (res) {
         busy(btn, false);
-        var out = $("#stuAskOut"); if (out) { out.hidden = false; out.innerHTML = "<b>AI 提示：</b><br>" + h((res.reply || {}).feedback || ""); }
+        var out = $("#stuAskOut");
+        if (out) { out.hidden = false; out.innerHTML = "<b>AI 提示：</b><br>" + h((res.reply || {}).feedback || ""); }
         notify("问题已提交");
-      }).catch(function (err) { busy(btn, false); notify("失败：" + (err.message || err)); });
+        load(currentPid);
+      }).catch(function (err) { busy(btn, false); notify("提问失败：" + (err.message || err)); });
     });
+
+    ["stuBindBtn", "stuBindBtn2", "stuRebindBtn"].forEach(function (id) {
+      var b = document.getElementById(id);
+      if (b) b.addEventListener("click", function () {
+        EduAuth.openBind({ forced: id === "stuBindBtn", onDone: function () { load(); } });
+      });
+    });
+    var pwdBtn = document.getElementById("stuPwdBtn");
+    if (pwdBtn) pwdBtn.addEventListener("click", function () { EduAuth.openPassword(); });
+    var outBtn = document.getElementById("stuLogoutBtn");
+    if (outBtn) outBtn.addEventListener("click", function () { EduAuth.logout(); });
+
     function renderStudent(d, wrong) {
       d = d || {};
       wrong = wrong || { items: [], total: 0, corrected: 0 };
@@ -1435,13 +1510,7 @@
         { value: myRev.length ? Math.round(myRev.reduce(function (s, r) { return s + Number((r.meta || {}).final_total || 0); }, 0) / myRev.length) : 0, foot: "作业平均分" },
         { value: wrong.total || 0, foot: "已讲解 " + (wrong.corrected || 0) + " 题" }
       ]);
-      // 顶部副文案：用真实计数替换写死的"2 个任务 / 1 条反馈"
-      var heroP = document.querySelector("#studentHero p");
-      if (heroP) {
-        var c = (typeof Edu.getSelectedCourse === "function") ? Edu.getSelectedCourse() : null;
-        var pendingCount = trains.concat(lessons).filter(function (t) { return t.status !== "ok"; }).length;
-        heroP.textContent = (c && c.name ? c.name : "课程") + "。本周有 " + pendingCount + " 个任务待完成，" + myRev.length + " 条教师反馈。";
-      }
+      // 顶部副文案由学籍信息渲染（renderProfile），这里不再覆盖
       // 今日安排
       var homeStack = document.querySelector('[data-pane="home"] .stack');
       if (homeStack) {
@@ -1515,14 +1584,13 @@
       var rvProgBar = document.getElementById("rvProgBar");
       if (rvProgBar) rvProgBar.style.width = (wrong.total ? Math.round((wrong.corrected || 0) / wrong.total * 100) : 0) + "%";
     }
-    onLive(function () {
-      var p = pid();
-      var stu = (window.EDU && window.EDU.student && window.EDU.student.name) || "";
-      Promise.all([
-        API.student.dashboard(p, stu),
-        API.student.wrong(p, stu).catch(function () { return { items: [], total: 0, corrected: 0 }; })
-      ]).then(function (res) { renderStudent(res[0], res[1]); }).catch(function () {});
-    });
+    onLive(function () { load(); });
+    if (typeof Edu.onCourseChange === "function") {
+      Edu.onCourseChange(function () {
+        var c = (typeof Edu.getSelectedCourse === "function") ? Edu.getSelectedCourse() : null;
+        if (c && (!currentPid || String(c.id) !== String(currentPid))) load(String(c.id));
+      });
+    }
   }
 
   /* ---------------- tools ---------------- */
