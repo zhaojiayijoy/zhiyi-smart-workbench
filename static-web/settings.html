@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>设置 · 致壹 智能教育工作台</title>
-<link rel="stylesheet" href="assets/css/site.css?v=1795700080">
+<link rel="stylesheet" href="assets/css/site.css?v=1795700070">
 </head>
 <body data-page="settings">
 <div class="app">
@@ -38,7 +38,7 @@
               <div class="field"><label>界面字号</label><select id="lookFont"><option>标准（13.5px）</option><option>紧凑（12.5px）</option><option>宽松（14.5px）</option></select></div>
               <div class="field"><label>侧栏默认状态</label><select id="lookSidebar"><option>展开</option><option>收起</option></select></div>
             </div>
-            <div class="mini" style="margin-top:6px">更改即时生效并自动保存</div>
+            <div class="form-actions"><button class="btn primary" type="button" id="lookSave" data-demo="外观设置已保存">保存</button></div>
           </div>
 
           <div class="tabpane" data-pane="model">
@@ -97,7 +97,7 @@
                 </div>
                 <div class="form-actions">
                   <button class="btn primary" type="button" id="cfg_test">测试连接</button>
-                  <span class="mini" id="cfgSaved" style="color:var(--text-2);align-self:center;margin-left:4px"></span>
+                  <button class="btn" type="button" id="cfg_save">保存</button>
                 </div>
               </div>
             </div>
@@ -134,7 +134,7 @@
                   <div class="checks" style="padding-top:4px"><label class="chk on"><input id="advDual" type="checkbox" checked>开启</label></div>
                 </div>
                 <div class="field"><label>导出格式偏好</label><select id="advFormat"><option>Word + PPT + Excel</option><option>仅 Word</option><option>仅 PDF</option></select></div>
-                <div class="mini" style="margin-top:4px">更改即时保存到本机</div>
+                <div class="form-actions"><button class="btn" type="button" id="advSave" data-demo="高级设置已保存（示例）">保存</button></div>
               </div>
             </div>
           </div>
@@ -149,6 +149,6 @@
 <script src="assets/js/data.js?v=1795420906"></script>
 <script src="assets/js/site.js?v=1795700060"></script>
 <script src="assets/js/api.js?v=1795700003"></script>
-<script src="assets/js/live.js?v=1795700005"></script>
+<script src="assets/js/live.js?v=1795700004"></script>
 </body>
 </html>
