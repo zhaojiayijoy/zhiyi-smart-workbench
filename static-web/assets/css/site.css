@@ -36,9 +36,9 @@ html[data-theme="dark"]{
   --panel-3:#232A26;
   --line:#39423C;
   --line-strong:#4A554E;
-  --text:#E9EFEA;
-  --text-2:#A9B6AE;
-  --text-3:#7F8D85;
+  --text:#FFFFFF;
+  --text-2:#F0F4F1;
+  --text-3:#D5DEDA;
   --accent:#5E9B7E;
   --accent-2:#6FAE8F;
   --accent-soft:rgba(94,155,126,.15);
@@ -54,6 +54,26 @@ html[data-theme="dark"]{
 html[data-theme="dark"] .topbar{background:rgba(29,35,32,.88)}
 html[data-theme="dark"] .sticky-bar{background:rgba(29,35,32,.95);box-shadow:0 -8px 24px rgba(0,0,0,.35)}
 html[data-theme="dark"] .state .state-ic{background:var(--panel-2);color:var(--text-2)}
+/* 暗夜模式：所有硬编码深色文字统一改为白色 */
+html[data-theme="dark"] .quick b,
+html[data-theme="dark"] .quick span,
+html[data-theme="dark"] .quick a{color:#FFFFFF}
+html[data-theme="dark"] .recent-grid .card-h h2,
+html[data-theme="dark"] .recent-grid .li-t,
+html[data-theme="dark"] .recent-grid .li-s{color:#FFFFFF}
+html[data-theme="dark"] .tag.ok{color:#FFFFFF;background:rgba(62,122,94,.35);border-color:rgba(111,174,143,.4)}
+html[data-theme="dark"] .tag.warn{color:#FFFFFF;background:rgba(184,120,62,.35);border-color:rgba(211,164,104,.4)}
+html[data-theme="dark"] .tag.err{color:#FFFFFF;background:rgba(184,68,62,.35);border-color:rgba(212,131,124,.4)}
+html[data-theme="dark"] .kpi.ok .value{color:#8FD4B0}
+html[data-theme="dark"] .kpi.warn .value{color:#E0B478}
+html[data-theme="dark"] .step.done{color:#FFFFFF}
+html[data-theme="dark"] .state.is-denied .state-ic{background:#4A2A28;color:#FFC5BF;border-color:rgba(212,131,124,.4)}
+html[data-theme="dark"] .state.is-stale .state-ic{background:#3A3024;color:#E0B478;border-color:rgba(211,164,104,.4)}
+html[data-theme="dark"] .ver-diff .add{background:#1F3A2A;color:#8FD4B0}
+html[data-theme="dark"] .ver-diff .del{background:#3A1F1C;color:#E4A49C}
+html[data-theme="dark"] .ctx-item.danger{color:#E4A49C}
+html[data-theme="dark"] ::-webkit-scrollbar-thumb{background:#4A554E;border:3px solid transparent;background-clip:content-box}
+html[data-theme="dark"] ::selection{background:#5E9B7E;color:#FFFFFF}
 *{box-sizing:border-box}
 html,body{margin:0;padding:0}
 body{
