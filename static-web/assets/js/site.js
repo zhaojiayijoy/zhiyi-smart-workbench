@@ -78,14 +78,36 @@
     var p = {};
     try { p = JSON.parse(localStorage.getItem("edu.prefs") || "{}"); } catch (e) {}
     var root = document.documentElement;
-    console.log("[applyPrefs] called, p=", JSON.stringify(p), "currentAttr=", root.getAttribute("data-theme"));
-    if (p.theme === "dark") root.setAttribute("data-theme", "dark");
-    else root.removeAttribute("data-theme");
+    applyPrefs._syncing = true;
+    if (p.theme === "dark") {
+      if (root.getAttribute("data-theme") !== "dark") root.setAttribute("data-theme", "dark");
+    } else {
+      if (root.hasAttribute("data-theme")) root.removeAttribute("data-theme");
+    }
+    applyPrefs._syncing = false;
     root.style.setProperty("--edu-font", (p.fontSize || 13.5) + "px");
-    console.log("[applyPrefs] after: data-theme=", root.getAttribute("data-theme"));
   }
-  // 不在解析时立即调用——那时 DOM 未就绪，可能被后续脚本覆盖
-  // 改在 DOMContentLoaded 开头调用两次（立即 + 事件循环末尾），确保最终生效
+  // 用 MutationObserver 兜底：任何其他脚本/工具把 data-theme 改错了，立刻拉回
+  (function guardTheme() {
+    var root = document.documentElement;
+    var obs = new MutationObserver(function (mutations) {
+      for (var i = 0; i < mutations.length; i++) {
+        if (mutations[i].type === "attributes" && mutations[i].attributeName === "data-theme") {
+          // 防抖：不在 applyPrefs 自己执行期间触发
+          if (applyPrefs._syncing) return;
+          // 检查当前值是否与 localStorage 一致
+          var p = {};
+          try { p = JSON.parse(localStorage.getItem("edu.prefs") || "{}"); } catch (e) {}
+          var want = p.theme === "dark" ? "dark" : null;
+          var have = root.getAttribute("data-theme");
+          if (want !== have) applyPrefs();
+          return;
+        }
+      }
+    });
+    obs.observe(root, { attributes: true, attributeFilter: ["data-theme"] });
+  })();
+  // 不再在解析时立即调用——改在 DOMContentLoaded 中统一调度
 
   window.Edu = window.Edu || {};
   window.Edu.applyPrefs = applyPrefs;
