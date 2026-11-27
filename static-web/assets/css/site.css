@@ -608,3 +608,19 @@ tbody tr:focus-visible,.tq:focus-visible{outline:2px solid var(--accent);outline
 }
 .draft-bar .dot{width:8px;height:8px;border-radius:50%;background:var(--warn);flex-shrink:0}
 .draft-bar b{color:var(--warn);font-weight:600}
+
+/* ===== 课程项目页：提示与示例文字更淡（正文与按钮不受影响） ===== */
+body[data-page="courses"] .mini{color:var(--text-3);opacity:.72}
+body[data-page="courses"] .hint{
+  display:block;font-size:11.5px;line-height:1.6;
+  color:var(--text-3);opacity:.62;margin-top:2px;
+}
+body[data-page="courses"] ::placeholder{color:var(--text-3);opacity:.5}
+html[data-theme="dark"] body[data-page="courses"] .mini{opacity:.78}
+html[data-theme="dark"] body[data-page="courses"] .hint{opacity:.68}
+html[data-theme="dark"] body[data-page="courses"] ::placeholder{opacity:.6}
+/* 课程项目页：文字位置与行高修正 */
+body[data-page="courses"] .card-b .k{display:block;line-height:1.5;margin-bottom:3px}
+body[data-page="courses"] .proj-meta{line-height:1.6}
+body[data-page="courses"] .form-actions{flex-wrap:wrap;row-gap:6px}
+body[data-page="courses"] .form-actions .mini{line-height:1.5}
