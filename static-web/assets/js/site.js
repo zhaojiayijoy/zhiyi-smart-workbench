@@ -82,7 +82,8 @@
     else root.removeAttribute("data-theme");
     root.style.setProperty("--edu-font", (p.fontSize || 13.5) + "px");
   }
-  applyPrefs();
+  // 不在解析时立即调用——那时 DOM 未就绪，可能被后续脚本覆盖
+  // 改在 DOMContentLoaded 开头调用两次（立即 + 事件循环末尾），确保最终生效
 
   window.Edu = window.Edu || {};
   window.Edu.applyPrefs = applyPrefs;
@@ -981,6 +982,10 @@
   }
 
   document.addEventListener("DOMContentLoaded", function () {
+    // 立即应用用户偏好（主题/字号），防止后续脚本覆盖
+    applyPrefs();
+    // 事件循环末尾再调一次，确保万无一失
+    setTimeout(applyPrefs, 0);
     if (!window.EDU) return;
     buildSidebar();
     buildTopbar();
