@@ -78,9 +78,11 @@
     var p = {};
     try { p = JSON.parse(localStorage.getItem("edu.prefs") || "{}"); } catch (e) {}
     var root = document.documentElement;
+    console.log("[applyPrefs] called, p=", JSON.stringify(p), "currentAttr=", root.getAttribute("data-theme"));
     if (p.theme === "dark") root.setAttribute("data-theme", "dark");
     else root.removeAttribute("data-theme");
     root.style.setProperty("--edu-font", (p.fontSize || 13.5) + "px");
+    console.log("[applyPrefs] after: data-theme=", root.getAttribute("data-theme"));
   }
   // 不在解析时立即调用——那时 DOM 未就绪，可能被后续脚本覆盖
   // 改在 DOMContentLoaded 开头调用两次（立即 + 事件循环末尾），确保最终生效
