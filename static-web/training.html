@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>创建实训 · 致壹 智能教育工作台</title>
 <link rel="stylesheet" href="assets/css/site.css?v=1795700180">
-<script src="assets/js/auth.js?v=1795765000"></script>
+<script src="assets/js/auth.js?v=1795770200"></script>
 </head>
 <body data-page="training">
 <div class="app">
@@ -61,6 +61,10 @@
           </div>
           <div id="trainRubric" style="margin-top:14px"></div>
           <div class="form-actions" style="margin-top:14px">
+            <select id="trainAudience" multiple size="2" title="发放班级：可多选，不选=全部班级"
+                    style="width:132px;padding:4px 6px;border:1px solid var(--line);border-radius:8px;background:var(--panel-2);font-size:12px;color:var(--text)">
+              <option value="">全部班级</option>
+            </select>
             <button class="btn" type="button" data-confirm="发布后学生即可查看并提交任务，确定发布？" data-demo="任务已发布到学生空间">发布任务</button>
             <button class="btn" type="button" data-demo="已保存为草稿">保存草稿</button>
             <button class="btn ghost" type="button" data-demo="已导出任务说明（示例）">导出任务说明</button>
@@ -128,7 +132,7 @@
 <div class="toast"></div>
 <script src="assets/js/data.js?v=1795420906"></script>
 <script src="assets/js/site.js?v=1795766000"></script>
-<script src="assets/js/api.js?v=1795767000"></script>
-<script src="assets/js/live.js?v=1795766000"></script>
+<script src="assets/js/api.js?v=1795770000"></script>
+<script src="assets/js/live.js?v=1795770400"></script>
 </body>
 </html>

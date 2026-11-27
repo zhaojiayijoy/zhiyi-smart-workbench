@@ -98,6 +98,16 @@
       user = u;
       setSession(token(), u);
       if (u.role !== needRole) { redirectForRoleMismatch(u.role); return null; }
+      if (u.role === "student" && u.must_change) {
+        // 初始密码未改：页面可见但数据接口被后端拦住，必须先改密
+        window.__eduMustChange = true;
+        reveal();
+        openPassword({ forced: true, onDone: function () {
+          window.__eduMustChange = false;
+          location.reload();
+        } });
+        return null;
+      }
       reveal();
       document.dispatchEvent(new CustomEvent("edu-auth-ready", { detail: u }));
       return u;
@@ -115,16 +125,18 @@
   }
 
   /* ---------------- 通用弹窗 ---------------- */
-  function openModal(title, bodyHtml, footerHtml) {
+  function openModal(title, bodyHtml, footerHtml, opts) {
+    opts = opts || {};
     var mask = document.createElement("div");
     mask.className = "modal-mask on";
     mask.innerHTML = '<div class="modal" style="max-width:460px">' +
-      '<div class="modal-h"><b>' + title + '</b><button class="x" type="button" data-x>×</button></div>' +
+      '<div class="modal-h"><b>' + title + '</b>' + (opts.closable === false ? "" : '<button class="x" type="button" data-x>×</button>') + '</div>' +
       '<div class="modal-b">' + bodyHtml + '</div>' +
       '<div class="modal-f">' + footerHtml + '</div></div>';
     document.body.appendChild(mask);
     function close() { if (mask.parentNode) mask.parentNode.removeChild(mask); }
     mask.addEventListener("click", function (e) {
+      if (opts.closable === false) return;
       if (e.target === mask || e.target.closest("[data-x]")) close();
     });
     return { el: mask, close: close };
@@ -136,14 +148,18 @@
   }
 
   /* 修改密码：成功后服务端会作废旧会话并返回新令牌 */
-  function openPassword() {
+  function openPassword(opts) {
+    opts = opts || {};
+    var forced = !!opts.forced;
     var m = openModal("修改密码",
+      (forced ? '<p class="mini" style="margin:0 0 10px">首次登录或密码被重置后，必须先修改初始密码才能进入空间。</p>' : "") +
       field("原密码", "pwdOld", "password") +
       field("新密码（至少 6 位）", "pwdNew", "password") +
       field("确认新密码", "pwdNew2", "password") +
       '<div class="mini" id="pwdMsg"></div>',
-      '<button class="btn" type="button" data-x>取消</button>' +
-      '<button class="btn primary" type="button" data-ok>保存</button>');
+      (forced ? "" : '<button class="btn" type="button" data-x>取消</button>') +
+      '<button class="btn primary" type="button" data-ok>保存</button>',
+      { closable: !forced });
     m.el.addEventListener("click", function (e) {
       if (!e.target.closest("[data-ok]")) return;
       var oldPwd = m.el.querySelector("#pwdOld").value;
@@ -158,6 +174,7 @@
           if (r && r.token) setSession(r.token, user);
           m.close();
           toast("密码已修改");
+          if (typeof opts.onDone === "function") opts.onDone();
         }).catch(function (err) { msg.textContent = err.message || "修改失败"; });
     });
   }

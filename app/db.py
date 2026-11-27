@@ -243,6 +243,24 @@ def _conn() -> sqlite3.Connection:
             created_at REAL NOT NULL,
             expires_at REAL NOT NULL
         );
+        CREATE TABLE IF NOT EXISTS submissions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            project_id INTEGER NOT NULL,
+            task_id INTEGER NOT NULL,
+            student_id INTEGER NOT NULL,
+            student_no TEXT NOT NULL,
+            student_name TEXT NOT NULL DEFAULT '',
+            file_id INTEGER NOT NULL DEFAULT 0,
+            file_name TEXT NOT NULL DEFAULT '',
+            note TEXT NOT NULL DEFAULT '',
+            review_task_id INTEGER NOT NULL DEFAULT 0,
+            status TEXT NOT NULL DEFAULT 'submitted',
+            score REAL,
+            feedback TEXT NOT NULL DEFAULT '',
+            created_at REAL NOT NULL,
+            updated_at REAL NOT NULL,
+            UNIQUE(task_id, student_no)
+        );
         """
     )
     # 3) 对旧库：补 ALTER TABLE project_id 列，补默认项目并迁移归属
@@ -259,6 +277,8 @@ def _conn() -> sqlite3.Connection:
         CREATE INDEX IF NOT EXISTS idx_students_project ON students(project_id, student_no);
         CREATE INDEX IF NOT EXISTS idx_users_role ON users(role, username);
         CREATE INDEX IF NOT EXISTS idx_sessions_user ON sessions(user_id);
+        CREATE INDEX IF NOT EXISTS idx_submissions_task ON submissions(task_id, student_no);
+        CREATE INDEX IF NOT EXISTS idx_submissions_project ON submissions(project_id, student_no);
         """
     )
     return conn
@@ -1032,3 +1052,85 @@ def purge_expired_sessions(now: Optional[float] = None) -> int:
         cur = c.execute("DELETE FROM sessions WHERE expires_at<?", (now or time.time(),))
         c.commit()
         return int(cur.rowcount or 0)
+
+
+# ---------------------------------------------------------------------------
+# submissions（学生提交作业）
+# ---------------------------------------------------------------------------
+_SUB_COLS = ("id, project_id, task_id, student_id, student_no, student_name, file_id,"
+             " file_name, note, review_task_id, status, score, feedback, created_at, updated_at")
+
+
+def upsert_submission(*, project_id: int, task_id: int, student_id: int,
+                      student_no: str, student_name: str, file_id: int = 0,
+                      file_name: str = "", note: str = "") -> dict[str, Any]:
+    """同一任务同一学生只保留一条提交，重复提交覆盖文件并回到待评审。"""
+    now = time.time()
+    with _conn() as c:
+        row = c.execute("SELECT id FROM submissions WHERE task_id=? AND student_no=?",
+                        (int(task_id), str(student_no))).fetchone()
+        if row:
+            c.execute(
+                "UPDATE submissions SET student_id=?, student_name=?, file_id=?, file_name=?,"
+                " note=?, status='submitted', score=NULL, feedback='', updated_at=? WHERE id=?",
+                (int(student_id), student_name, int(file_id), file_name, note, now, int(row["id"])),
+            )
+            sid = int(row["id"])
+        else:
+            cur = c.execute(
+                "INSERT INTO submissions (project_id, task_id, student_id, student_no, student_name,"
+                " file_id, file_name, note, review_task_id, status, created_at, updated_at)"
+                " VALUES (?,?,?,?,?,?,?,?,0,'submitted',?,?)",
+                (int(project_id), int(task_id), int(student_id), str(student_no), student_name,
+                 int(file_id), file_name, note, now, now),
+            )
+            sid = int(cur.lastrowid)
+        c.commit()
+        r = c.execute(f"SELECT {_SUB_COLS} FROM submissions WHERE id=?", (sid,)).fetchone()
+    return _d(r)
+
+
+def set_submission_review(sid: int, review_task_id: int) -> None:
+    with _conn() as c:
+        c.execute("UPDATE submissions SET review_task_id=?, updated_at=? WHERE id=?",
+                  (int(review_task_id), time.time(), int(sid)))
+        c.commit()
+
+
+def update_submission_result(sid: int, *, status: str, score: Optional[float] = None,
+                            feedback: str = "") -> None:
+    with _conn() as c:
+        c.execute("UPDATE submissions SET status=?, score=?, feedback=?, updated_at=? WHERE id=?",
+                  (status, score, feedback, time.time(), int(sid)))
+        c.commit()
+
+
+def get_submission(sid: int) -> Optional[dict[str, Any]]:
+    with _conn() as c:
+        r = c.execute(f"SELECT {_SUB_COLS} FROM submissions WHERE id=?", (int(sid),)).fetchone()
+    return _d(r) if r else None
+
+
+def get_submission_by_review_task(review_task_id: int) -> Optional[dict[str, Any]]:
+    with _conn() as c:
+        r = c.execute(f"SELECT {_SUB_COLS} FROM submissions WHERE review_task_id=?",
+                      (int(review_task_id),)).fetchone()
+    return _d(r) if r else None
+
+
+def list_submissions(project_id: Optional[int] = None,
+                     student_no: Optional[str] = None) -> list[dict[str, Any]]:
+    sql = f"SELECT {_SUB_COLS} FROM submissions"
+    where, args = [], []
+    if project_id is not None:
+        where.append("project_id=?")
+        args.append(int(project_id))
+    if student_no:
+        where.append("student_no=?")
+        args.append(str(student_no))
+    if where:
+        sql += " WHERE " + " AND ".join(where)
+    sql += " ORDER BY updated_at DESC"
+    with _conn() as c:
+        rows = c.execute(sql, args).fetchall()
+        return [_d(r) for r in rows]

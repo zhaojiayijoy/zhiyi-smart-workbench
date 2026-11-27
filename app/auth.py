@@ -145,6 +145,8 @@ def resolve_token(token: Optional[str]) -> Optional[dict[str, Any]]:
     return user
 
 
-def reset_password(user_id: int, password: str) -> None:
-    db.update_user(int(user_id), password_hash=hash_password(password), must_change=0)
+def reset_password(user_id: int, password: str, must_change: bool = False) -> None:
+    """改密；must_change=True 用于教师重置，学生下次登录必须先改密。"""
+    db.update_user(int(user_id), password_hash=hash_password(password),
+                   must_change=1 if must_change else 0)
     db.delete_user_sessions(int(user_id))

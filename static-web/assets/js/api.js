@@ -89,7 +89,14 @@
       wrong: function (pid) { return _req("/student/wrong" + (pid ? "?project_id=" + pid : "")); },
       ask: function (pid, question, kp) {
         return _req("/student/ask", { method: "POST", body: { project_id: pid, question: question, knowledge_point: kp || "" } });
-      }
+      },
+      submit: function (taskId, file, note) {
+        var fd = new FormData();
+        fd.append("note", note || "");
+        if (file) fd.append("file", file);
+        return _req("/student/task/" + taskId + "/submit", { method: "POST", body: fd, form: true });
+      },
+      submissionFileUrl: function (sid) { return BASE + "/student/submissions/" + sid + "/file"; }
     },
     files: {
       list: function (pid) { return _req("/files?project_id=" + (pid || "")); },
@@ -118,7 +125,7 @@
       history: function (pid) { return _req("/lesson/history?project_id=" + (pid || "")); },
       get: function (id) { return _req("/lesson/" + id); },
       approve: function (id) { return _req("/lesson/" + id + "/approve", { method: "POST", body: {} }); },
-      status: function (id, status) { return _req("/lesson/" + id + "/status", { method: "POST", body: { status: status } }); },
+      status: function (id, status, audience) { return _req("/lesson/" + id + "/status", { method: "POST", body: { status: status, audience: audience } }); },
       regenerateAll: function (id) { return _req("/lesson/" + id + "/regenerate-all", { method: "POST", body: {} }); },
       exportUrl: function (id, type) { return BASE + "/lesson/" + id + "/export?type=" + (type || "docx"); }
     },
@@ -137,7 +144,7 @@
       generate: function (p) { return _req("/training/generate", { method: "POST", body: p }); },
       history: function (pid) { return _req("/training/history?project_id=" + (pid || "")); },
       get: function (id) { return _req("/training/" + id); },
-      status: function (id, status) { return _req("/training/" + id + "/status", { method: "POST", body: { status: status } }); },
+      status: function (id, status, audience) { return _req("/training/" + id + "/status", { method: "POST", body: { status: status, audience: audience } }); },
       exportUrl: function (id, type) { return BASE + "/training/" + id + "/export?type=" + (type || "docx"); }
     },
     tutor: {

@@ -80,6 +80,10 @@ async def auth_guard(request: Request, call_next):
         if not allowed:
             return JSONResponse(status_code=403,
                                 content={"ok": False, "code": "forbidden", "error": "学生账号无权访问教师端接口"})
+        # 首次登录 / 被教师重置密码后，必须先改密才能进入空间
+        if user.get("must_change") and not (path.startswith("/api/auth/") or path == "/api/courses"):
+            return JSONResponse(status_code=403,
+                                content={"ok": False, "code": "must_change", "error": "请先修改初始密码"})
     return await call_next(request)
 
 
@@ -141,7 +145,11 @@ def _from_task_meta(bucket: str, ref: Any) -> Optional[dict[str, Any]]:
                 "file_name": meta.get("file") or t.get("prompt") or "",
                 "review": ai, "teacher": meta.get("teacher"),
                 "accepted": meta.get("accepted"), "final_total": meta.get("final_total"),
-                "status": meta.get("status"), "ts": ts}
+                "status": meta.get("status"), "ts": ts,
+                "file_id": meta.get("file_id") or 0,
+                "submission_id": meta.get("submission_id") or 0,
+                "submission_task_id": meta.get("submission_task_id") or 0,
+                "student_no": meta.get("student_no") or ""}
     if bucket == "nextplans":
         plan = meta.get("plan")
         if not plan:
@@ -910,7 +918,7 @@ def reset_student_passwords(project_id: int = Query(...)) -> dict:
         user = db.get_user_by_username(no)
         pwd = auth.initial_password(no)
         if user:
-            auth.reset_password(int(user["id"]), pwd)
+            auth.reset_password(int(user["id"]), pwd, must_change=True)
             reset += 1
         else:
             auth.ensure_student_user(no, s.get("name") or "", s.get("class_name") or "")
@@ -1065,6 +1073,7 @@ def get_lesson(tid: int) -> dict:
     task = db.get_task(tid) or {}
     pkg = dict(item["pkg"])
     pkg["_published"] = bool((task.get("meta") or {}).get("published"))
+    pkg["_audience"] = ((task.get("meta") or {}).get("audience") or {}).get("classes") or []
     return ok(pkg)
 
 
@@ -1423,7 +1432,10 @@ def get_training(tid: int) -> dict:
     item = _store_get("trainings", tid)
     if not item:
         raise HTTPException(404, "实训包不存在")
-    return ok(item["pkg"])
+    task = db.get_task(tid) or {}
+    pkg = dict(item["pkg"])
+    pkg["_audience"] = ((task.get("meta") or {}).get("audience") or {}).get("classes") or []
+    return ok(pkg)
 
 
 @app.get("/api/training/{tid}/export")
@@ -1558,7 +1570,10 @@ def review_history(project_id: Optional[int] = Query(None)) -> dict:
         rows.append({"task_id": t, "student": v["student"], "file_name": v["file_name"],
                      "total": ai_total, "ai_total": ai_total,
                      "final_total": v.get("final_total", ai_total),
-                     "status": v.get("status") or "ai", "ts": v["ts"]})
+                     "status": v.get("status") or "ai", "ts": v["ts"],
+                     "file_id": v.get("file_id") or 0,
+                     "submission_id": v.get("submission_id") or 0,
+                     "student_no": v.get("student_no") or ""})
     return ok(rows)
 
 
@@ -1629,7 +1644,7 @@ def finalize_review(tid: int, body: ReviewFinalizeIn) -> dict:
                      "ai_total": ai_total, "final_total": final_total})
     accepted = body.accepted if body.accepted is not None else (old_meta.get("accepted") or {})
     meta = {
-        "student": student, "class_name": class_name,
+        "student": student, "class_name": class_name or old_meta.get("class_name", ""),
         "files": [file_name] if file_name else [], "file": file_name,
         "task": old_meta.get("task", ""), "rubric_name": old_meta.get("rubric_name", ""),
         "rubric": old_meta.get("rubric") or [],
@@ -1638,6 +1653,11 @@ def finalize_review(tid: int, body: ReviewFinalizeIn) -> dict:
                     "comment": comment, "reason": body.reason},
         "accepted": accepted, "final_total": final_total, "status": body.status,
         "versions": versions,
+        # 学生提交链路字段：终评时不能丢，否则学生端无法把反馈挂回任务
+        "file_id": old_meta.get("file_id") or 0,
+        "student_no": old_meta.get("student_no") or "",
+        "submission_id": old_meta.get("submission_id") or 0,
+        "submission_task_id": old_meta.get("submission_task_id") or 0,
     }
     if task:
         db.update_task(tid, answer=comment, meta=meta)
@@ -1645,6 +1665,15 @@ def finalize_review(tid: int, body: ReviewFinalizeIn) -> dict:
                  "teacher": meta["teacher"], "accepted": accepted,
                  "final_total": final_total, "status": body.status})
     _store_put("reviews", tid, item)
+    # 学生提交的记录：把评审结果同步回 submissions，学生端据此显示状态与分数
+    sub = db.get_submission_by_review_task(tid)
+    if sub:
+        new_status = {"published": "reviewed", "returned": "returned"}.get(body.status, "submitted")
+        db.update_submission_result(
+            int(sub["id"]), status=new_status,
+            score=final_total if body.status == "published" else None,
+            feedback=comment or "",
+        )
     return ok({"task_id": tid, "ai_total": ai_total, "final_total": final_total,
                "status": body.status, "teacher": meta["teacher"]})
 
@@ -1845,14 +1874,24 @@ def _student_keys(user: dict) -> set[str]:
     return {k for k in keys if k}
 
 
-def _published_lessons(project_id: Optional[int]) -> list[dict[str, Any]]:
+def _audience_match(t: dict, class_name: str) -> bool:
+    """发布范围：meta.audience 为空 / classes 为空 表示全部班级；否则需包含学生班级。"""
+    aud = (t.get("meta") or {}).get("audience") or {}
+    classes = [str(x).strip() for x in (aud.get("classes") or []) if str(x).strip()]
+    if not classes:
+        return True
+    return (class_name or "").strip() in classes
+
+
+def _published_lessons(project_id: Optional[int], class_name: str = "") -> list[dict[str, Any]]:
     return [t for t in db.list_tasks(project_id=project_id, kind="lesson", limit=100)
-            if bool((t.get("meta") or {}).get("published"))]
+            if bool((t.get("meta") or {}).get("published")) and _audience_match(t, class_name)]
 
 
-def _published_trainings(project_id: Optional[int]) -> list[dict[str, Any]]:
+def _published_trainings(project_id: Optional[int], class_name: str = "") -> list[dict[str, Any]]:
     return [t for t in db.list_tasks(project_id=project_id, kind="training", limit=100)
-            if str(((t.get("meta") or {}).get("pkg") or {}).get("status") or "") == "published"]
+            if str(((t.get("meta") or {}).get("pkg") or {}).get("status") or "") == "published"
+            and _audience_match(t, class_name)]
 
 
 def _wrong_payload(project_id: Optional[int], keys: set[str]) -> dict[str, Any]:
@@ -1922,13 +1961,15 @@ def student_overview(request: Request, project_id: Optional[int] = Query(None)) 
     ids = {int(c["id"]) for c in courses if c and c.get("id") is not None}
     pid = project_id if project_id in ids else (courses[0]["id"] if courses else None)
     keys = _student_keys(user)
-    lessons = _published_lessons(pid) if pid else []
-    trainings = _published_trainings(pid) if pid else []
+    cls = (user.get("class_name") or "").strip()
+    lessons = _published_lessons(pid, cls) if pid else []
+    trainings = _published_trainings(pid, cls) if pid else []
     reviews = ([t for t in db.list_tasks(project_id=pid, kind="review", limit=200)
                 if not keys or _stu_key(t) in keys] if pid else [])
     qa = ([t for t in db.list_tasks(project_id=pid, kind="qa", limit=200)
            if not keys or _stu_key(t) in keys] if pid else [])
     wrong = _wrong_payload(pid, keys) if pid else {"items": [], "total": 0, "corrected": 0}
+    submissions = (db.list_submissions(pid, str(user.get("student_no") or "")) if pid else [])
     return ok({
         "profile": auth.public_user(user),
         "courses": courses,
@@ -1937,6 +1978,7 @@ def student_overview(request: Request, project_id: Optional[int] = Query(None)) 
         "trainings": trainings,
         "my_reviews": reviews,
         "my_qa": qa,
+        "my_submissions": submissions,
         "wrong": wrong,
     })
 
@@ -1958,8 +2000,10 @@ def student_dashboard(request: Request, project_id: Optional[int] = Query(None),
           if not keys or _stu_key(t) in keys]
     return ok({
         "my_qa": qa, "my_reviews": reviews,
-        "trainings": _published_trainings(project_id),
-        "lessons": _published_lessons(project_id),
+        "trainings": _published_trainings(project_id,
+                                          str((_user(request).get("class_name") or ""))),
+        "lessons": _published_lessons(project_id,
+                                      str((_user(request).get("class_name") or ""))),
         "tutor_threads": [],
     })
 
@@ -1973,6 +2017,99 @@ def student_wrong(request: Request, project_id: Optional[int] = Query(None),
     else:
         keys = {student.strip()} if student.strip() else set()
     return ok(_wrong_payload(project_id, keys))
+
+
+@app.post("/api/student/task/{tid}/submit")
+def student_submit_task(tid: int, request: Request, note: str = Form(""),
+                        file: Optional[UploadFile] = File(None)) -> dict:
+    """学生提交作业：附件落库 → 进入教师评审队列（生成 review 任务）。"""
+    user = _user(request)
+    if user.get("role") != "student":
+        raise HTTPException(403, "仅学生账号可提交")
+    task = db.get_task(tid)
+    if not task or task.get("kind") not in ("lesson", "training"):
+        raise HTTPException(404, "任务不存在")
+    pid = task.get("project_id")
+    allowed = {int(c["id"]) for c in _student_courses(user) if c and c.get("id") is not None}
+    if pid not in allowed:
+        raise HTTPException(403, "该任务不在你的班级范围")
+    cls = str(user.get("class_name") or "")
+    published = (str(((task.get("meta") or {}).get("pkg") or {}).get("status") or "") == "published"
+                 if task.get("kind") == "training"
+                 else bool((task.get("meta") or {}).get("published")))
+    if not published or not _audience_match(task, cls):
+        raise HTTPException(403, "该任务未发布给你所在的班级")
+    if not file or not file.filename:
+        return err("请选择要提交的作业文件")
+    data = file.file.read()
+    if not data:
+        return err("文件为空")
+    if len(data) > 20 * 1024 * 1024:
+        return err("文件超过 20MB")
+    name = file.filename
+    ext = Path(name).suffix.lstrip(".").upper()
+    try:
+        text, meta = edu.extract_text(name, data)
+    except Exception as e:
+        text, meta = "", {"note": f"解析失败：{e}", "ext": ext}
+    fid = db.save_file(
+        name=name, ext=meta.get("ext") or ext, kind="doc", content=data, size=len(data),
+        rows=meta.get("rows", 0), cols=meta.get("cols", 0), chars=meta.get("chars", 0),
+        parsed_text=text or None, project_id=pid, visibility="both", category="学生作业",
+        ai_context=1, parse_status="parsed" if text.strip() else "failed",
+    )
+    student_name = str(user.get("display_name") or user.get("student_no") or "学生")
+    student_no = str(user.get("student_no") or "")
+    sub = db.upsert_submission(project_id=int(pid), task_id=int(tid), student_id=int(user["id"]),
+                               student_no=student_no, student_name=student_name,
+                               file_id=int(fid), file_name=name, note=note.strip())
+    review = {}
+    if text.strip():
+        try:
+            review = edu.evaluate_submission(pid, text, name, student=student_name)
+        except Exception:
+            review = {}
+    if not review:
+        review = {"dimensions": [], "total": 0, "summary": "AI 未能解析该文件，教师将人工评审。",
+                  "comment": ""}
+    meta_r = {
+        "student": student_name, "student_no": student_no, "class_name": cls,
+        "file": name, "files": [name], "file_id": int(fid), "ai": review,
+        "submission_id": int(sub["id"]), "submission_task_id": int(tid),
+        "status": "submitted", "final_total": None,
+    }
+    rid = int(sub.get("review_task_id") or 0)
+    if rid and db.get_task(rid):
+        db.update_task(rid, answer="", meta=meta_r)
+    else:
+        rid = db.save_task(prompt=f"{student_name}：{name}", kind="review",
+                           project_id=int(pid), meta=meta_r)
+        db.set_submission_review(int(sub["id"]), int(rid))
+    item = {"project_id": int(pid), "review": review, "student": student_name,
+            "file_name": name, "ts": _now(), "status": "submitted",
+            "file_id": int(fid), "submission_id": int(sub["id"]),
+            "submission_task_id": int(tid), "student_no": student_no}
+    _store_put("reviews", int(rid), item)
+    db.update_submission_result(int(sub["id"]), status="submitted")
+    return ok({"submission_id": sub["id"], "review_task_id": rid, "status": "submitted",
+               "file_id": fid, "file_name": name, "score": None,
+               "message": "已提交，等待教师评审"})
+
+
+@app.get("/api/student/submissions/{sid}/file")
+def student_submission_file(sid: int, request: Request) -> Response:
+    """学生下载自己提交的附件（只允许本人）。"""
+    user = _user(request)
+    if user.get("role") != "student":
+        raise HTTPException(403, "仅学生账号可访问")
+    sub = db.get_submission(int(sid))
+    if not sub or str(sub.get("student_no")) != str(user.get("student_no")):
+        raise HTTPException(404, "提交记录不存在")
+    f = db.get_file(int(sub.get("file_id") or 0), with_content=True)
+    if not f or f.get("content") is None:
+        raise HTTPException(404, "附件不存在")
+    return _file_resp(f["content"], f.get("name") or sub.get("file_name") or "submission",
+                      "application/octet-stream")
 
 
 class StudentAskIn(BaseModel):
@@ -2180,6 +2317,7 @@ def approve_lesson(tid: int) -> dict:
 # ---------------------------------------------------------------------------
 class TrainingStatusIn(BaseModel):
     status: str
+    audience: Optional[list[str]] = None   # 不传=不改；空列表=全部班级
 
 
 @app.post("/api/training/{tid}/status")
@@ -2190,18 +2328,23 @@ def set_training_status(tid: int, body: TrainingStatusIn) -> dict:
     if not item:
         raise HTTPException(404, "实训包不存在")
     item["pkg"]["status"] = body.status
-    _store_put("trainings", tid, item)
     task = db.get_task(tid)
+    task_meta = (task or {}).get("meta") or {}
+    if body.audience is not None:
+        classes = [str(c).strip() for c in body.audience if str(c).strip()]
+        task_meta["audience"] = {"classes": classes}
+        item["pkg"]["audience"] = classes
+    _store_put("trainings", tid, item)
     if task:
-        meta = task.get("meta") or {}
-        meta["pkg"] = item["pkg"]
-        db.update_task(tid, meta=meta)
-    return ok({"task_id": tid, "status": body.status})
+        task_meta["pkg"] = item["pkg"]
+        db.update_task(tid, meta=task_meta)
+    return ok({"task_id": tid, "status": body.status,
+               "audience": (task_meta.get("audience") or {}).get("classes") or []})
 
 
 @app.post("/api/lesson/{tid}/status")
 def set_lesson_status(tid: int, body: TrainingStatusIn) -> dict:
-    """备课包发布给学生 / 撤回为草稿（学生端按 meta.published 过滤）。"""
+    """备课包发布给学生 / 撤回为草稿（学生端按 meta.published + 发放班级过滤）。"""
     if body.status not in ("draft", "published"):
         raise HTTPException(400, "status 仅支持 draft / published")
     task = db.get_task(tid)
@@ -2209,8 +2352,11 @@ def set_lesson_status(tid: int, body: TrainingStatusIn) -> dict:
         raise HTTPException(404, "备课包不存在")
     meta = task.get("meta") or {}
     meta["published"] = body.status == "published"
+    if body.audience is not None:
+        meta["audience"] = {"classes": [str(c).strip() for c in body.audience if str(c).strip()]}
     db.update_task(tid, meta=meta)
-    return ok({"task_id": tid, "published": meta["published"], "status": body.status})
+    return ok({"task_id": tid, "published": meta["published"], "status": body.status,
+               "audience": (meta.get("audience") or {}).get("classes") or []})
 
 
 # ---------------------------------------------------------------------------

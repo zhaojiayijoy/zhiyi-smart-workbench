@@ -398,15 +398,36 @@
       if (pubBtn) pubBtn.textContent = published ? "撤回发布" : "发布给学生";
     }
     syncPub(!!(pkg && pkg._published));
+    var audSel = out.querySelector("#lessonAudience");
+    function loadAudience() {
+      if (!audSel) return;
+      var pidNow = pid();
+      if (!pidNow) return;
+      var cur = (pkg && pkg._audience) || [];
+      API.students.list(pidNow).then(function (res) {
+        var classes = (res && res.classes) || [];
+        audSel.innerHTML = '<option value="">全部班级</option>' + classes.map(function (c) {
+          return '<option value="' + h(c) + '"' + (cur.indexOf(c) > -1 ? " selected" : "") + '>' + h(c) + "</option>";
+        }).join("");
+      }).catch(function () {});
+    }
+    if (audSel) loadAudience();
+    function pickedAudience() {
+      if (!audSel) return [];
+      return Array.prototype.filter.call(audSel.selectedOptions || [], function (o) { return o.value; })
+        .map(function (o) { return o.value; });
+    }
     if (pubBtn) {
       pubBtn.addEventListener("click", function () {
         if (!taskId) { notify("请先生成备课包"); return; }
         var next = (pubTag && pubTag.textContent === "已发布") ? "draft" : "published";
         busy(pubBtn, true, "提交中…");
-        API.lesson.status(taskId, next).then(function (r) {
+        API.lesson.status(taskId, next, pickedAudience()).then(function (r) {
           busy(pubBtn, false);
           syncPub(!!r.published);
-          notify(r.published ? "已发布到学生空间" : "已撤回，学生端不再显示");
+          notify(r.published
+            ? "已发布给：" + ((r.audience && r.audience.length) ? r.audience.join("、") : "全部班级")
+            : "已撤回，学生端不再显示");
         }).catch(function (err) { busy(pubBtn, false); notify("操作失败：" + (err.message || err)); });
       });
     }
@@ -563,11 +584,30 @@
     out.hidden = false;
     out.scrollIntoView({ behavior: "smooth", block: "start" });
     bindBtn(out, "导出任务说明", function () { window.open(API.training.exportUrl(taskId, "docx")); });
+    var audSel = out.querySelector("#trainAudience");
+    var curAud = (pkg && pkg._audience) || [];
+    if (audSel && pid()) {
+      API.students.list(pid()).then(function (res) {
+        var classes = (res && res.classes) || [];
+        audSel.innerHTML = '<option value="">全部班级</option>' + classes.map(function (c) {
+          return '<option value="' + h(c) + '"' + (curAud.indexOf(c) > -1 ? " selected" : "") + '>' + h(c) + "</option>";
+        }).join("");
+      }).catch(function () {});
+    }
+    function pickedAudience() {
+      if (!audSel) return [];
+      return Array.prototype.filter.call(audSel.selectedOptions || [], function (o) { return o.value; })
+        .map(function (o) { return o.value; });
+    }
     bindBtn(out, "发布任务", function (e, b) {
       if (!taskId) { notify("请先生成实训任务包"); return; }
       busy(b, true, "发布中…");
-      API.training.status(taskId, "published")
-        .then(function () { busy(b, false); notify("已发布到学生空间"); document.dispatchEvent(new CustomEvent("edu:training-changed")); })
+      API.training.status(taskId, "published", pickedAudience())
+        .then(function (r) {
+          busy(b, false);
+          notify("已发布给：" + ((r.audience && r.audience.length) ? r.audience.join("、") : "全部班级"));
+          document.dispatchEvent(new CustomEvent("edu:training-changed"));
+        })
         .catch(function (err) { busy(b, false); notify("发布失败：" + (err.message || err)); });
     });
     bindBtn(out, "保存草稿", function (e, b) {
@@ -861,7 +901,7 @@
     bindBtn(document, "退回修改", function () { reviewAction("returned"); });
     bindBtn(document, "需要人工检查", function () { reviewAction("manual"); });
 
-    function renderReview(review, taskId, student, name) {
+    function renderReview(review, taskId, student, name, skipRow) {
       var dims = review.dimensions || [];
       currentReviewId = taskId || currentReviewId;
       currentDims = dims;
@@ -871,12 +911,12 @@
           return '<tr><td>' + h(d.name || d.dimension || "") + '</td><td><b>' + h(d.score) + '</b>/' + h(d.max) + '</td>' +
             '<td class="wrap">' + h(d.evidence || "") + (d.suggestion ? '<div class="mini">建议：' + h(d.suggestion) + '</div>' : "") + '</td>' +
             '<td>' + h(d.location || "") + '</td><td><input type="checkbox" checked></td></tr>';
-        }).join("") || '<tr><td colspan="5" class="mini">暂无维度数据</td></tr>';
+        }).join("") || '<tr><td colspan="5" class="mini">暂无维度数据（AI 未能解析该文件，可直接给出教师终评）</td></tr>';
       }
       var acc = document.querySelector(".card .card-h .tag.acc");
       if (acc) acc.textContent = "AI 初评 " + (review.total != null ? review.total : "");
       var subTb = document.querySelectorAll("table tbody")[0];
-      if (subTb) {
+      if (subTb && !skipRow) {
         var row = '<tr><td><b>' + h(student || "学生") + '</b><div class="mini">—</div></td><td>' + h(name || "学生提交") + '</td><td>' + h(review.total) + '</td><td><span class="tag warn">待复核</span></td></tr>';
         subTb.insertAdjacentHTML("afterbegin", row);
       }
@@ -897,6 +937,21 @@
       var ff = $('form[data-sim="#finalOut"]');
       if (ff) $all('input[type="number"]', ff).forEach(function (i) { i.value = ""; });
     }
+    function openRecord(tid) {
+      if (!tid) return;
+      API.review.get(tid).then(function (it) {
+        currentReviewId = Number(tid);
+        renderReview(it.review || {}, Number(tid), it.student, it.file_name, true);
+        var vw = document.getElementById("reviewViewing");
+        if (vw) {
+          var link = it.file_id
+            ? ' · <a class="mini" style="text-decoration:underline" target="_blank" href="' +
+              API.base + "/files/" + it.file_id + '/download">下载学生提交</a>'
+            : "";
+          vw.innerHTML = h(it.student || "学生") + " · " + h(it.file_name || "") + link;
+        }
+      }).catch(function () {});
+    }
     function loadHistory() {
       var p = pid();
       API.review.history(p).then(function (rows) {
@@ -911,8 +966,12 @@
                        (r.status === "returned" ? '<span class="tag warn">待修改</span>' :
                        (r.status === "manual" ? '<span class="tag warn">需人工检查</span>' :
                        '<span class="tag warn">待复核</span>'));
-              return '<tr><td><b>' + h(r.student || "学生") + '</b></td><td>' + h(r.file_name || "") + '</td><td>' + (r.total != null ? h(r.total) : "—") + '</td><td>' + st + '</td></tr>';
+              var sub = r.submission_id ? '<span class="mini"> · 学生提交</span>' : "";
+              return '<tr data-review-id="' + h(r.task_id) + '" style="cursor:pointer"><td><b>' + h(r.student || "学生") + '</b>' + sub + '</td><td>' + h(r.file_name || "") + '</td><td>' + (r.total != null ? h(r.total) : "—") + '</td><td>' + st + '</td></tr>';
             }).join("");
+            Array.prototype.forEach.call(tb.querySelectorAll("[data-review-id]"), function (tr) {
+              tr.addEventListener("click", function () { openRecord(tr.getAttribute("data-review-id")); });
+            });
           }
         }
         // 同步页头徽章 / 学生提交计数 / 正在查看
@@ -925,7 +984,7 @@
         if (sc) sc.textContent = rows.length + " 份";
         var vw = document.getElementById("reviewViewing");
         if (vw) vw.textContent = rows[0] ? ((rows[0].student || "学生") + " · " + (rows[0].file_name || "")) : "暂无";
-        if (!currentReviewId && rows[0]) currentReviewId = rows[0].task_id;
+        if (!currentReviewId && rows[0]) { currentReviewId = rows[0].task_id; openRecord(rows[0].task_id); }
         // 无选中记录时清掉写死的假证据与终评预填
         resetReviewEvidence();
       }).catch(function () {});
@@ -1451,6 +1510,7 @@
     }
 
     function load(projectId) {
+      if (window.__eduMustChange) return Promise.resolve(null);
       var qp = projectId;
       if (qp === undefined) {
         try { qp = new URLSearchParams(location.search).get("project_id") || undefined; } catch (e) { qp = undefined; }
@@ -1499,22 +1559,82 @@
     var outBtn = document.getElementById("stuLogoutBtn");
     if (outBtn) outBtn.addEventListener("click", function () { EduAuth.logout(); });
 
+    function openSubmit(taskId, title) {
+      var mask = document.createElement("div");
+      mask.className = "modal-mask on";
+      mask.innerHTML = '<div class="modal" style="max-width:480px">' +
+        '<div class="modal-h"><b>提交作业</b><button class="x" type="button" data-x>×</button></div>' +
+        '<div class="modal-b">' +
+          '<p class="mini" style="margin:0 0 10px">' + h(title || "任务") + '</p>' +
+          '<div class="field" style="margin-bottom:10px"><label>作业附件（docx / pdf / txt / md / csv，≤20MB）</label>' +
+          '<input type="file" id="subFile" accept=".docx,.doc,.pdf,.txt,.md,.csv,.xlsx,.pptx"></div>' +
+          '<div class="field" style="margin-bottom:6px"><label>备注（可选）</label>' +
+          '<textarea id="subNote" style="min-height:64px" placeholder="补充说明，如提交思路"></textarea></div>' +
+          '<div class="mini" id="subMsg"></div></div>' +
+        '<div class="modal-f"><button class="btn" type="button" data-x>取消</button>' +
+        '<button class="btn primary" type="button" data-ok>上传并提交</button></div></div>';
+      document.body.appendChild(mask);
+      function close() { if (mask.parentNode) mask.parentNode.removeChild(mask); }
+      mask.addEventListener("click", function (e) {
+        if (e.target === mask || e.target.closest("[data-x]")) { close(); return; }
+        if (!e.target.closest("[data-ok]")) return;
+        var f = mask.querySelector("#subFile").files[0];
+        var note = mask.querySelector("#subNote").value;
+        var msg = mask.querySelector("#subMsg");
+        if (!f) { msg.textContent = "请选择作业文件"; return; }
+        var btn = mask.querySelector("[data-ok]");
+        btn.disabled = true; btn.textContent = "提交中…";
+        API.student.submit(taskId, f, note).then(function (r) {
+          close();
+          notify(r.message || "已提交，等待教师评审");
+          load(currentPid);
+        }).catch(function (err) {
+          btn.disabled = false; btn.textContent = "上传并提交";
+          msg.textContent = err.message || "提交失败";
+        });
+      });
+    }
+    document.addEventListener("click", function (e) {
+      var b = e.target.closest("[data-submit-task]");
+      if (b) {
+        var tr = b.closest("tr");
+        openSubmit(Number(b.getAttribute("data-submit-task")),
+                   tr && tr.querySelector("b") ? tr.querySelector("b").textContent : "");
+        return;
+      }
+      if (e.target.closest("[data-goto-fb]")) {
+        var tab = document.querySelector('.tabs [data-tab="feedback"]');
+        if (tab) tab.click();
+      }
+    });
+
     function renderStudent(d, wrong) {
       d = d || {};
       wrong = wrong || { items: [], total: 0, corrected: 0 };
       var myQa = d.my_qa || [], myRev = d.my_reviews || [],
           trains = d.trainings || [], lessons = d.lessons || [];
+      var subs = {};
+      (d.my_submissions || []).forEach(function (s) { subs[String(s.task_id)] = s; });
+      var allTasks = trains.concat(lessons);
+      var pending = allTasks.filter(function (t) {
+        var s = subs[String(t.id)];
+        return !s || s.status === "returned";
+      }).length;
+      var scored = (d.my_submissions || []).filter(function (s) { return s.status === "reviewed" && s.score != null; });
       setKpis(document, [
-        { value: trains.length, foot: "实训任务" },
-        { value: myRev.filter(function (r) { return r.status !== "published"; }).length, foot: "待阅读反馈" },
-        { value: myRev.length ? Math.round(myRev.reduce(function (s, r) { return s + Number((r.meta || {}).final_total || 0); }, 0) / myRev.length) : 0, foot: "作业平均分" },
+        { value: pending, foot: "待完成任务" },
+        { value: (d.my_submissions || []).filter(function (s) { return s.status === "submitted"; }).length, foot: "待评审提交" },
+        { value: scored.length ? Math.round(scored.reduce(function (a, s) { return a + Number(s.score || 0); }, 0) / scored.length) : 0, foot: "作业平均分" },
         { value: wrong.total || 0, foot: "已讲解 " + (wrong.corrected || 0) + " 题" }
       ]);
       // 顶部副文案由学籍信息渲染（renderProfile），这里不再覆盖
       // 今日安排
       var homeStack = document.querySelector('[data-pane="home"] .stack');
       if (homeStack) {
-        var todos = trains.concat(lessons).filter(function (t) { return t.status !== "ok"; }).slice(0, 3);
+        var todos = allTasks.filter(function (t) {
+          var s = subs[String(t.id)];
+          return !s || s.status === "returned";
+        }).slice(0, 3);
         if (!todos.length) homeStack.innerHTML = '<div class="list-item"><div class="li-ic">✓</div><div><div class="li-t">今日暂无待办</div><div class="li-s">所有任务已完成</div></div></div>';
         else homeStack.innerHTML = todos.map(function (t, i) {
           var meta = t.meta || {}; var title = (meta.pkg && meta.pkg.title) || t.prompt || "任务";
@@ -1524,20 +1644,37 @@
       // 学习进度
       var homeBars = document.querySelector('[data-pane="home"] .bars');
       if (homeBars) {
-        var all = trains.concat(lessons), done = all.filter(function (t) { return t.status === "ok"; }).length;
+        var all = trains.concat(lessons), done = all.filter(function (t) {
+          var s = subs[String(t.id)];
+          return s && s.status === "reviewed";
+        }).length;
         renderBars(homeBars, [{ label: "任务完成", value: done, suffix: done + " / " + all.length + " 个" }]);
       }
       // 我的任务
       var taskTb = document.querySelector('[data-pane="tasks"] tbody');
       if (taskTb) {
-        var taskRows = trains.concat(lessons).slice(0, 20);
+        var taskRows = allTasks.slice(0, 20);
         if (!taskRows.length) taskTb.innerHTML = '<tr><td colspan="5" class="mini">暂无任务</td></tr>';
         else taskTb.innerHTML = taskRows.map(function (t) {
           var isTrain = t.kind === "training";
           var meta = t.meta || {};
           var title = isTrain ? ((meta.pkg && meta.pkg.title) || t.prompt || "实训任务") : (t.prompt || "备课任务");
-          var st = t.status === "ok" ? '<span class="tag ok">已完成</span>' : '<span class="tag warn">进行中</span>';
-          return '<tr><td><b>' + h(title) + '</b></td><td>' + (isTrain ? "实训" : "备课") + '</td><td>' + (fmtTime(t.created_at) || "—") + '</td><td>' + st + '</td><td><button class="btn sm" type="button" data-demo="已打开任务">查看</button></td></tr>';
+          var s = subs[String(t.id)];
+          var st, act;
+          if (!s) {
+            st = '<span class="tag">未提交</span>';
+            act = '<button class="btn sm" type="button" data-submit-task="' + t.id + '">提交作业</button>';
+          } else if (s.status === "reviewed") {
+            st = '<span class="tag ok">已评分 ' + (s.score != null ? s.score : "—") + '</span>';
+            act = '<button class="btn sm" type="button" data-goto-fb="1">查看反馈</button>';
+          } else if (s.status === "returned") {
+            st = '<span class="tag warn">已退回</span>';
+            act = '<button class="btn sm" type="button" data-submit-task="' + t.id + '">重新提交</button>';
+          } else {
+            st = '<span class="tag warn">待评审</span>';
+            act = '<button class="btn sm" type="button" data-submit-task="' + t.id + '">重新提交</button>';
+          }
+          return '<tr><td><b>' + h(title) + '</b></td><td>' + (isTrain ? "实训" : "备课") + '</td><td>' + (fmtTime(t.created_at) || "—") + '</td><td>' + st + '</td><td>' + act + '</td></tr>';
         }).join("");
       }
       // 我的提问
@@ -1555,16 +1692,28 @@
       var fbList = document.getElementById("fbList");
       if (fbList) {
         if (!myRev.length) fbList.innerHTML = '<div class="rule">暂无教师反馈。</div>';
-        else fbList.innerHTML = myRev.map(function (r, i) {
-          var meta = r.meta || {};
-          var total = meta.final_total != null ? meta.final_total : ((meta.ai || {}).total);
-          var unread = i === 0 ? "0" : "1";
-          var comment = ((meta.ai || {}).comment) || ((meta.ai || {}).summary) || "见评分详情。";
-          return '<div class="rule fb" tabindex="0" role="button" data-read="' + unread + '"><div class="fb-h"><b>' +
-            h(r.prompt || "作业反馈") + (total != null ? " · " + total + " 分" : "") + '</b>' +
-            (unread === "0" ? '<span class="tag acc fb-unread">未读</span>' : '<span class="tag fb-unread" hidden>未读</span>') +
-            '</div><p class="mini" style="margin:6px 0 0">' + h(comment) + '</p></div>';
-        }).join("");
+        else {
+          var titleById = {};
+          allTasks.forEach(function (t) {
+            titleById[String(t.id)] = ((t.meta && t.meta.pkg && t.meta.pkg.title) || t.prompt || "任务");
+          });
+          fbList.innerHTML = myRev.map(function (r, i) {
+            var meta = r.meta || {};
+            var teacher = meta.teacher || {};
+            var total = teacher.total != null ? teacher.total : meta.final_total;
+            var comment = teacher.comment || ((meta.ai || {}).comment) || ((meta.ai || {}).summary) || "见评分详情。";
+            var unread = i === 0 ? "0" : "1";
+            var title = titleById[String(meta.submission_task_id || "")] || r.prompt || "作业反馈";
+            var file = meta.file ? " · " + h(meta.file) : "";
+            var state = meta.status === "published"
+              ? '<span class="tag ok">已发布</span>'
+              : (meta.status === "returned" ? '<span class="tag">已退回</span>' : '<span class="tag warn">待复核</span>');
+            return '<div class="rule fb" tabindex="0" role="button" data-read="' + unread + '"><div class="fb-h"><b>' +
+              h(title) + file + (total != null ? " · " + total + " 分" : "") + '</b>' + state +
+              (unread === "0" ? '<span class="tag acc fb-unread">未读</span>' : '<span class="tag fb-unread" hidden>未读</span>') +
+              '</div><p class="mini" style="margin:6px 0 0">' + h(comment) + '</p></div>';
+          }).join("");
+        }
         var fbCount = document.getElementById("fbCount");
         if (fbCount) fbCount.textContent = "共 " + myRev.length + " 条";
       }

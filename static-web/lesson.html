@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>一键备课 · 致壹 智能教育工作台</title>
 <link rel="stylesheet" href="assets/css/site.css?v=1795700180">
-<script src="assets/js/auth.js?v=1795765000"></script>
+<script src="assets/js/auth.js?v=1795770200"></script>
 </head>
 <body data-page="lesson">
 <div class="app">
@@ -124,6 +124,10 @@
 
           <div class="form-actions" style="margin-top:14px">
             <button class="btn" type="button" data-confirm="通过审核后，备课包将保存到当前课程资料并可用于课堂，确定继续？" data-demo="已保存到课程资料">通过审核并保存</button>
+            <select id="lessonAudience" multiple size="2" title="发放班级：可多选，不选=全部班级"
+                    style="width:132px;padding:4px 6px;border:1px solid var(--line);border-radius:8px;background:var(--panel-2);font-size:12px;color:var(--text)">
+              <option value="">全部班级</option>
+            </select>
             <button class="btn" type="button" id="btnPublishLesson">发布给学生</button>
             <span class="tag" id="lessonPubTag">草稿</span>
             <button class="btn" type="button" id="btnGoRehearsal" style="background:var(--accent);color:#fff;border-color:var(--accent)">✦ 课堂预演</button>
@@ -153,8 +157,8 @@
 <div class="toast"></div>
 <script src="assets/js/data.js?v=1795420906"></script>
 <script src="assets/js/site.js?v=1795766000"></script>
-<script src="assets/js/api.js?v=1795767000"></script>
-<script src="assets/js/live.js?v=1795766000"></script>
+<script src="assets/js/api.js?v=1795770000"></script>
+<script src="assets/js/live.js?v=1795770400"></script>
 <script>
 (function(){
   function $id(id){ return document.getElementById(id); }
