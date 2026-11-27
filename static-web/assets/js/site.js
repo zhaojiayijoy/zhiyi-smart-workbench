@@ -88,6 +88,33 @@
     }
     applyPrefs._syncing = false;
     root.style.setProperty("--edu-font", (p.fontSize || 13.5) + "px");
+    syncThemeToggle();
+  }
+
+  /* ---------- 明暗主题：一键切换 ---------- */
+  function isDarkTheme() { return document.documentElement.getAttribute("data-theme") === "dark"; }
+  function syncThemeToggle() {
+    var btn = document.getElementById("themeToggle");
+    if (!btn) return;
+    var dark = isDarkTheme();
+    btn.textContent = dark ? "☀" : "☾";
+    btn.setAttribute("aria-pressed", dark ? "true" : "false");
+    btn.setAttribute("title", dark ? "切换到亮色" : "切换到暗色");
+  }
+  function toggleTheme() {
+    var next = isDarkTheme() ? "light" : "dark";
+    var p = {};
+    try { p = JSON.parse(localStorage.getItem("edu.prefs") || "{}"); } catch (e) { p = {}; }
+    p.theme = next;
+    try { localStorage.setItem("edu.prefs", JSON.stringify(p)); } catch (e) {}
+    // 设置页「外观」读的是 edu.look，这里保持同步，避免两个入口互相覆盖
+    try {
+      var look = JSON.parse(localStorage.getItem("edu.look") || "{}");
+      look.theme = next;
+      localStorage.setItem("edu.look", JSON.stringify(look));
+    } catch (e) {}
+    applyPrefs();
+    syncThemeToggle();
   }
   // 用 MutationObserver 兜底：任何其他脚本/工具把 data-theme 改错了，立刻拉回
   (function guardTheme() {
@@ -113,6 +140,7 @@
 
   window.Edu = window.Edu || {};
   window.Edu.applyPrefs = applyPrefs;
+  window.Edu.toggleTheme = toggleTheme;
   Edu.state = {
     live: false,
     selectedCourseId: null,  // 全局唯一课程标识
@@ -555,6 +583,7 @@
       mobile +
       '<div class="crumb"><span>致壹</span><span>/</span><b>' + (TITLES[page] || "首页") + "</b></div>" +
       '<div class="top-right">' +
+        '<button class="btn sm ghost theme-toggle" type="button" id="themeToggle" title="切换亮色/暗色" aria-label="切换亮色/暗色">☾</button>' +
         '<label class="course-pick"><span>课程</span><select id="coursePick">' + options + '</select></label>' +
         (isStudent ? "" : '<a class="btn sm" href="courses.html#newCourse">＋ 创建课程</a>') +
         '<span class="mini" id="accountTag" style="white-space:nowrap">' + escHtml(accountLabel()) + "</span>" +
@@ -586,7 +615,11 @@
         var pick = document.querySelector("#coursePick");
         if (pick) pick.focus();
       }
+      // 顶栏明暗主题一键切换：立即生效并写入 edu.prefs（同时镜像到设置页用的 edu.look）
+      if (e.target.closest("#themeToggle")) { toggleTheme(); }
     });
+
+    syncThemeToggle();
 
     var pick = top.querySelector("#coursePick");
     try {
@@ -875,8 +908,20 @@
     });
   }
 
+  /* 首页 hero 文案：有课程时说明关联关系，无课程时给出明确引导 */
+  function renderHeroCourseLine() {
+    var el = document.getElementById("heroCourseLine");
+    if (!el) return;
+    var c = getSelectedCourse();
+    var name = c && (c.name || "").trim();
+    el.textContent = name
+      ? "所有内容都会关联到当前课程「" + name + "」。"
+      : "尚未选择课程，请先在顶部选择或新建课程。";
+  }
+
   function fillCourseFields() {
     var c = getSelectedCourse();
+    renderHeroCourseLine();
     document.querySelectorAll("[data-fill]").forEach(function (el) {
       var v = el.getAttribute("data-fill");
       if (v.indexOf("course.") !== 0) return;

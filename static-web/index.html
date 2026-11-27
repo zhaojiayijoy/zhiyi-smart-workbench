@@ -1,10 +1,10 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>工作台首页 · 致壹 智能教育工作台</title>
-<link rel="stylesheet" href="assets/css/site.css?v=1795700180">
+<link rel="stylesheet" href="assets/css/site.css?v=1795789011">
 <script src="assets/js/auth.js?v=1795770200"></script>
 </head>
 <body data-page="index">
@@ -16,7 +16,7 @@
 
       <section class="hero">
         <h1>今天要完成哪项教学任务？</h1>
-        <p>所有内容都会关联到当前课程 <b data-fill="course.name">—</b>。</p>
+        <p id="heroCourseLine">尚未选择课程，请先在顶部选择或新建课程。</p>
 
         <form class="composer" id="homeComposer">
           <textarea placeholder="输入课题、上传资料，或描述你要完成的教学任务。" rows="3"></textarea>
@@ -42,15 +42,15 @@
           <div class="recent-grid" style="margin:0;gap:16px">
             <div>
               <div class="recent-h"><b>最近备课包</b><a class="mini" href="lesson.html">全部</a></div>
-              <div class="mini" style="padding:8px 0">暂无数据</div>
+              <div id="recentLesson"><div class="empty-mini"><div class="em-ic">✦</div><div class="em-t">暂无备课包</div><div class="em-s">去「一键备课」生成第一个</div><a class="btn sm ghost" href="lesson.html">去生成</a></div></div>
             </div>
             <div>
               <div class="recent-h"><b>最近实训任务</b><a class="mini" href="training.html">全部</a></div>
-              <div class="mini" style="padding:8px 0">暂无数据</div>
+              <div id="recentTraining"><div class="empty-mini"><div class="em-ic">◈</div><div class="em-t">暂无实训任务</div><div class="em-s">去「创建实训」生成第一个</div><a class="btn sm ghost" href="training.html">去生成</a></div></div>
             </div>
             <div>
               <div class="recent-h"><b>待评审作业</b><a class="mini" href="review.html">全部</a></div>
-              <div class="mini" style="padding:8px 0">暂无数据</div>
+              <div id="recentReview"><div class="empty-mini"><div class="em-ic">✓</div><div class="em-t">暂无待评审作业</div><div class="em-s">上传学生提交后开始评审</div><a class="btn sm ghost" href="review.html">去评审</a></div></div>
             </div>
           </div>
         </div>
@@ -78,9 +78,9 @@
 <div class="toast"></div>
 
 <script src="assets/js/data.js?v=1795420906"></script>
-<script src="assets/js/site.js?v=1795766000"></script>
+<script src="assets/js/site.js?v=1795789002"></script>
 <script src="assets/js/api.js?v=1795770000"></script>
-<script src="assets/js/live.js?v=1795770400"></script>
+<script src="assets/js/live.js?v=1795789003"></script>
 <script>
 (function(){
   var form = document.getElementById('homeComposer');

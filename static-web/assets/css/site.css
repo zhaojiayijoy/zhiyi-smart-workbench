@@ -8,14 +8,14 @@
   --line:#DED7C9;
   --line-strong:#CDBFA7;
   --text:#25322D;
-  --text-2:#66736C;
-  --text-3:#94A199;
+  /* 二级文字：对 --bg(#F5F1E8) 约 5.8:1，与三级 --text-3(#63706A, 4.6:1) 拉开层次 */
+  --text-2:#55625B;
+  /* 三级文字：对 --bg(#F5F1E8) 约 4.7:1、对 --panel(#FFFCF6) 约 5.2:1，满足 WCAG AA */
+  --text-3:#63706A;
   --accent:#365B4C;
   --accent-2:#426D5B;
   --accent-soft:rgba(54,91,76,.10);
   --accent-line:rgba(54,91,76,.35);
-  --brand-accent:#B85C3E;
-  --brand-accent-soft:rgba(184,92,62,.12);
   --ok:#3E7A5E;
   --ok-soft:rgba(62,122,94,.12);
   --warn:#B8783E;
@@ -37,7 +37,8 @@ html[data-theme="dark"]{
   --line:#39423C;
   --line-strong:#4A554E;
   --text:#FFFFFF;
-  --text-2:#F0F4F1;
+  /* 次级文字：与主文字 #FFFFFF 拉开层级，仍对 --panel 保持 ≈8:1 */
+  --text-2:#B9C4BD;
   --text-3:#D5DEDA;
   --accent:#5E9B7E;
   --accent-2:#6FAE8F;
@@ -552,6 +553,17 @@ tbody tr:focus-visible,.tq:focus-visible{outline:2px solid var(--accent);outline
 .rule{background:var(--panel-3);border:1px solid var(--line);border-radius:9px;padding:10px 12px;font-size:12px;color:var(--text-2)}
 .rule b{color:var(--text);font-weight:600}
 .qbox{background:#FBF7EE;border-left:3px solid var(--accent-line);border-radius:0 8px 8px 0;padding:10px 12px;font-size:12.5px;color:var(--text-2)}
+
+/* ===== 卡片内空状态：图标 + 标题 + 说明 + 行动入口 ===== */
+.empty-mini{display:flex;flex-direction:column;align-items:flex-start;gap:6px;padding:10px 0}
+.empty-mini .em-ic{width:26px;height:26px;border-radius:8px;background:var(--accent-soft);color:var(--accent);
+  display:flex;align-items:center;justify-content:center;font-size:13px}
+.empty-mini .em-t{font-size:12.5px;font-weight:600;color:var(--text)}
+.empty-mini .em-s{font-size:11.5px;color:var(--text-3);line-height:1.5}
+.empty-mini .btn{margin-top:2px}
+
+/* ===== 顶栏明暗主题一键切换 ===== */
+.theme-toggle{width:30px;justify-content:center;padding:6px 0;font-size:14px;line-height:1}
 
 @media (max-width:1080px){
   .app{grid-template-columns:1fr}

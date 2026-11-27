@@ -177,11 +177,11 @@
     onLive(function () {
       var p = pid(); if (!p) return;
       API.lesson.history(p).then(function (rows) {
-        var box = document.querySelector(".card .card-b.tight");
+        var box = document.getElementById("recentLesson");
         if (!box) return;
         rows = (rows || []).slice(0, 2);
         if (!rows.length) {
-          box.innerHTML = '<div class="list-item"><div class="li-ic">✦</div><div style="flex:1"><div class="li-t">暂无备课包</div><div class="li-s">去「一键备课」生成第一个</div></div><a class="btn sm ghost" href="lesson.html">去生成</a></div>';
+          box.innerHTML = '<div class="empty-mini"><div class="em-ic">✦</div><div class="em-t">暂无备课包</div><div class="em-s">去「一键备课」生成第一个</div><a class="btn sm ghost" href="lesson.html">去生成</a></div>';
           return;
         }
         box.innerHTML = rows.map(function (r) {
@@ -192,23 +192,21 @@
       }).catch(function () {});
       // 第二卡：最近实训任务
       API.training.history(p).then(function (rows) {
-        var cards = document.querySelectorAll(".recent-grid .card-b.tight");
-        var box = cards[1];
+        var box = document.getElementById("recentTraining");
         if (!box) return;
         rows = (rows || []).slice(0, 2);
-        if (!rows.length) { box.innerHTML = '<div class="list-item"><div class="li-ic">◈</div><div style="flex:1"><div class="li-t">暂无实训任务</div><div class="li-s">去「创建实训」生成第一个</div></div><a class="btn sm ghost" href="training.html">去生成</a></div>'; return; }
+        if (!rows.length) { box.innerHTML = '<div class="empty-mini"><div class="em-ic">◈</div><div class="em-t">暂无实训任务</div><div class="em-s">去「创建实训」生成第一个</div><a class="btn sm ghost" href="training.html">去生成</a></div>'; return; }
         box.innerHTML = rows.map(function (r) {
           return '<a class="list-item" href="training.html"><div class="li-ic">◈</div><div style="flex:1"><div class="li-t">' + h(r.scenario || "(无标题)") + '</div><div class="li-s">' + fmtTime(r.ts) + '</div></div><span class="tag warn">草稿</span></a>';
         }).join("");
       }).catch(function () {});
       // 第三卡：待评审作业
       API.review.history(p).then(function (rows) {
-        var cards = document.querySelectorAll(".recent-grid .card-b.tight");
-        var box = cards[2];
+        var box = document.getElementById("recentReview");
         if (!box) return;
         rows = rows || [];
         var pending = rows.filter(function (r) { return r.status !== "published"; }).length;
-        if (!rows.length) { box.innerHTML = '<div class="list-item"><div class="li-ic">✓</div><div style="flex:1"><div class="li-t">暂无待评审作业</div><div class="li-s">上传学生提交后开始评审</div></div><a class="btn sm ghost" href="review.html">去评审</a></div>'; return; }
+        if (!rows.length) { box.innerHTML = '<div class="empty-mini"><div class="em-ic">✓</div><div class="em-t">暂无待评审作业</div><div class="em-s">上传学生提交后开始评审</div><a class="btn sm ghost" href="review.html">去评审</a></div>'; return; }
         box.innerHTML = '<a class="list-item" href="review.html"><div class="li-ic">✓</div><div style="flex:1"><div class="li-t">' + pending + ' 份待教师复核</div><div class="li-s">共 ' + rows.length + ' 份评审记录</div></div><span class="tag warn">待处理</span></a>';
       }).catch(function () {});
       API.tasks.list(p).then(function (rows) {
@@ -1775,8 +1773,13 @@
       var sidebar = document.getElementById("pfSidebar").value || "open";
       try {
         localStorage.setItem("edu.look", JSON.stringify({ theme: theme, font: font, sidebar: sidebar }));
-        // 应用主题
-        try { document.documentElement.dataset.theme = theme; } catch (e) {}
+        // 顶栏切换按钮读的是 edu.prefs，这里保持同步并立即应用
+        try {
+          var pref = JSON.parse(localStorage.getItem("edu.prefs") || "{}");
+          pref.theme = theme;
+          localStorage.setItem("edu.prefs", JSON.stringify(pref));
+        } catch (e) {}
+        if (window.Edu && Edu.applyPrefs) Edu.applyPrefs();
         notify("外观已保存");
       } catch (e) { notify("保存失败：" + e.message); }
     });
@@ -1860,7 +1863,11 @@
           var s = subs[String(t.id)];
           return !s || s.status === "returned";
         }).slice(0, 3);
-        if (!todos.length) homeStack.innerHTML = '<div class="list-item"><div class="li-ic">✓</div><div><div class="li-t">今日暂无待办</div><div class="li-s">所有任务已完成</div></div></div>';
+        if (!todos.length) {
+          homeStack.innerHTML = (courses && courses.length)
+            ? '<div class="list-item"><div class="li-ic">✓</div><div><div class="li-t">今日暂无待办</div><div class="li-s">所有任务已完成</div></div></div>'
+            : '<div class="list-item"><div class="li-ic">◌</div><div><div class="li-t">暂无可学习的课程</div><div class="li-s">课程尚未发布或已归档，请联系教师</div></div></div>';
+        }
         else homeStack.innerHTML = todos.map(function (t, i) {
           var meta = t.meta || {}; var title = (meta.pkg && meta.pkg.title) || t.prompt || "任务";
           return '<div class="list-item"><div class="li-ic">' + (i + 1) + '</div><div><div class="li-t">' + h(title) + '</div><div class="li-s">' + (t.kind === "training" ? "实训" : "备课") + " · " + (fmtTime(t.created_at) || "未排期") + '</div></div></div>';
