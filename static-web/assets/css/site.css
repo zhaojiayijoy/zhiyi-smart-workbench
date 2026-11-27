@@ -54,10 +54,99 @@ html[data-theme="dark"]{
 html[data-theme="dark"] .topbar{background:rgba(29,35,32,.88)}
 html[data-theme="dark"] .sticky-bar{background:rgba(29,35,32,.95);box-shadow:0 -8px 24px rgba(0,0,0,.35)}
 html[data-theme="dark"] .state .state-ic{background:var(--panel-2);color:var(--text-2)}
-/* 暗夜模式：所有硬编码深色文字统一改为白色 */
+/* 暗夜模式：覆盖所有原生表单控件和卡片的白底 */
+html[data-theme="dark"] input,
+html[data-theme="dark"] select,
+html[data-theme="dark"] textarea{
+  background:var(--panel);
+  color:var(--text);
+  border:1px solid var(--line);
+  border-radius:6px;
+}
+html[data-theme="dark"] input:focus,
+html[data-theme="dark"] select:focus,
+html[data-theme="dark"] textarea:focus{
+  border-color:var(--accent);
+  outline:none;
+  box-shadow:0 0 0 2px var(--accent-soft);
+}
+html[data-theme="dark"] input[type="checkbox"]{
+  background:var(--panel-2);
+  accent-color:var(--accent);
+}
+html[data-theme="dark"] .btn{
+  background:var(--panel-2);
+  color:var(--text);
+  border:1px solid var(--line-strong);
+}
+html[data-theme="dark"] .btn:hover{
+  background:var(--hover);
+  border-color:var(--accent-line);
+}
+html[data-theme="dark"] .btn.ghost{
+  background:transparent;
+  border-color:var(--line);
+  color:var(--text-2);
+}
+html[data-theme="dark"] .btn.ghost:hover{
+  background:var(--hover);
+  color:var(--text);
+}
+html[data-theme="dark"] .card{
+  background:var(--panel);
+  border:1px solid var(--line);
+}
+html[data-theme="dark"] .card-b{
+  background:var(--panel);
+}
+html[data-theme="dark"] .table-wrap table{
+  background:var(--panel);
+  border-color:var(--line);
+}
+html[data-theme="dark"] .table-wrap th{
+  background:var(--panel-2);
+  color:var(--text);
+  border-color:var(--line);
+}
+html[data-theme="dark"] .table-wrap td{
+  border-color:var(--line);
+  color:var(--text-2);
+}
+html[data-theme="dark"] .table-wrap tbody tr:hover{
+  background:var(--hover);
+}
+html[data-theme="dark"] .quick a{
+  background:var(--panel-2);
+  border:1px solid var(--line);
+  color:var(--text);
+}
+html[data-theme="dark"] .quick a:hover{
+  background:var(--hover);
+  border-color:var(--accent-line);
+}
 html[data-theme="dark"] .quick b,
-html[data-theme="dark"] .quick span,
-html[data-theme="dark"] .quick a{color:#FFFFFF}
+html[data-theme="dark"] .quick span{color:var(--text)}
+html[data-theme="dark"] .tabs button{
+  background:var(--panel-2);
+  color:var(--text-2);
+  border:1px solid var(--line);
+}
+html[data-theme="dark"] .tabs button.on{
+  background:var(--accent);
+  color:#FFFFFF;
+  border-color:var(--accent);
+}
+html[data-theme="dark"] .tabs button:hover{
+  color:var(--text);
+}
+html[data-theme="dark"] .field label{color:var(--text-2)}
+html[data-theme="dark"] .mini{color:var(--text-3)}
+html[data-theme="dark"] .sub{color:var(--text-2)}
+html[data-theme="dark"] .rule{background:var(--panel-2);color:var(--text-2);border:1px solid var(--line)}
+html[data-theme="dark"] .form-note{color:var(--text-3)}
+html[data-theme="dark"] .toast{background:#2F3833;color:#FFFFFF;border:1px solid var(--line)}
+html[data-theme="dark"] ::placeholder{color:var(--text-3);opacity:.7}
+/* 暗夜模式：硬编码深色文字覆盖（非 CSS 变量管辖的元素） */
 html[data-theme="dark"] .recent-grid .card-h h2,
 html[data-theme="dark"] .recent-grid .li-t,
 html[data-theme="dark"] .recent-grid .li-s{color:#FFFFFF}
