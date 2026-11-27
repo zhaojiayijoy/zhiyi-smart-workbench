@@ -271,6 +271,14 @@ class PasswordIn(BaseModel):
     new_password: str = ""
 
 
+class UpdateMeIn(BaseModel):
+    """学生更新自己的个人资料（display_name / 学籍字段）。"""
+    display_name: str = ""
+    college: str = ""
+    major: str = ""
+    class_name: str = ""
+
+
 @app.post("/api/auth/login")
 def auth_login(body: LoginIn):
     role = (body.role or "").strip().lower()
@@ -319,6 +327,34 @@ def auth_password(body: PasswordIn, request: Request) -> dict:
         return err("新密码至少 6 位")
     auth.reset_password(int(user["id"]), body.new_password)
     return ok({"token": auth.new_session(int(user["id"]), str(user.get("role") or "student"))})
+
+
+@app.patch("/api/auth/me")
+def auth_patch_me(body: UpdateMeIn, request: Request) -> dict:
+    """学生更新个人资料：display_name、学籍三字段（college/major/class_name）。
+    至少传一个非空字段；若学籍三字段都填全，则自动 bound=1。"""
+    user = _user(request)
+    if user.get("role") != "student":
+        raise HTTPException(403, "仅学生账号可修改个人资料")
+    updates: dict = {}
+    dn = (body.display_name or "").strip()
+    col = (body.college or "").strip()
+    maj = (body.major or "").strip()
+    cls = (body.class_name or "").strip()
+    if dn:
+        updates["display_name"] = dn
+    if col:
+        updates["college"] = col
+    if maj:
+        updates["major"] = maj
+    if cls:
+        updates["class_name"] = cls
+    if not updates:
+        return err("至少提供一个要修改的字段")
+    if col and maj and cls:
+        updates["bound"] = 1
+    db.update_user(int(user["id"]), **updates)
+    return ok(auth.public_user(db.get_user(int(user["id"]))))
 
 
 @app.get("/api/settings")
@@ -1610,6 +1646,8 @@ _REVIEW_STATUS = ("published", "returned", "manual")
 def finalize_review(tid: int, body: ReviewFinalizeIn) -> dict:
     if body.status not in _REVIEW_STATUS:
         raise HTTPException(400, "status 仅支持 published / returned / manual")
+    if body.status == "returned" and not body.reason.strip():
+        raise HTTPException(400, "退回时必须填写原因")
     item = _store_get("reviews", tid)
     if not item:
         raise HTTPException(404, "评审记录不存在")
@@ -1665,17 +1703,46 @@ def finalize_review(tid: int, body: ReviewFinalizeIn) -> dict:
                  "teacher": meta["teacher"], "accepted": accepted,
                  "final_total": final_total, "status": body.status})
     _store_put("reviews", tid, item)
-    # 学生提交的记录：把评审结果同步回 submissions，学生端据此显示状态与分数
+    # 学生提交的记录：将结果仅同步到对应的历史版本
     sub = db.get_submission_by_review_task(tid)
     if sub:
         new_status = {"published": "reviewed", "returned": "returned"}.get(body.status, "submitted")
-        db.update_submission_result(
-            int(sub["id"]), status=new_status,
+        db.update_submission_version_result(
+            tid, status=new_status,
             score=final_total if body.status == "published" else None,
-            feedback=comment or "",
+            feedback=(body.reason or comment or "") if body.status == "returned" else (comment or ""),
         )
     return ok({"task_id": tid, "ai_total": ai_total, "final_total": final_total,
                "status": body.status, "teacher": meta["teacher"]})
+
+
+class ReviewBatchIn(BaseModel):
+    ids: list[int]
+    status: str
+    reason: str = ""
+    comment: Optional[str] = None
+
+
+@app.post("/api/review/batch")
+def batch_finalize_reviews(body: ReviewBatchIn) -> dict:
+    ids = list(dict.fromkeys(body.ids or []))
+    if not ids or len(ids) > 100:
+        raise HTTPException(400, "ids 数量必须为 1 到 100")
+    if body.status not in ("published", "returned"):
+        raise HTTPException(400, "status 仅支持 published / returned")
+    if body.status == "returned" and not body.reason.strip():
+        raise HTTPException(400, "退回时必须填写原因")
+    results = []
+    for tid in ids:
+        try:
+            finalize_review(tid, ReviewFinalizeIn(status=body.status, reason=body.reason,
+                                                    comment=body.comment))
+            results.append({"task_id": tid, "ok": True})
+        except HTTPException as exc:
+            results.append({"task_id": tid, "ok": False, "error": str(exc.detail)})
+    success_count = sum(1 for result in results if result["ok"])
+    return ok({"results": results, "success_count": success_count,
+               "failed_count": len(results) - success_count})
 
 
 @app.get("/api/review/{tid}/export")
@@ -2078,27 +2145,72 @@ def student_submit_task(tid: int, request: Request, note: str = Form(""),
         "submission_id": int(sub["id"]), "submission_task_id": int(tid),
         "status": "submitted", "final_total": None,
     }
-    rid = int(sub.get("review_task_id") or 0)
-    if rid and db.get_task(rid):
-        db.update_task(rid, answer="", meta=meta_r)
-    else:
-        rid = db.save_task(prompt=f"{student_name}：{name}", kind="review",
-                           project_id=int(pid), meta=meta_r)
-        db.set_submission_review(int(sub["id"]), int(rid))
+    rid = db.save_task(prompt=f"{student_name}：{name}", kind="review",
+                       project_id=int(pid), meta=meta_r)
+    db.set_submission_review(int(sub["id"]), int(rid))
     item = {"project_id": int(pid), "review": review, "student": student_name,
             "file_name": name, "ts": _now(), "status": "submitted",
             "file_id": int(fid), "submission_id": int(sub["id"]),
             "submission_task_id": int(tid), "student_no": student_no}
     _store_put("reviews", int(rid), item)
-    db.update_submission_result(int(sub["id"]), status="submitted")
     return ok({"submission_id": sub["id"], "review_task_id": rid, "status": "submitted",
-               "file_id": fid, "file_name": name, "score": None,
+               "version": sub["version"], "file_id": fid, "file_name": name, "score": None,
                "message": "已提交，等待教师评审"})
+
+
+def _submission_versions_for_user(sid: int, user: dict[str, Any]) -> list[dict[str, Any]]:
+    sub = db.get_submission(int(sid))
+    if not sub:
+        raise HTTPException(404, "提交记录不存在")
+    if user.get("role") == "student" and str(sub.get("student_no")) != str(user.get("student_no")):
+        raise HTTPException(404, "提交记录不存在")
+    if user.get("role") not in ("student", "teacher"):
+        raise HTTPException(403, "无权访问")
+    return db.list_submission_versions(int(sid))
+
+
+def _submission_version_file(sid: int, version: int, user: dict[str, Any]) -> Response:
+    _submission_versions_for_user(sid, user)
+    record = db.get_submission_version(int(sid), int(version))
+    if not record:
+        raise HTTPException(404, "提交版本不存在")
+    f = db.get_file(int(record.get("file_id") or 0), with_content=True)
+    if not f or f.get("content") is None:
+        raise HTTPException(404, "附件不存在")
+    return _file_resp(f["content"], f.get("name") or record.get("file_name") or "submission",
+                      "application/octet-stream")
+
+
+@app.get("/api/student/submissions/{sid}/versions")
+def student_submission_versions(sid: int, request: Request) -> dict:
+    return ok(_submission_versions_for_user(sid, _user(request)))
+
+
+@app.get("/api/student/submissions/{sid}/versions/{version}/file")
+def student_submission_version_file(sid: int, version: int, request: Request) -> Response:
+    return _submission_version_file(sid, version, _user(request))
+
+
+@app.get("/api/submissions/{sid}/versions")
+def teacher_submission_versions(sid: int, request: Request) -> dict:
+    user = _user(request)
+    if user.get("role") != "teacher":
+        raise HTTPException(403, "仅教师账号可访问")
+    if not db.get_submission(int(sid)):
+        raise HTTPException(404, "提交记录不存在")
+    return ok(db.list_submission_versions(int(sid)))
+
+
+@app.get("/api/submissions/{sid}/versions/{version}/file")
+def teacher_submission_version_file(sid: int, version: int, request: Request) -> Response:
+    user = _user(request)
+    if user.get("role") != "teacher":
+        raise HTTPException(403, "仅教师账号可访问")
+    return _submission_version_file(sid, version, user)
 
 
 @app.get("/api/student/submissions/{sid}/file")
 def student_submission_file(sid: int, request: Request) -> Response:
-    """学生下载自己提交的附件（只允许本人）。"""
     user = _user(request)
     if user.get("role") != "student":
         raise HTTPException(403, "仅学生账号可访问")

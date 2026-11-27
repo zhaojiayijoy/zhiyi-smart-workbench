@@ -64,14 +64,22 @@
       <div class="split" style="margin-bottom:14px">
         <div class="card">
           <div class="card-h"><h2>学生提交</h2><div class="right"><span class="mini" id="reviewSubmitCount">—</span></div></div>
+          <div class="card-b">
+            <div class="row"><span class="mini" id="reviewSelectedCount">已选 0 份</span><button class="btn sm" type="button" id="reviewBatchPublish" disabled>批量发布</button><button class="btn sm" type="button" id="reviewBatchReturn" disabled>批量退回</button></div>
+            <div class="field"><label for="reviewBatchReason">退回原因（退回时必填）</label><textarea id="reviewBatchReason" rows="2"></textarea></div>
+            <div class="field"><label for="reviewBatchComment">批量评语（可选）</label><textarea id="reviewBatchComment" rows="2"></textarea></div>
+            <div class="mini" id="reviewBatchResult" role="status" aria-live="polite" style="white-space:pre-wrap"></div>
+          </div>
           <div class="table-wrap">
             <table>
-              <thead><tr><th>学生</th><th>文件</th><th>总分</th><th>状态</th></tr></thead>
-              <tbody><tr><td colspan="4" class="mini">暂无数据</td></tr></tbody>
+              <thead><tr><th><input type="checkbox" id="reviewSelectAll" aria-label="全选评审记录"></th><th>学生</th><th>文件</th><th>总分</th><th>状态</th></tr></thead>
+              <tbody id="reviewHistoryTb"><tr><td colspan="5" class="mini">暂无数据</td></tr></tbody>
             </table>
           </div>
           <div class="card-b" style="border-top:1px solid var(--line)">
             <div class="mini">正在查看：<b id="reviewViewing" style="color:var(--text)">暂无数据</b></div>
+            <h3>提交版本历史</h3>
+            <div id="reviewVersions" class="stack" aria-live="polite"><div class="mini">请选择评审记录</div></div>
           </div>
         </div>
 

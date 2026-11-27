@@ -47,7 +47,35 @@
     });
   }
 
+  function download(path, filename) {
+    var token = null;
+    try { token = localStorage.getItem("edu.token"); } catch (e) {}
+    return fetch(BASE + path, { headers: token ? { Authorization: "Bearer " + token } : {} }).then(function (res) {
+      if (!res.ok) {
+        if (res.status === 401 && window.EduAuth) window.EduAuth.clearSession();
+        return res.text().then(function (text) {
+          var data; try { data = JSON.parse(text); } catch (e) {}
+          throw new Error((data && (data.error || data.detail)) || ("下载失败：HTTP " + res.status));
+        });
+      }
+      return res.blob();
+    }).then(function (blob) {
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement("a");
+      a.href = url; a.download = filename || "附件";
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(function () { URL.revokeObjectURL(url); }, 60000);
+    });
+  }
+
   var api = {
+    download: download,
+    submissions: {
+      versions: function (sid) { return _req("/submissions/" + encodeURIComponent(sid) + "/versions"); },
+      downloadVersion: function (sid, version, filename) {
+        return download("/submissions/" + encodeURIComponent(sid) + "/versions/" + encodeURIComponent(version) + "/file", filename);
+      }
+    },
     base: BASE,
     health: function () { return _req("/health"); },
 
@@ -60,6 +88,9 @@
       bind: function (p) { return _req("/auth/bind", { method: "POST", body: p }); },
       password: function (oldPwd, newPwd) {
         return _req("/auth/password", { method: "POST", body: { old_password: oldPwd, new_password: newPwd } });
+      },
+      updateMe: function (p) {
+        return _req("/auth/me", { method: "PATCH", body: p });
       }
     },
 
@@ -84,6 +115,10 @@
       resetPasswords: function (pid) { return _req("/students/reset-passwords?project_id=" + (pid || ""), { method: "POST" }); }
     },
     student: {
+      versions: function (sid) { return _req("/student/submissions/" + encodeURIComponent(sid) + "/versions"); },
+      downloadVersion: function (sid, version, filename) {
+        return download("/student/submissions/" + encodeURIComponent(sid) + "/versions/" + encodeURIComponent(version) + "/file", filename);
+      },
       overview: function (pid) { return _req("/student/overview" + (pid ? "?project_id=" + pid : "")); },
       dashboard: function (pid) { return _req("/student/dashboard" + (pid ? "?project_id=" + pid : "")); },
       wrong: function (pid) { return _req("/student/wrong" + (pid ? "?project_id=" + pid : "")); },
@@ -154,6 +189,7 @@
       status: function (id, st) { return _req("/tutor/records/" + id, { method: "PATCH", body: { status: st } }); }
     },
     review: {
+      batch: function (p) { return _req("/review/batch", { method: "POST", body: p }); },
       rubrics: function () { return _req("/review/rubrics"); },
       evaluate: function (p) { return _req("/review/evaluate", { method: "POST", body: p }); },
       history: function (pid) { return _req("/review/history?project_id=" + (pid || "")); },

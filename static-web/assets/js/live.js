@@ -77,6 +77,39 @@
     clearTimeout(notify._t);
     notify._t = setTimeout(function () { el.classList.remove("on"); }, 2400);
   }
+  function showSubmissionVersions(container, sid, student) {
+    var request = {};
+    container._versionRequest = request;
+    container.textContent = "版本历史加载中…";
+    var service = student ? API.student : API.submissions;
+    service.versions(sid).then(function (data) {
+      if (container._versionRequest !== request) return;
+      var rows = Array.isArray(data) ? data : ((data || {}).versions || []);
+      container.innerHTML = rows.map(function (v) {
+        var reason = v.return_reason || v.reason || (v.status === 'returned' ? v.feedback : '') || "";
+        return '<div class="rule"><b>版本 ' + h(v.version) + '</b> · ' + h(v.file_name || "附件") +
+          '<div class="mini">' + h(fmtTime(v.created_at || v.submitted_at)) + ' · ' + h(v.status || "") + '</div>' +
+          (v.note ? '<div class="mini">备注：' + h(v.note) + '</div>' : '') +
+          (reason ? '<div class="mini">退回原因：' + h(reason) + '</div>' : '') +
+          '<button class="btn sm" type="button" data-version="' + h(v.version) + '">下载附件</button></div>';
+      }).join("") || '<div class="mini">暂无历史版本</div>';
+      $all("[data-version]", container).forEach(function (button, index) {
+        button.addEventListener("click", function () {
+          busy(button, true, "下载中…");
+          service.downloadVersion(sid, button.getAttribute("data-version"), rows[index].file_name).catch(function (err) {
+            notify("下载失败：" + err.message);
+          }).then(function () { busy(button, false); });
+        });
+      });
+    }).catch(function (err) {
+      if (container._versionRequest !== request) return;
+      container.textContent = "历史加载失败：" + err.message;
+      var retry = document.createElement("button");
+      retry.className = "btn sm"; retry.type = "button"; retry.textContent = "重试";
+      retry.addEventListener("click", function () { showSubmissionVersions(container, sid, student); });
+      container.appendChild(retry);
+    });
+  }
   function pid() { return Edu.state.selectedCourseId || (Edu.getSelectedCourse() && Edu.getSelectedCourse().id) || null; }
   function onLive(fn) {
     Edu.onCourseChange(function () {
@@ -829,6 +862,59 @@
     });
     var currentReviewId = null;
     var currentDims = [];
+    var selectedReviews = {};
+    var batchPending = false;
+    var reviewRows = [];
+    var recordRequest = 0;
+    function updateSelection() {
+      var checks = $all('#reviewHistoryTb [data-review-select]');
+      var count = Object.keys(selectedReviews).length;
+      var all = document.getElementById('reviewSelectAll');
+      if (all) {
+        all.checked = checks.length > 0 && count === checks.length;
+        all.indeterminate = count > 0 && count < checks.length;
+        all.disabled = batchPending || !checks.length;
+      }
+      checks.forEach(function (c) { c.checked = !!selectedReviews[c.value]; c.disabled = batchPending; });
+      document.getElementById('reviewSelectedCount').textContent = '已选 ' + count + ' 份';
+      ['reviewBatchPublish', 'reviewBatchReturn'].forEach(function (id) {
+        document.getElementById(id).disabled = batchPending || !count;
+      });
+    }
+    document.getElementById('reviewSelectAll').addEventListener('change', function (e) {
+      selectedReviews = {};
+      if (e.target.checked) reviewRows.forEach(function (r) { selectedReviews[String(r.task_id)] = true; });
+      updateSelection();
+    });
+    function batchReview(status) {
+      if (!Edu.isLive() || batchPending) return;
+      var ids = Object.keys(selectedReviews).map(Number);
+      var reason = document.getElementById('reviewBatchReason').value.trim();
+      var comment = document.getElementById('reviewBatchComment').value.trim();
+      var result = document.getElementById('reviewBatchResult');
+      if (!ids.length) return;
+      if (ids.length > 100) { result.textContent = '每次最多处理 100 份评审，请减少选择。'; return; }
+      if (status === 'returned' && !reason) { result.textContent = '请填写退回原因'; return; }
+      if (!window.confirm('确认' + (status === 'published' ? '发布' : '退回') + '所选 ' + ids.length + ' 份评审？')) return;
+      batchPending = true; updateSelection(); result.textContent = '正在处理…';
+      API.review.batch({ ids: ids, status: status, reason: reason, comment: comment || null }).then(function (data) {
+        var results = Array.isArray(data) ? data : ((data || {}).results || []);
+        var failed = [], success = 0;
+        ids.forEach(function (id) {
+          var item = results.filter(function (r) { return String(r.id != null ? r.id : r.task_id) === String(id); })[0];
+          if (item && (item.ok === true || item.success === true) && !item.error) {
+            delete selectedReviews[String(id)]; success++;
+          } else {
+            failed.push('评审 #' + id + '：' + (item && (item.error || item.message) || '未收到成功结果，请核对后重试'));
+          }
+        });
+        result.textContent = '成功 ' + success + ' 份，失败 ' + failed.length + ' 份。' + (failed.length ? '\n' + failed.join('\n') : '');
+        return loadHistory();
+      }).catch(function (err) { result.textContent = '批量操作失败：' + err.message + '。所选记录已保留，可重试。'; })
+        .then(function () { batchPending = false; updateSelection(); });
+    }
+    document.getElementById('reviewBatchPublish').addEventListener('click', function () { batchReview('published'); });
+    document.getElementById('reviewBatchReturn').addEventListener('click', function () { batchReview('returned'); });
     var finalForm = $('form[data-sim="#finalOut"]');
     if (finalForm) finalForm.addEventListener("submit", function (e) {
       if (!Edu.isLive()) return;
@@ -917,7 +1003,7 @@
       if (acc) acc.textContent = "AI 初评 " + (review.total != null ? review.total : "");
       var subTb = document.querySelectorAll("table tbody")[0];
       if (subTb && !skipRow) {
-        var row = '<tr><td><b>' + h(student || "学生") + '</b><div class="mini">—</div></td><td>' + h(name || "学生提交") + '</td><td>' + h(review.total) + '</td><td><span class="tag warn">待复核</span></td></tr>';
+        var row = '<tr><td></td><td><b>' + h(student || "学生") + '</b><div class="mini">—</div></td><td>' + h(name || "学生提交") + '</td><td>' + h(review.total) + '</td><td><span class="tag warn">待复核</span></td></tr>';
         subTb.insertAdjacentHTML("afterbegin", row);
       }
       // 终评表单预填
@@ -939,27 +1025,54 @@
     }
     function openRecord(tid) {
       if (!tid) return;
+      var request = ++recordRequest;
+      currentReviewId = null;
+      var versions = document.getElementById('reviewVersions');
+      versions._versionRequest = null;
+      versions.textContent = '加载中…';
+      resetReviewEvidence();
       API.review.get(tid).then(function (it) {
+        if (request !== recordRequest) return;
         currentReviewId = Number(tid);
         renderReview(it.review || {}, Number(tid), it.student, it.file_name, true);
         var vw = document.getElementById("reviewViewing");
         if (vw) {
-          var link = it.file_id
-            ? ' · <a class="mini" style="text-decoration:underline" target="_blank" href="' +
-              API.base + "/files/" + it.file_id + '/download">下载学生提交</a>'
-            : "";
-          vw.innerHTML = h(it.student || "学生") + " · " + h(it.file_name || "") + link;
+          vw.textContent = (it.student || '学生') + ' · ' + (it.file_name || '');
+          if (it.file_id) {
+            var download = document.createElement('button');
+            download.type = 'button'; download.className = 'btn sm'; download.textContent = '下载学生提交';
+            download.addEventListener('click', function () {
+              busy(download, true, '下载中…');
+              API.download('/files/' + encodeURIComponent(it.file_id) + '/download', it.file_name)
+                .catch(function (err) { notify('下载失败：' + err.message); })
+                .then(function () { busy(download, false); });
+            });
+            vw.appendChild(download);
+          }
         }
-      }).catch(function () {});
+        var row = reviewRows.filter(function (r) { return String(r.task_id) === String(tid); })[0];
+        var sid = it.submission_id || (row && row.submission_id);
+        if (sid) showSubmissionVersions(versions, sid, false);
+        else versions.textContent = '该评审未关联学生提交';
+      }).catch(function (err) {
+        if (request !== recordRequest) return;
+        currentReviewId = null; versions.textContent = '评审加载失败：' + err.message;
+        notify('评审加载失败：' + err.message);
+      });
     }
     function loadHistory() {
       var p = pid();
-      API.review.history(p).then(function (rows) {
+      return API.review.history(p).then(function (rows) {
+        if (String(p) !== String(pid())) return;
         rows = rows || [];
+        reviewRows = rows;
+        Object.keys(selectedReviews).forEach(function (id) {
+          if (!rows.some(function (r) { return String(r.task_id) === id; })) delete selectedReviews[id];
+        });
         var tb = document.querySelectorAll("table tbody")[0];
         if (tb) {
           if (!rows.length) {
-            tb.innerHTML = '<tr><td colspan="4" class="mini">暂无评审记录，上传学生提交后开始 AI 评审。</td></tr>';
+            tb.innerHTML = '<tr><td colspan="5" class="mini">暂无评审记录，上传学生提交后开始 AI 评审。</td></tr>';
           } else {
             tb.innerHTML = rows.map(function (r) {
               var st = r.status === "published" ? '<span class="tag ok">已发布</span>' :
@@ -967,10 +1080,19 @@
                        (r.status === "manual" ? '<span class="tag warn">需人工检查</span>' :
                        '<span class="tag warn">待复核</span>'));
               var sub = r.submission_id ? '<span class="mini"> · 学生提交</span>' : "";
-              return '<tr data-review-id="' + h(r.task_id) + '" style="cursor:pointer"><td><b>' + h(r.student || "学生") + '</b>' + sub + '</td><td>' + h(r.file_name || "") + '</td><td>' + (r.total != null ? h(r.total) : "—") + '</td><td>' + st + '</td></tr>';
+              return '<tr data-review-id="' + h(r.task_id) + '" style="cursor:pointer"><td><input type="checkbox" data-review-select value="' + h(r.task_id) + '" aria-label="选择评审 ' + h(r.task_id) + '"></td><td><b>' + h(r.student || "学生") + '</b>' + sub + '</td><td>' + h(r.file_name || "") + '</td><td>' + (r.total != null ? h(r.total) : "—") + '</td><td>' + st + '</td></tr>';
             }).join("");
             Array.prototype.forEach.call(tb.querySelectorAll("[data-review-id]"), function (tr) {
-              tr.addEventListener("click", function () { openRecord(tr.getAttribute("data-review-id")); });
+              tr.addEventListener("click", function (e) {
+                if (e.target.closest('input')) return;
+                openRecord(tr.getAttribute("data-review-id"));
+              });
+              var check = tr.querySelector('[data-review-select]');
+              check.addEventListener('change', function () {
+                if (check.checked) selectedReviews[check.value] = true;
+                else delete selectedReviews[check.value];
+                updateSelection();
+              });
             });
           }
         }
@@ -984,10 +1106,15 @@
         if (sc) sc.textContent = rows.length + " 份";
         var vw = document.getElementById("reviewViewing");
         if (vw) vw.textContent = rows[0] ? ((rows[0].student || "学生") + " · " + (rows[0].file_name || "")) : "暂无";
-        if (!currentReviewId && rows[0]) { currentReviewId = rows[0].task_id; openRecord(rows[0].task_id); }
-        // 无选中记录时清掉写死的假证据与终评预填
-        resetReviewEvidence();
-      }).catch(function () {});
+        updateSelection();
+        if (!rows.some(function (r) { return String(r.task_id) === String(currentReviewId); })) currentReviewId = null;
+        if (rows.length) openRecord(currentReviewId || rows[0].task_id);
+        else {
+          recordRequest++; currentReviewId = null; resetReviewEvidence();
+          var versions = document.getElementById('reviewVersions');
+          versions._versionRequest = null; versions.textContent = '暂无提交版本';
+        }
+      }).catch(function (err) { notify('评审列表加载失败：' + err.message); });
     }
     onLive(loadHistory);
   }
@@ -1485,20 +1612,41 @@
       }
       var tip = document.getElementById("stuBindTip");
       if (tip) tip.hidden = !!profile.bound;
-      var box = document.getElementById("stuProfileBox");
-      if (box) {
-        box.innerHTML = [
-          ["姓名", name],
-          ["学号", profile.student_no || profile.username || "—"],
-          ["学院", profile.college || "未填写"],
-          ["专业", profile.major || "未填写"],
-          ["班级", profile.class_name || "未填写"],
-          ["绑定状态", profile.bound ? "已绑定" : "未绑定"]
-        ].map(function (r) {
-          return '<div class="list-item"><div><div class="li-t">' + r[0] +
-            '</div><div class="li-s">' + h(r[1]) + '</div></div></div>';
-        }).join("");
-      }
+
+      /* 设置面板：填充表单字段 */
+      var fName = document.getElementById("pfName");
+      if (fName) fName.value = name;
+      var fNo = document.getElementById("pfNo");
+      if (fNo) fNo.value = profile.student_no || profile.username || "";
+      var fCol = document.getElementById("pfCollege");
+      if (fCol) fCol.value = profile.college || "";
+      var fMaj = document.getElementById("pfMajor");
+      if (fMaj) fMaj.value = profile.major || "";
+      var fCls = document.getElementById("pfClass");
+      if (fCls) fCls.value = profile.class_name || "";
+      var bindTag = document.getElementById("stuBindTag");
+      if (bindTag) bindTag.textContent = profile.bound ? "已绑定" : "未绑定";
+      var boundLine = document.getElementById("pfBoundLine");
+      if (boundLine) boundLine.textContent = profile.bound ? "已绑定学院 · 专业 · 班级" : "未绑定 — 请先在下方填写学籍";
+      var createdAt = document.getElementById("pfCreatedAt");
+      if (createdAt) createdAt.textContent = profile.created_at ? fmtTime(profile.created_at) : "—";
+
+      /* 外观字段：从 localStorage 恢复 */
+      try {
+        var look = JSON.parse(localStorage.getItem("edu.look") || "{}");
+        var pfLight = document.getElementById("pfLight");
+        var pfDark = document.getElementById("pfDark");
+        if (pfLight && pfDark) {
+          var isDark = look.theme === "dark";
+          pfLight.checked = !isDark;
+          pfDark.checked = isDark;
+        }
+        var pfFont = document.getElementById("pfFont");
+        if (pfFont && look.font) pfFont.value = String(look.font);
+        var pfSidebar = document.getElementById("pfSidebar");
+        if (pfSidebar && look.sidebar) pfSidebar.value = look.sidebar;
+      } catch (e) {}
+
       var pick = document.getElementById("coursePick");
       if (pick && courses.length) {
         pick.innerHTML = courses.map(function (c) {
@@ -1515,6 +1663,11 @@
       if (qp === undefined) {
         try { qp = new URLSearchParams(location.search).get("project_id") || undefined; } catch (e) { qp = undefined; }
       }
+      var historyPanel = document.getElementById('stuSubmissionHistory');
+      var historyVersions = document.getElementById('stuVersions');
+      historyPanel.hidden = true;
+      historyVersions._versionRequest = null;
+      historyVersions.textContent = '';
       return API.student.overview(qp).then(function (d) {
         courses = d.courses || [];
         currentPid = d.project_id || null;
@@ -1554,8 +1707,80 @@
         EduAuth.openBind({ forced: id === "stuBindBtn", onDone: function () { load(); } });
       });
     });
-    var pwdBtn = document.getElementById("stuPwdBtn");
-    if (pwdBtn) pwdBtn.addEventListener("click", function () { EduAuth.openPassword(); });
+
+    /* 设置面板：保存个人资料 */
+    var pfSaveBtn = document.getElementById("pfSaveBtn");
+    if (pfSaveBtn) pfSaveBtn.addEventListener("click", function () {
+      var body = {};
+      var dn = (document.getElementById("pfName").value || "").trim();
+      var col = (document.getElementById("pfCollege").value || "").trim();
+      var maj = (document.getElementById("pfMajor").value || "").trim();
+      var cls = (document.getElementById("pfClass").value || "").trim();
+      if (dn) body.display_name = dn;
+      if (col) body.college = col;
+      if (maj) body.major = maj;
+      if (cls) body.class_name = cls;
+      if (!Object.keys(body).length) { notify("没有需要保存的内容"); return; }
+      busy(pfSaveBtn, true, "保存中…");
+      var msg = document.getElementById("pfSaveMsg");
+      API.auth.updateMe(body).then(function (d) {
+        busy(pfSaveBtn, false);
+        notify("资料已保存");
+        if (msg) msg.textContent = "✓ 已保存";
+        load(currentPid);
+      }).catch(function (err) {
+        busy(pfSaveBtn, false); notify("保存失败：" + (err.message || err));
+        if (msg) msg.textContent = "保存失败";
+      });
+    });
+
+    /* 设置面板：修改密码 */
+    var pfPwdSave = document.getElementById("pfPwdSave");
+    if (pfPwdSave) pfPwdSave.addEventListener("click", function () {
+      var oldPwd = document.getElementById("pfOldPwd").value;
+      var newPwd = document.getElementById("pfNewPwd").value;
+      var newPwd2 = document.getElementById("pfNewPwd2").value;
+      if (!oldPwd || !newPwd) { notify("请填写原密码和新密码"); return; }
+      if (newPwd.length < 6) { notify("新密码至少 6 位"); return; }
+      if (newPwd !== newPwd2) { notify("两次新密码输入不一致"); return; }
+      busy(pfPwdSave, true, "更新中…");
+      var msg = document.getElementById("pfPwdMsg");
+      API.auth.password(oldPwd, newPwd).then(function (d) {
+        busy(pfPwdSave, false);
+        notify("密码已更新，请使用新密码重新登录");
+        if (msg) msg.textContent = "✓ 密码已更新";
+        // 清表单
+        document.getElementById("pfOldPwd").value = "";
+        document.getElementById("pfNewPwd").value = "";
+        document.getElementById("pfNewPwd2").value = "";
+        // 后端会返回新 token，更新 localStorage
+        if (d && d.token) { try { localStorage.setItem("edu.token", d.token); } catch (e) {} }
+      }).catch(function (err) {
+        busy(pfPwdSave, false); notify("密码更新失败：" + (err.message || err));
+        if (msg) msg.textContent = (err.message || err).toString().slice(0, 30);
+      });
+    });
+
+    /* 设置面板：外观 */
+    var pfLight = document.getElementById("pfLight");
+    var pfDark = document.getElementById("pfDark");
+    if (pfLight && pfDark) {
+      pfLight.addEventListener("change", function () { if (pfLight.checked) pfDark.checked = false; else pfLight.checked = true; });
+      pfDark.addEventListener("change", function () { if (pfDark.checked) pfLight.checked = false; else pfDark.checked = true; });
+    }
+    var pfLookSave = document.getElementById("pfLookSave");
+    if (pfLookSave) pfLookSave.addEventListener("click", function () {
+      var theme = (pfLight && pfLight.checked) ? "light" : "dark";
+      var font = document.getElementById("pfFont").value || "13.5";
+      var sidebar = document.getElementById("pfSidebar").value || "open";
+      try {
+        localStorage.setItem("edu.look", JSON.stringify({ theme: theme, font: font, sidebar: sidebar }));
+        // 应用主题
+        try { document.documentElement.dataset.theme = theme; } catch (e) {}
+        notify("外观已保存");
+      } catch (e) { notify("保存失败：" + e.message); }
+    });
+
     var outBtn = document.getElementById("stuLogoutBtn");
     if (outBtn) outBtn.addEventListener("click", function () { EduAuth.logout(); });
 
@@ -1664,18 +1889,25 @@
           if (!s) {
             st = '<span class="tag">未提交</span>';
             act = '<button class="btn sm" type="button" data-submit-task="' + t.id + '">提交作业</button>';
-          } else if (s.status === "reviewed") {
+          } else if (s.status === "reviewed" || s.status === "published") {
             st = '<span class="tag ok">已评分 ' + (s.score != null ? s.score : "—") + '</span>';
             act = '<button class="btn sm" type="button" data-goto-fb="1">查看反馈</button>';
           } else if (s.status === "returned") {
-            st = '<span class="tag warn">已退回</span>';
+            st = '<span class="tag warn">已退回</span><div class="mini">退回原因：' + h(s.return_reason || s.reason || s.feedback || '请联系教师确认') + '</div>';
             act = '<button class="btn sm" type="button" data-submit-task="' + t.id + '">重新提交</button>';
           } else {
             st = '<span class="tag warn">待评审</span>';
             act = '<button class="btn sm" type="button" data-submit-task="' + t.id + '">重新提交</button>';
           }
+          if (s) act += ' <button class="btn sm" type="button" data-submission-history="' + h(s.id) + '">版本历史</button>';
           return '<tr><td><b>' + h(title) + '</b></td><td>' + (isTrain ? "实训" : "备课") + '</td><td>' + (fmtTime(t.created_at) || "—") + '</td><td>' + st + '</td><td>' + act + '</td></tr>';
         }).join("");
+        $all('[data-submission-history]', taskTb).forEach(function (button) {
+          button.addEventListener('click', function () {
+            document.getElementById('stuSubmissionHistory').hidden = false;
+            showSubmissionVersions(document.getElementById('stuVersions'), button.getAttribute('data-submission-history'), true);
+          });
+        });
       }
       // 我的提问
       var qaStack = document.querySelector('[data-pane="qa"] .stack');
@@ -1701,7 +1933,7 @@
             var meta = r.meta || {};
             var teacher = meta.teacher || {};
             var total = teacher.total != null ? teacher.total : meta.final_total;
-            var comment = teacher.comment || ((meta.ai || {}).comment) || ((meta.ai || {}).summary) || "见评分详情。";
+            var comment = meta.status === 'returned' ? ('退回原因：' + (teacher.reason || meta.return_reason || meta.reason || teacher.comment || '请联系教师确认')) : (teacher.comment || ((meta.ai || {}).comment) || ((meta.ai || {}).summary) || "见评分详情。");
             var unread = i === 0 ? "0" : "1";
             var title = titleById[String(meta.submission_task_id || "")] || r.prompt || "作业反馈";
             var file = meta.file ? " · " + h(meta.file) : "";
