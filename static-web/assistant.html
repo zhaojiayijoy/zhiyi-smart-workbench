@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>AI 助手 · 致壹 智能教育工作台</title>
-<link rel="stylesheet" href="assets/css/site.css?v=1795789011">
+<link rel="stylesheet" href="assets/css/site.css?v=1795789601">
 <script src="assets/js/auth.js?v=1795770200"></script>
 </head>
 <body data-page="assistant">
@@ -15,35 +15,41 @@
     <main class="content" style="max-width:none;display:flex;flex-direction:column">
 
       <div class="page-head">
-        <div><h1>AI 助手</h1><p class="sub" data-page-sub>结合当前课程资料与学情回答问题，生成内容需教师确认</p></div>
-        <div class="right"><span class="tag acc">已加载 <b data-fill="course.resourceCount">—</b> 课程资料</span><button class="btn" type="button" data-demo="已新建对话">新建对话</button></div>
+        <div><h1>AI 助手</h1><p class="sub" data-page-sub>结合当前课程资料与学情回答问题，生成内容需教师确认<span class="mini" style="margin-left:8px">已加载 <b data-fill="course.resourceCount">—</b> 份课程资料</span></p></div>
+        <div class="right"><button class="btn" type="button" data-new-chat>新建对话</button></div>
       </div>
 
-      <div style="display:flex;flex-direction:column;flex:1;min-height:calc(100vh - 200px)">
-        <div style="flex:1;min-height:0;overflow:auto;padding:4px 2px 12px">
-          <div class="chat" id="chat">
-            <div class="msg ai">
-              <div class="who">AI</div>
-              <div class="bubble">你好。我可以围绕「<b data-fill="course.name">—</b>」协助备课与学情分析，生成内容请核对后使用：
-                <ul>
-                  <li>把某个知识点改写成课堂导入</li>
-                  <li>根据错误类型生成针对性练习</li>
-                  <li>对比两版教案的差异并给出修改建议</li>
-                </ul>
+      <div style="display:flex;gap:14px;flex:1;min-height:calc(100vh - 200px)">
+        <aside class="chat-history" id="chatHistory">
+          <div class="ch-title"><b>对话历史</b><span class="mini" data-hist-count>—</span></div>
+          <div class="ch-list" id="chatHistoryList"></div>
+        </aside>
+        <div style="flex:1;min-width:0;display:flex;flex-direction:column">
+          <div style="flex:1;min-height:0;overflow:auto;padding:4px 2px 12px">
+            <div class="chat" id="chat">
+              <div class="msg ai">
+                <div class="who">AI</div>
+                <div class="bubble">你好。我可以围绕「<b data-fill="course.name">—</b>」协助备课与学情分析，生成内容请核对后使用：
+                  <ul>
+                    <li>把某个知识点改写成课堂导入</li>
+                    <li>根据错误类型生成针对性练习</li>
+                    <li>对比两版教案的差异并给出修改建议</li>
+                  </ul>
+                </div>
               </div>
             </div>
+            <div class="checks" id="suggests" style="margin-top:12px">
+              <button class="chk" type="button" data-prompt="生成一组区分参照群体与意见领袖的练习题">生成练习</button>
+              <button class="chk" type="button" data-prompt="把第 6 次课的教案压缩成 45 分钟版本">压缩教案</button>
+              <button class="chk" type="button" data-prompt="总结近 30 天学情中最需要干预的三个问题">总结学情</button>
+            </div>
           </div>
-        </div>
-        <div style="padding:12px 0 0">
-          <div class="checks" id="suggests" style="margin-bottom:8px">
-            <button class="chk" type="button" data-prompt="生成一组区分参照群体与意见领袖的练习题">生成练习</button>
-            <button class="chk" type="button" data-prompt="把第 6 次课的教案压缩成 45 分钟版本">压缩教案</button>
-            <button class="chk" type="button" data-prompt="总结近 30 天学情中最需要干预的三个问题">总结学情</button>
+          <div style="padding:12px 0 0">
+            <form class="composer" id="composer">
+              <textarea placeholder="输入问题，Enter 发送，Shift+Enter 换行" rows="2"></textarea>
+              <button class="btn primary" type="submit">发送</button>
+            </form>
           </div>
-          <form class="composer" id="composer">
-            <textarea placeholder="输入问题，Enter 发送，Shift+Enter 换行" rows="2"></textarea>
-            <button class="btn primary" type="submit">发送</button>
-          </form>
         </div>
       </div>
 
@@ -53,8 +59,8 @@
 
 <div class="toast"></div>
 <script src="assets/js/data.js?v=1795420906"></script>
-<script src="assets/js/site.js?v=1795789002"></script>
+<script src="assets/js/site.js?v=1795789602"></script>
 <script src="assets/js/api.js?v=1795770000"></script>
-<script src="assets/js/live.js?v=1795789003"></script>
+<script src="assets/js/live.js?v=1795789603"></script>
 </body>
 </html>

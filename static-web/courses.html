@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>课程项目 · 致壹 智能教育工作台</title>
-<link rel="stylesheet" href="assets/css/site.css?v=1795789011">
+<link rel="stylesheet" href="assets/css/site.css?v=1795789601">
 <script src="assets/js/auth.js?v=1795770200"></script>
 </head>
 <body data-page="courses">
@@ -17,7 +17,6 @@
       <div class="page-head">
         <div><h1>课程项目</h1><p class="sub" id="pageSub">课程是备课、答疑、实训与学情分析共用的上下文</p></div>
         <div class="right">
-          <a class="btn" href="#newCourse">＋ 新建课程项目</a>
           <a class="btn primary" href="lesson.html">继续备课</a>
         </div>
       </div>
@@ -55,65 +54,6 @@
         <div class="card-h"><h2>教学轮次（子项目）</h2><div class="right"><span class="mini" id="roundsCount">—</span></div></div>
         <div class="card-b" id="roundsBody">
           <div class="mini" style="padding:6px 0">本课程还没有历史轮次。完成本轮并发起新的教学任务后，上一轮会自动打包归档到这里。</div>
-        </div>
-      </div>
-
-      <div class="card fold" style="margin-bottom:14px" id="newCourse">
-        <div class="card-h" data-fold-head aria-expanded="false"><h2>＋ 新建课程项目</h2><div class="right"><span class="mini">带 * 为必填</span><span class="fold-caret">▾</span></div></div>
-        <div class="card-b">
-          <form id="newCourseForm" novalidate>
-            <h3>课程基本信息</h3>
-            <div class="grid g3">
-              <div class="field"><label>课程名称 *</label><input type="text" id="nf_name" name="courseName" required placeholder="例如：消费者行为分析"></div>
-              <div class="field"><label>授课班级或对象 *</label><input type="text" id="nf_class" name="className" required placeholder="例如：市场营销 24-1"></div>
-              <div class="field unit-field"><label>课时 *</label><input type="number" id="nf_hours" name="totalHours" min="1" required placeholder="请输入数字"><span class="unit-suffix">课时</span></div>
-            </div>
-            <div class="grid g3">
-              <div class="field unit-field"><label>班级人数</label><input type="number" id="nf_size" name="classSize" min="1" placeholder=""><span class="unit-suffix">人</span></div>
-              <div class="field"><label>教材 / 课程标准版本</label><input type="text" id="nf_textbook" name="textbook" placeholder="例如：第 5 版"></div>
-              <div class="field unit-field"><label>课程总课次</label><input type="number" id="nf_totalSessions" name="totalSessions" min="1" placeholder=""><span class="unit-suffix">次课</span></div>
-            </div>
-            <div class="grid g2">
-              <div class="field"><label>课程描述 / 备注（可选）</label><input type="text" id="nf_desc" name="desc" placeholder="一句话说明课程定位或授课时间、场地"></div>
-            </div>
-
-            <h3 style="margin-top:6px">教学目标</h3>
-            <div class="field"><label>课程学习目标 *</label><textarea id="nf_objectives" name="objectives" required placeholder="知识目标、能力目标、素养目标，可分行填写"></textarea></div>
-            <div class="grid g2">
-              <div class="field"><label>重点</label><input type="text" id="nf_key" name="key" placeholder="例如：消费者决策模型"></div>
-              <div class="field"><label>难点</label><input type="text" id="nf_diff" name="diff" placeholder="例如：情境因素对决策的干扰"></div>
-            </div>
-
-            <h3 style="margin-top:6px">当前教学进度</h3>
-            <div class="field" style="max-width:260px">
-              <label>已进行到第几次课 <span style="color:var(--text-3);font-weight:400">（不能大于上方总课次）</span></label>
-              <div class="unit-field">
-                <input type="number" id="nf_currentSession" name="currentSession" min="1" placeholder="">
-                <span class="unit-suffix">次课</span>
-              </div>
-            </div>
-
-            <h3 style="margin-top:6px">新一轮设置</h3>
-            <div class="field">
-              <div class="checks">
-                <label class="chk on"><input type="checkbox" id="nf_archivePrev">把当前课程打包归档为子项目，并创建它的新一轮</label>
-              </div>
-              <span class="hint" id="archiveHint">归档后会为新轮次保留课程档案、教学资料与当前教学进度；旧项目作为历史轮次保留，可在上方「教学轮次」中查看并下载归档包。</span>
-            </div>
-
-            <div class="form-actions">
-              <button class="btn" type="submit">创建课程项目</button>
-              <button class="btn" type="reset" id="nfReset">取消</button>
-              <span class="mini">创建后会自动成为当前课程，并用于备课与学情分析。</span>
-            </div>
-          </form>
-          <div id="draftPreviewBar" class="draft-bar" hidden>
-            <span class="dot"></span>
-            <span>草稿预览：<b id="draftPreviewText">—</b></span>
-          </div>
-          <div class="rule" id="courseCreated" hidden style="margin-top:12px">
-            课程项目已创建。现在这门课程已设为当前课程，并可用于备课与学情分析。
-          </div>
         </div>
       </div>
 
@@ -156,9 +96,9 @@
 
 <div class="toast"></div>
 <script src="assets/js/data.js?v=1795420906"></script>
-<script src="assets/js/site.js?v=1795789002"></script>
+<script src="assets/js/site.js?v=1795789602"></script>
 <script src="assets/js/api.js?v=1795770000"></script>
-<script src="assets/js/live.js?v=1795789003"></script>
+<script src="assets/js/live.js?v=1795789603"></script>
 <script>
 /* ===== courses.html 页面专属逻辑 ===== */
 (function(){

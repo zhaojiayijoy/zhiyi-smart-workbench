@@ -42,13 +42,8 @@
     {
       label: "工具",
       items: [
-        { href: "assistant.html", icon: "spark", text: "AI 助手", page: "assistant" },
         { href: "tools.html", icon: "tool", text: "教学工具", page: "tools" }
       ]
-    },
-    {
-      label: "系统",
-      items: [{ href: "settings.html", icon: "gear", text: "设置", page: "settings" }]
     }
   ];
 
@@ -388,11 +383,54 @@
     var countEl = sec.querySelector("[data-proj-count]");
     if (!head || !body) return;
 
+    function isActive(c) { return c && c.status !== "archived" && !c.archived; }
+
+    // 初始视觉判定：有没有活跃课程 → 决定是否显示可收缩
+    function applyVisual(list) {
+      var hasActive = (list || []).some(isActive);
+      sec.classList.toggle("no-caret", !hasActive);
+      if (!hasActive) {
+        body.innerHTML = "";
+        body.style.display = "none";
+        head.removeAttribute("aria-expanded");
+        head.style.cursor = "pointer";
+        // 把 ▾ caret 去掉
+        var caret = head.querySelector(".caret");
+        if (caret) caret.style.display = "none";
+        return false;
+      }
+      body.style.display = "";
+      var caret = head.querySelector(".caret");
+      if (caret) caret.style.display = "";
+      return true;
+    }
+
+    // 先尝试用缓存判定；没缓存就 fetch 一次
+    var cached = (Edu.state && Edu.state.courses) || [];
+    var visualReady = cached.length > 0 ? applyVisual(cached) : false;
+    if (!visualReady && window.EduAPI && EduAPI.courses && typeof EduAPI.courses.list === "function") {
+      EduAPI.courses.list(true).then(function (list) {
+        Edu.state = Edu.state || {}; Edu.state.courses = list || [];
+        applyVisual(list);
+      }).catch(function () {});
+    }
+
+    // 监听课程变化：有/无活跃课程切换时更新外观
+    Edu.onCourseChange(function () {
+      var cur = (Edu.state && Edu.state.courses) || [];
+      if (cur.length) applyVisual(cur);
+      else if (window.EduAPI && EduAPI.courses) {
+        EduAPI.courses.list(true).then(function (list) {
+          Edu.state.courses = list || []; applyVisual(list);
+        }).catch(function () {});
+      }
+    });
+
     function load() {
       var c = getSelectedCourse();
       if (!c) {
         if (countEl) countEl.hidden = true;
-        body.innerHTML = '<div class="nav-sec-empty">还没有课程项目，<a href="courses.html#newCourse">新建一个</a></div>';
+        body.innerHTML = '<div class="nav-sec-empty">还没有课程项目，<a href="courses.html">新建一个</a></div>';
         return;
       }
       if (!Edu.isLive() || !window.EduAPI || !EduAPI.courses || typeof EduAPI.courses.rounds !== "function") {
@@ -432,7 +470,21 @@
     }
 
     head.addEventListener("click", function () {
-      setOpen(!sec.classList.contains("open"));
+      function toggle() { setOpen(!sec.classList.contains("open")); }
+      // 已判定为无活跃课程 → 不再 toggle，只弹引导窗
+      if (sec.classList.contains("no-caret")) { showEmptyCoursesModal(); return; }
+      if (!window.EduAPI || !EduAPI.courses) { toggle(); return; }
+      var cached2 = (Edu.state && Edu.state.courses) || [];
+      var hasActive = cached2.some(isActive);
+      if (hasActive) { toggle(); return; }
+      EduAPI.courses.list(true).then(function (list) {
+        list = list || [];
+        Edu.state.courses = list;
+        applyVisual(list);
+        var active = list.filter(isActive);
+        if (active.length === 0) { showEmptyCoursesModal(); return; }
+        toggle();
+      }).catch(function () { toggle(); });
     });
 
     body.addEventListener("click", function (e) {
@@ -465,9 +517,124 @@
     setOpen(saved !== "0", false);
   }
 
+  /* ---------- 空课程引导弹窗 ---------- */
+  function showEmptyCoursesModal() {
+    var mask = document.getElementById("modalEmptyCourses");
+    if (!mask) {
+      mask = document.createElement("div");
+      mask.className = "modal-mask";
+      mask.id = "modalEmptyCourses";
+      mask.innerHTML =
+        '<div class="modal" style="max-width:460px">' +
+        '<div class="modal-h"><b>还没有课程项目</b><button class="x" type="button" data-close-modal>×</button></div>' +
+        '<div class="modal-b">' +
+        '<div class="state is-warn" style="margin-bottom:12px">' +
+        '<div class="state-ic">+</div>' +
+        '<div><b>先建一门课程</b><span>所有教学环节（备课、实训、评审）都要挂在一门课程项目之下。</span></div>' +
+        '</div>' +
+        '<p class="sub">现在点击侧栏上方的 <b style="color:var(--acc)">「＋ 新建教学任务」</b> 按钮，在弹出的表单中填写课程名称、班级等信息即可开始。</p>' +
+        '</div>' +
+        '<div class="modal-f">' +
+        '<button class="btn" type="button" data-close-modal>稍后再说</button>' +
+        '<button class="btn primary" type="button" id="ecGoNewTask">去新建教学任务</button>' +
+        '</div>' +
+        '</div>';
+      document.body.appendChild(mask);
+    }
+    mask.classList.add("on");
+    var go = mask.querySelector("#ecGoNewTask");
+    if (go) {
+      go.onclick = function () {
+        mask.classList.remove("on");
+        var m = document.getElementById("modalNewCourse");
+        if (!m) { initModal(); m = document.getElementById("modalNewCourse"); }
+        if (m) m.classList.add("on");
+      };
+    }
+  }
+
+  /* ---------- AI 助手浮动按钮（可缩放 = 点击展开小面板） ---------- */
+  function initAssistantFab() {
+    // assistant.html 本身不需要 FAB（它就是 AI 助手页面）
+    if ((document.body && document.body.getAttribute("data-page") === "assistant")) return;
+    var btn = document.createElement("button");
+    btn.type = "button"; btn.className = "assist-fab"; btn.id = "assistFab";
+    btn.title = "AI 助手"; btn.setAttribute("aria-label", "AI 助手");
+    btn.innerHTML =
+      '<span class="fab-ic">' + ic("spark", 22) + '</span>' +
+      '<span class="fab-panel">' +
+        '<div class="fab-h"><b>AI 助手</b><button class="x" type="button" data-fab-close>×</button></div>' +
+        '<div class="fab-body">' +
+          '<div class="fab-sub">围绕当前课程资料快速提问</div>' +
+          '<textarea id="fabInput" placeholder="输入问题，Enter 发送" rows="2"></textarea>' +
+          '<div class="fab-actions">' +
+            '<button class="btn sm" type="button" data-fab-send>发送</button>' +
+            '<a class="btn sm ghost" href="assistant.html">打开完整助手页面 ›</a>' +
+          '</div>' +
+          '<div class="fab-prompts">' +
+            '<button class="fab-prompt" type="button" data-fab-prompt="生成一组练习题" data-prompt="生成一组练习题">生成练习</button>' +
+            '<button class="fab-prompt" type="button" data-fab-prompt="压缩教案" data-prompt="把当前教案压缩成 45 分钟版本">压缩教案</button>' +
+            '<button class="fab-prompt" type="button" data-fab-prompt="总结学情" data-prompt="总结近 30 天学情中最需要干预的三个问题">总结学情</button>' +
+          '</div>' +
+        '</div>' +
+      '</span>';
+    document.body.appendChild(btn);
+
+    var panel = btn.querySelector(".fab-panel");
+    var ta = btn.querySelector("#fabInput");
+    function open() { btn.classList.add("open"); setTimeout(function () { if (ta) ta.focus(); }, 50); }
+    function close() { btn.classList.remove("open"); }
+
+    btn.addEventListener("click", function (e) {
+      if (e.target.closest("[data-fab-close]")) { close(); return; }
+      if (e.target.closest(".fab-panel")) return; // 点面板内部不触发 toggle
+      // 点按钮本体 → toggle
+      if (e.target.closest(".fab-ic")) {
+        if (btn.classList.contains("open")) close(); else open();
+      }
+    });
+
+    // 发送按钮
+    btn.addEventListener("click", function (e) {
+      var send = e.target.closest("[data-fab-send]");
+      if (!send) return;
+      var text = (ta && ta.value || "").trim();
+      if (!text) return;
+      // 跳到 assistant.html ?q=xxx
+      location.href = "assistant.html?q=" + encodeURIComponent(text);
+    });
+    // 快捷 prompt
+    btn.addEventListener("click", function (e) {
+      var p = e.target.closest(".fab-prompt");
+      if (!p) return;
+      var text = p.getAttribute("data-prompt") || p.textContent || "";
+      location.href = "assistant.html?q=" + encodeURIComponent(text);
+    });
+    // textarea Enter 发送
+    if (ta) ta.addEventListener("keydown", function (e) {
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        var text = ta.value.trim();
+        if (!text) return;
+        location.href = "assistant.html?q=" + encodeURIComponent(text);
+      }
+    });
+    // ESC / 点外部关闭
+    document.addEventListener("keydown", function (e) {
+      if (e.key === "Escape") close();
+    });
+    document.addEventListener("click", function (e) {
+      if (!btn.classList.contains("open")) return;
+      if (btn.contains(e.target)) return;
+      close();
+    });
+  }
+
   function buildSidebar() {
     var aside = document.querySelector(".sidebar");
     if (!aside) return;
+    // 暴露给 modal 保存成功后触发侧栏刷新
+    if (window.Edu) Edu.renderSidebar = buildSidebar;
     var groups = isStudent ? STUDENT_GROUPS : GROUPS;
     var hash = (location.hash || "#home").slice(1);
     var nav = "";
@@ -476,7 +643,7 @@
       g.items.forEach(function (it) {
         if (!isStudent && it.page === "courses") {
           nav += '<div class="nav-sec" id="navProjects">' +
-              '<button class="nav-sec-h' + (page === "courses" ? " active" : "") + '" type="button" data-proj-toggle aria-expanded="false">' +
+              '<button class="nav-sec-h' + (page === "courses" ? " active" : "") + '" type="button" data-proj-toggle data-nav-courses aria-expanded="false">' +
                 ic(it.icon) + '<span class="lbl">' + it.text + '</span>' +
                 '<span class="cnt" data-proj-count hidden></span><span class="caret">▾</span>' +
               '</button>' +
@@ -506,12 +673,17 @@
     var newBtn = isStudent
       ? '<button type="button" data-go="student.html#tasks">' + ic("plus", 14) + " 我的学习任务</button>"
       : '<button type="button" data-new-task>' + ic("plus", 14) + " 新建教学任务</button>";
+    var homeHref = isStudent ? "student.html" : "index.html";
+    var homeBtnText = ic("home", 14) + " 首页";
+    var homeBtn = isStudent
+      ? '<button type="button" data-go="' + homeHref + '">' + homeBtnText + '</button>'
+      : '<button type="button" data-go="' + homeHref + '">' + homeBtnText + '</button>';
     aside.innerHTML =
-      '<a class="brand" href="' + (isStudent ? "student.html" : "index.html") + '">' +
+      '<a class="brand" href="' + homeHref + '">' +
         '<div class="mark">致</div>' +
         '<div><div class="name">' + window.EDU.brand.name + '</div><div class="sub">' + window.EDU.brand.sub + "</div></div>" +
       "</a>" +
-      '<div class="side-new">' + newBtn + "</div>" +
+      '<div class="side-new">' + homeBtn + newBtn + "</div>" +
       '<nav class="nav">' + nav + "</nav>" +
       '<div class="side-foot"><div class="avatar">' + (u.initials || "") + "</div>" +
         "<div><b>" + (isStudent ? (u.name || "学生") : "本地用户") + "</b><span>" + (isStudent ? (u.class || "") : "教师 · 单租户") + "</span></div></div>";
@@ -522,13 +694,86 @@
     var newTaskBtn = aside.querySelector("[data-new-task]");
     if (newTaskBtn) {
       newTaskBtn.addEventListener("click", function () {
-        if (page === "index" && window.EduNewTask && typeof window.EduNewTask.open === "function") {
-          window.EduNewTask.open();
-          return;
-        }
-        location.href = "index.html#newTask";
+        var mask = document.getElementById("modalNewCourse");
+        if (!mask) { initModal(); mask = document.getElementById("modalNewCourse"); }
+        if (mask) mask.classList.add("on");
       });
     }
+    // 侧栏底部头像卡 → 弹出菜单（上方弹，不是 modal 遮罩）
+    var foot = aside.querySelector(".side-foot");
+    if (foot) {
+      foot.style.cursor = "pointer";
+      foot.addEventListener("click", function (e) {
+        e.stopPropagation();
+        toggleSidePopover(foot, u, isStudent);
+      });
+    }
+    // 侧栏"个人资料"菜单项点击后的弹 modal：走侧栏头像卡事件委托统一处理
+    document.addEventListener("click", function (e) {
+      var item = e.target.closest("[data-side-item]");
+      if (!item) return;
+      var act = item.getAttribute("data-side-item");
+      closeSidePopover();
+      if (act === "profile") { openProfileModal(); }
+      else if (act === "settings") {
+        if (isStudent) location.href = "student.html#settings";
+        else location.href = "settings.html";
+      }
+    });
+    // 点侧栏头像卡之外、popover 之外 → 关掉 popover
+    document.addEventListener("click", function (e) {
+      if (!e.target.closest(".side-foot") && !e.target.closest(".side-popover")) {
+        closeSidePopover();
+      }
+    });
+    document.addEventListener("keydown", function (e) {
+      if (e.key === "Escape") closeSidePopover();
+    });
+  }
+
+  /* ---------- 侧栏头像卡弹出菜单 ---------- */
+  var _sidePopoverEl = null;
+  function toggleSidePopover(trigger, u, isStudent) {
+    if (_sidePopoverEl && _sidePopoverEl.classList.contains("on")) { closeSidePopover(); return; }
+    closeSidePopover();
+    // 从 auth.user 取完整学院/专业/班级（buildSidebar 传给的 u 是简化对象）
+    var fullUser = (window.EduAuth && window.EduAuth.user) || {};
+    var classLine = isStudent
+      ? ([fullUser.college, fullUser.major, fullUser.class_name].filter(Boolean).join(" · ") || "未绑定学籍")
+      : "教师 · 单租户";
+    var pop = document.createElement("div");
+    pop.className = "side-popover";
+    var items;
+    if (isStudent) {
+      items =
+        '<button class="sp-item" type="button" data-side-item="profile"><span class="sp-ic">👤</span><span>个人资料<span class="sp-sub">修改姓名 / 学院 / 专业 / 班级</span></span></button>' +
+        '<button class="sp-item" type="button" data-side-item="settings"><span class="sp-ic">⚙</span><span>设置<span class="sp-sub">外观 / 密码 / 账号状态</span></span></button>';
+    } else {
+      items = '<button class="sp-item" type="button" data-side-item="settings"><span class="sp-ic">⚙</span><span>设置<span class="sp-sub">外观 / 密码 / 账号状态</span></span></button>';
+    }
+    pop.innerHTML =
+      '<div class="sp-h"><b>' + (fullUser.display_name || fullUser.username || u.name || "本地用户") + '</b><span>' + classLine + '</span></div>' + items;
+    document.body.appendChild(pop);
+    _sidePopoverEl = pop;
+    // 定位：紧贴头像卡上方，用 fixed 定位
+    requestAnimationFrame(function () {
+      var r = trigger.getBoundingClientRect();
+      var ph = pop.offsetHeight;
+      var pw = pop.offsetWidth;
+      var top = r.top - ph - 8;
+      var left = Math.min(r.left + r.width - pw, r.right - pw);
+      if (top < 8) top = r.bottom + 8; // 极端窄屏下方空间不足 → 反向
+      pop.style.top = top + "px";
+      pop.style.left = left + "px";
+      pop.classList.add("on");
+    });
+  }
+  function closeSidePopover() {
+    if (!_sidePopoverEl) return;
+    _sidePopoverEl.classList.remove("on");
+    var el = _sidePopoverEl;
+    _sidePopoverEl = null;
+    setTimeout(function () { try { el.remove(); } catch (e) {} }, 160);
   }
 
   /* ---------- 顶栏 ---------- */
@@ -682,12 +927,56 @@
 
   /* ---------- 弹窗 ---------- */
   function initModal() {
-    var mask = document.querySelector("#modalNewTask");
-    if (!mask) {
-      mask = document.createElement("div");
-      mask.className = "modal-mask";
-      mask.id = "modalNewTask";
-      mask.innerHTML =
+    /* 弹窗 1：新建课程项目（任意页面可弹） */
+    var mc = document.querySelector("#modalNewCourse");
+    if (!mc) {
+      mc = document.createElement("div");
+      mc.className = "modal-mask";
+      mc.id = "modalNewCourse";
+      mc.innerHTML =
+        '<div class="modal" style="max-width:760px">' +
+        '<div class="modal-h"><b>新建课程项目</b><button class="x" type="button" data-close-modal>×</button></div>' +
+        '<div class="modal-b">' +
+        '<form id="newCourseForm" novalidate method="post" data-sim="#courseCreated">' +
+        '<h3>课程基本信息</h3>' +
+        '<div class="grid g3">' +
+        '<div class="field"><label>课程名称 *</label><input type="text" id="nf_name" name="courseName" required placeholder="例如：消费者行为分析"></div>' +
+        '<div class="field"><label>授课班级或对象 *</label><input type="text" id="nf_class" name="className" required placeholder="例如：市场营销 24-1"></div>' +
+        '<div class="field unit-field"><label>课时 *</label><input type="number" id="nf_hours" name="totalHours" min="1" required placeholder="请输入数字"><span class="unit-suffix">课时</span></div>' +
+        '</div>' +
+        '<div class="grid g3">' +
+        '<div class="field unit-field"><label>班级人数</label><input type="number" id="nf_size" name="classSize" min="1" placeholder=""><span class="unit-suffix">人</span></div>' +
+        '<div class="field"><label>教材 / 课程标准版本</label><input type="text" id="nf_textbook" name="textbook" placeholder="例如：第 5 版"></div>' +
+        '<div class="field unit-field"><label>课程总课次</label><input type="number" id="nf_totalSessions" name="totalSessions" min="1" placeholder=""><span class="unit-suffix">次课</span></div>' +
+        '</div>' +
+        '<div class="grid g2">' +
+        '<div class="field"><label>课程描述 / 备注（可选）</label><input type="text" id="nf_desc" name="desc" placeholder="一句话说明课程定位或授课时间、场地"></div>' +
+        '</div>' +
+        '<h3 style="margin-top:6px">教学目标</h3>' +
+        '<div class="field"><label>课程学习目标 *</label><textarea id="nf_objectives" name="objectives" required placeholder="知识目标、能力目标、素养目标，可分行填写"></textarea></div>' +
+        '<div class="grid g2">' +
+        '<div class="field"><label>重点</label><input type="text" id="nf_key" name="key" placeholder="例如：消费者决策模型"></div>' +
+        '<div class="field"><label>难点</label><input type="text" id="nf_diff" name="diff" placeholder="例如：情境因素对决策的干扰"></div>' +
+        '</div>' +
+        '<div class="form-actions">' +
+        '<button class="btn primary" type="submit">创建课程项目</button>' +
+        '<button class="btn" type="reset" id="nfReset">取消</button>' +
+        '<span class="mini">创建后会自动成为当前课程。</span>' +
+        '</div>' +
+        '</form>' +
+        '<div id="courseCreated" class="rule" hidden style="margin-top:12px"></div>' +
+        '</div>' +
+        '</div>';
+      document.body.appendChild(mc);
+    }
+
+    /* 弹窗 2：新建教学任务入口选择器（备课/实训/答疑/评审） */
+    var mask2 = document.querySelector("#modalNewTask");
+    if (!mask2) {
+      mask2 = document.createElement("div");
+      mask2.className = "modal-mask";
+      mask2.id = "modalNewTask";
+      mask2.innerHTML =
         '<div class="modal">' +
         '<div class="modal-h"><b>新建教学任务</b><button class="x" type="button" data-close-modal>×</button></div>' +
         '<div class="modal-b">' +
@@ -700,30 +989,114 @@
         '</div></div>' +
         '<div class="modal-f"><button class="btn" type="button" data-close-modal>关闭</button></div>' +
         '</div>';
+      document.body.appendChild(mask2);
+    }
+
+    /* 统一关闭逻辑（新建课程 / 新建任务 / 个人资料） */
+    document.addEventListener("click", function (e) {
+      if (e.target.closest("[data-close-modal]")) {
+        e.target.closest(".modal-mask").classList.remove("on");
+      }
+    });
+    document.querySelectorAll(".modal-mask").forEach(function (m) {
+      m.addEventListener("click", function (e) { if (e.target === m) m.classList.remove("on"); });
+    });
+    document.addEventListener("keydown", function (e) {
+      if (e.key === "Escape") {
+        document.querySelectorAll(".modal-mask.on").forEach(function (m) { m.classList.remove("on"); });
+      }
+    });
+
+    /* 关闭 modal（新建课程 / 新建任务）；个人资料 modal 由 openProfileModal 动态创建 */
+  }
+
+  /* ---------- 个人资料弹窗（单卡：修改公开资料） ---------- */
+  function openProfileModal() {
+    if (typeof window.EduAuth === "undefined" || !window.EduAuth.user) {
+      location.href = "login.html";
+      return;
+    }
+    var u = window.EduAuth.user;
+    var mask = document.getElementById("modalProfile");
+    if (!mask) {
+      mask = document.createElement("div");
+      mask.className = "modal-mask";
+      mask.id = "modalProfile";
       document.body.appendChild(mask);
     }
-    document.addEventListener("click", function (e) {
-      if (e.target.closest('[data-open-modal="new-task"]')) {
-        // 动态显示当前课程名
-        var sub = mask.querySelector(".modal-b [data-page-sub], .modal-b .sub");
-        if (sub) {
-          var cur = getSelectedCourse();
-          var name = cur ? (cur.name || "（未选课程）") : "（未选课程）";
-          // 如果已有 data-page-sub，则 fillCourseFields 已处理过；否则手动更新
-          if (sub.hasAttribute && sub.hasAttribute("data-page-sub")) {
-            // fillCourseFields 已自动更新，什么都不做
-          } else {
-            sub.textContent = '选择要开始的教学环节。所有内容都会关联到当前课程「' + name + '」。';
-          }
-        }
-        mask.classList.add("on");
-        return;
-      }
-      if (e.target.closest("[data-close-modal]")) { mask.classList.remove("on"); }
+    mask.innerHTML =
+      '<div class="modal" style="max-width:520px">' +
+      '<div class="modal-h"><b>个人资料</b><button class="x" type="button" data-close-modal>×</button></div>' +
+      '<div class="modal-b">' +
+      '<div class="field compact"><label>姓名</label><input id="mpName" value="' + (u.display_name || "") + '"></div>' +
+      '<div class="field compact"><label>学号（只读）</label><input value="' + (u.username || "") + '" readonly></div>' +
+      '<div class="grid g2" style="gap:8px">' +
+      '<div class="field compact"><label>学院</label><input id="mpCollege" value="' + (u.college || "") + '"></div>' +
+      '<div class="field compact"><label>专业</label><input id="mpMajor" value="' + (u.major || "") + '"></div>' +
+      '</div>' +
+      '<div class="field compact"><label>班级</label><input id="mpClass" value="' + (u.class_name || "") + '"></div>' +
+      '<div class="form-actions" style="margin-top:10px">' +
+      '<button class="btn primary sm" type="button" id="mpSave">保存资料</button>' +
+      '<button class="btn sm ghost" type="button" data-close-modal>取消</button>' +
+      '<span class="mini" id="mpSaveMsg" style="margin-left:auto"></span>' +
+      '</div>' +
+      '</div>' +
+      '<div class="modal-f"><button class="btn ghost" type="button" data-close-modal>关闭</button></div>' +
+      '</div>';
+
+    var saveBtn = mask.querySelector("#mpSave");
+    if (saveBtn) saveBtn.addEventListener("click", function () {
+      var body = {},
+        dn = (mask.querySelector("#mpName").value || "").trim(),
+        col = (mask.querySelector("#mpCollege").value || "").trim(),
+        maj = (mask.querySelector("#mpMajor").value || "").trim(),
+        cls = (mask.querySelector("#mpClass").value || "").trim();
+      if (dn) body.display_name = dn;
+      if (col) body.college = col;
+      if (maj) body.major = maj;
+      if (cls) body.class_name = cls;
+      if (!Object.keys(body).length) { toast("没有需要保存的内容"); return; }
+      saveBtn.disabled = true; saveBtn.innerHTML = '<span class="spin"></span> 保存中…';
+      var msg = mask.querySelector("#mpSaveMsg");
+      var useAPI = (typeof window.EduAPI !== "undefined" && EduAPI.auth);
+      var p = useAPI ? EduAPI.auth.updateMe(body) : apiFetch("/api/auth/me", "PATCH", body);
+      p.then(function () {
+        saveBtn.disabled = false; saveBtn.textContent = "保存资料";
+        toast("资料已保存");
+        if (msg) msg.textContent = "✓ 已保存";
+        if (window.EduAuth && window.EduAuth.user) { Object.assign(window.EduAuth.user, body); }
+        try { if (typeof Edu.renderSidebar === "function") Edu.renderSidebar(); } catch (e) {}
+        setTimeout(function () { mask.classList.remove("on"); }, 450);
+      }).catch(function (err) {
+        saveBtn.disabled = false; saveBtn.textContent = "保存资料";
+        var detail = err && (err.detail || err.message || err.error) || err;
+        toast("保存失败：" + String(detail).slice(0, 40));
+        if (msg) msg.textContent = "保存失败";
+      });
     });
-    mask.addEventListener("click", function (e) { if (e.target === mask) mask.classList.remove("on"); });
-    document.addEventListener("keydown", function (e) {
-      if (e.key === "Escape") mask.classList.remove("on");
+
+    mask.classList.add("on");
+  }
+
+  /* site.js 内置的 fetch 封装（兜底用，优先走 EduAPI） */
+  function apiFetch(path, method, body) {
+    var h = { "Content-Type": "application/json" };
+    try {
+      var tk = localStorage.getItem("edu.token");
+      if (tk) h["Authorization"] = "Bearer " + tk;
+    } catch (e) {}
+    var url = path;
+    if (path.charAt(0) === "/") {
+      var apiBase = (typeof EduAPI !== "undefined" && EduAPI.base) || "http://127.0.0.1:8700/api";
+      url = apiBase + path;
+    }
+    var opts = { method: method || "GET", headers: h, credentials: "same-origin" };
+    if (body) opts.body = JSON.stringify(body);
+    return fetch(url, opts).then(function (r) {
+      if (!r.ok) return r.json().catch(function () { return {}; }).then(function (d) {
+        throw new Error((d && d.detail) || r.statusText || r.status);
+      });
+      return r.json();
     });
   }
 
@@ -1095,5 +1468,6 @@
     Edu.onCourseChange(function () { fillCourseFields(); renderTopCourseSummary(); });
     initLive();
     initVersions();
+    initAssistantFab();
   });
 })();

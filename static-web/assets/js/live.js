@@ -55,6 +55,26 @@
       return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[m];
     });
   }
+  /* 知识点下拉：只使用课程内真实出现过的知识点；无数据时禁用并说明 */
+  function fillPointSelect(sel, points, hintEl) {
+    if (!sel) return;
+    var uniq = [];
+    (points || []).forEach(function (p) {
+      var v = String(p || "").trim();
+      if (v && uniq.indexOf(v) < 0) uniq.push(v);
+    });
+    if (!uniq.length) {
+      sel.innerHTML = '<option value="">由课程内容自动识别</option>';
+      sel.disabled = true;
+      if (hintEl) hintEl.textContent = "该课程尚未提供知识点，提交后由 AI 自动归类。";
+      return;
+    }
+    sel.innerHTML = '<option value="">不指定</option>' + uniq.map(function (v) {
+      return '<option value="' + h(v) + '">' + h(v) + '</option>';
+    }).join("");
+    sel.disabled = false;
+    if (hintEl) hintEl.textContent = "来自本课程已批改作业与历史答疑的知识点。";
+  }
   function fmtTime(ts) {
     if (!ts) return "";
     var d = new Date(ts * 1000);
@@ -223,9 +243,12 @@
   }
 
   /* ---------------- courses ---------------- */
-  function initCourses() {
-    var form = $('form[data-sim="#courseCreated"]');
-    if (form) form.addEventListener("submit", function (e) {
+  /* ---------------- 课程创建表单（全局事件委托，任何页面任何时候弹出 modal 都能提交） ---------------- */
+  function bindCourseCreateForm() {
+    // 事件委托：document 级监听，site.js initModal 随时 append 的新 form 也能捕获
+    document.addEventListener("submit", function (e) {
+      var form = e.target.closest('form[data-sim="#courseCreated"]');
+      if (!form) return;
       if (!Edu.isLive()) return;
       e.preventDefault(); e.stopImmediatePropagation();
       var btn = form.querySelector('[type="submit"]');
@@ -251,14 +274,17 @@
         notify("课程已创建：" + c.name);
         return API.courses.list().then(function (list) { Edu.state.courses = list || []; });
       }).then(function () {
-        selectCourse(vals._id || (Edu.state.courses[0] && Edu.state.courses[0].id));
-        var created = $("#courseCreated");
-        if (created) { created.hidden = false; created.textContent = "已创建课程「" + vals.name + "」并设为当前课程。"; }
+        selectCourse((Edu.state.courses && Edu.state.courses[0] && Edu.state.courses[0].id) || null);
         form.reset();
-        loadCourses();
+        // 创建成功后关掉 modal
+        var m = form.closest(".modal-mask");
+        if (m) m.classList.remove("on");
+        try { loadCourses(); } catch (e) {}
       }).catch(function (err) { busy(btn, false); notify("创建失败：" + (err.message || err)); });
     });
+  }
 
+  function initCourses() {
     function loadCourses() {
       var p = pid();
       API.courses.list().then(function (list) {
@@ -521,7 +547,14 @@
     });
 
     function loadDocs() {
-      var p = pid(); if (!p) return;
+      var p = pid();
+      var box0 = document.getElementById("docChecks");
+      var hint0 = document.getElementById("docHint");
+      if (!p) {
+        if (box0) box0.innerHTML = '<span class="mini">未选择课程，请先在顶部选择课程。</span>';
+        if (hint0) hint0.textContent = "选择课程后会自动列出该课程的资料。";
+        return;
+      }
       var box = document.getElementById("docChecks");
       var hint = document.getElementById("docHint");
       if (!box) return;
@@ -768,11 +801,24 @@
     }
     function loadTutor() {
       var p = pid();
+      var list0 = document.querySelector(".tutor-list .card-b");
+      if (!p) {
+        setKpis(document, [
+          { value: 0, foot: "近 30 天" }, { value: 0, foot: "解决率 0%" },
+          { value: 0, foot: "未解决" }, { value: "—", foot: "高频知识点" }
+        ]);
+        if (list0) list0.innerHTML = '<div class="mini" style="padding:14px 0">未选择课程，请先在顶部选择课程。</div>';
+        var cnt0 = document.getElementById("tutorCount");
+        if (cnt0) cnt0.textContent = "0 条";
+        fillPointSelect(document.getElementById("tutorPointSelect"), []);
+        return;
+      }
       Promise.all([API.tutor.history(p), API.tasks.list(p, "qa")]).then(function (res) {
         var threads = res[0] || [], qas = res[1] || [];
+        fillPointSelect(document.getElementById("tutorPointSelect"),
+          qas.map(function (t) { return (t.meta || {}).knowledge_point; }));
         setKpis(document, [
-          { value: qas.length, foot: "近 30 天" },
-          { value: qas.filter(function (t) { return t.status === "ok"; }).length, foot: "解决率 " + (qas.length ? Math.round(qas.filter(function (t) { return t.status === "ok"; }).length / qas.length * 100) : 0) + "%" },
+          { value: qas.length, foot: "近 30 天" },          { value: qas.filter(function (t) { return t.status === "ok"; }).length, foot: "解决率 " + (qas.length ? Math.round(qas.filter(function (t) { return t.status === "ok"; }).length / qas.length * 100) : 0) + "%" },
           { value: qas.filter(function (t) { return t.status !== "ok"; }).length, foot: "未解决" },
           { value: (function () { var m = {}; qas.forEach(function (t) { var k = ((t.meta || {}).knowledge_point || ""); if (k) m[k] = (m[k] || 0) + 1; }); var top = Object.keys(m).sort(function (a, b) { return m[b] - m[a]; })[0]; return top || "—"; })(), foot: "高频知识点" }
         ]);
@@ -1263,6 +1309,60 @@
   /* ---------------- assistant ---------------- */
   function initAssistant() {
     var chat = $("#chat"), form = $("#composer");
+    var HIST_KEY = "edu.chatHistory";
+
+    function loadHist() {
+      try { return JSON.parse(localStorage.getItem(HIST_KEY)) || []; } catch (e) { return []; }
+    }
+    function saveHist(h) { try { localStorage.setItem(HIST_KEY, JSON.stringify(h.slice(0, 30))); } catch (e) {} }
+    function renderHist() {
+      var list = loadHist();
+      var box = $("#chatHistoryList"), cnt = document.querySelector("[data-hist-count]");
+      if (cnt) cnt.textContent = list.length ? list.length : "";
+      if (!box) return;
+      if (!list.length) { box.innerHTML = '<div class="ch-empty">还没有历史对话</div>'; return; }
+      box.innerHTML = list.map(function (h, i) {
+        var d = new Date(h.ts);
+        var dateStr = (d.getMonth() + 1) + "/" + d.getDate() + " " + String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0");
+        return '<button type="button" class="ch-item" data-idx="' + i + '">' +
+          '<b>' + (h.preview || "未命名对话") + '</b>' +
+          '<span class="mini">' + dateStr + '</span>' +
+          '</button>';
+      }).join("");
+    }
+    function snapshotChat() {
+      if (!chat) return null;
+      var welcome = chat.querySelector(".msg.ai");
+      var all = chat.querySelectorAll(".msg");
+      var msgs = [];
+      for (var i = 0; i < all.length; i++) {
+        var m = all[i];
+        if (welcome && m === welcome) continue;
+        var bubble = m.querySelector(".bubble");
+        if (!bubble) continue;
+        var role = m.classList.contains("me") ? "me" : "ai";
+        var txt = (bubble.innerText || bubble.textContent || "").trim();
+        if (!txt) continue;
+        msgs.push({ role: role, text: txt });
+      }
+      if (!msgs.length) return null;
+      // 用第一条用户消息的前 24 字当标题
+      var title = "AI 助手对话";
+      for (var j = 0; j < msgs.length; j++) {
+        if (msgs[j].role === "me") { title = msgs[j].text.replace(/\s+/g, " ").slice(0, 24) || title; break; }
+      }
+      return { ts: Date.now(), preview: title, messages: msgs };
+    }
+    function restoreChat(histItem) {
+      if (!chat || !histItem) return;
+      var welcome = chat.querySelector(".msg.ai");
+      chat.innerHTML = "";
+      if (welcome) chat.appendChild(welcome);
+      (histItem.messages || []).forEach(function (m) {
+        appendMsg(m.role, m.text.replace(/\n/g, "<br>"));
+      });
+    }
+
     onLive(function () {
       // 清空内置演示对话，只保留欢迎语（第一条 .msg.ai），并隐藏演示提示
       if (chat) {
@@ -1272,6 +1372,43 @@
       }
       var demoNote = document.getElementById("assistantDemoNote");
       if (demoNote) demoNote.style.display = "none";
+    });
+    renderHist();
+
+    // 历史侧栏点击
+    var histList = $("#chatHistoryList");
+    if (histList) histList.addEventListener("click", function (e) {
+      var b = e.target.closest(".ch-item");
+      if (!b) return;
+      var idx = Number(b.getAttribute("data-idx"));
+      var h = loadHist();
+      if (h[idx]) restoreChat(h[idx]);
+    });
+    // 历史侧栏右键删除
+    if (histList) histList.addEventListener("contextmenu", function (e) {
+      var b = e.target.closest(".ch-item");
+      if (!b) return;
+      e.preventDefault();
+      if (!confirm("删除这条历史对话？")) return;
+      var idx = Number(b.getAttribute("data-idx"));
+      var h = loadHist(); h.splice(idx, 1); saveHist(h); renderHist();
+    });
+
+    // 新建对话按钮：保存当前到历史 → 清空 chat（保留 welcome）
+    document.addEventListener("click", function (e) {
+      var btn = e.target.closest("[data-new-chat]");
+      if (!btn) return;
+      var snap = snapshotChat();
+      if (snap) {
+        var h = loadHist(); h.unshift(snap); saveHist(h);
+      }
+      if (chat) {
+        var welcome = chat.querySelector(".msg.ai");
+        chat.innerHTML = "";
+        if (welcome) chat.appendChild(welcome);
+      }
+      renderHist();
+      notify(snap ? "已保存到历史" : "已新建对话");
     });
     function appendMsg(role, html) {
       if (!chat) return;
@@ -1400,12 +1537,22 @@
       }).catch(function () {});
     }
     onLive(loadFiles);
-    // 页头「上传资料」按钮：直接选文件上传（默认师生可见、分类「资料」）
-    var topUp = $all("button").filter(function (b) { return b.textContent.indexOf("上传资料") > -1 && !b.closest("form"); })[0];
+    // 页头「上传资料」按钮：滚动到唯一的上传表单并聚焦文件选择（不再另开隐藏上传入口）
+    var topUp = document.getElementById("filesQuickUpload") ||
+      $all("button").filter(function (b) { return b.textContent.indexOf("上传资料") > -1 && !b.closest("form"); })[0];
     if (topUp) topUp.addEventListener("click", function (e) {
       if (!Edu.isLive()) return;
       e.preventDefault(); e.stopImmediatePropagation();
       var p = pid(); if (!p) { notify("请先选择课程"); return; }
+      var form = document.getElementById("fileUploadForm");
+      if (form) {
+        var card = document.getElementById("fileUploadCard");
+        if (card) card.scrollIntoView({ behavior: "smooth", block: "center" });
+        var picker = form.querySelector('input[type="file"]');
+        if (picker) setTimeout(function () { picker.focus(); }, 220);
+        notify("请在下方选择文件并确认可见范围");
+        return;
+      }
       var input = document.createElement("input");
       input.type = "file"; input.multiple = true;
       input.accept = ".pdf,.docx,.doc,.pptx,.ppt,.md,.txt,.csv,.xlsx,.xls,.png,.jpg,.jpeg";
@@ -1598,6 +1745,8 @@
     var courses = [];
 
     function renderProfile(p) {
+      // 学生页的「个人资料」tab 已移除：现在改资料走侧栏头像卡弹窗
+      if (!document.getElementById("pfName")) return;
       profile = p || {};
       var name = profile.display_name || profile.username || "同学";
       var nameEl = document.getElementById("stuName");
@@ -1843,6 +1992,9 @@
           trains = d.trainings || [], lessons = d.lessons || [];
       var subs = {};
       (d.my_submissions || []).forEach(function (s) { subs[String(s.task_id)] = s; });
+      fillPointSelect(document.getElementById("qaPointSelect"),
+        myQa.map(function (q) { return q.knowledge_point; }),
+        document.getElementById("qaPointHint"));
       var allTasks = trains.concat(lessons);
       var pending = allTasks.filter(function (t) {
         var s = subs[String(t.id)];
@@ -1850,9 +2002,9 @@
       }).length;
       var scored = (d.my_submissions || []).filter(function (s) { return s.status === "reviewed" && s.score != null; });
       setKpis(document, [
-        { value: pending, foot: "待完成任务" },
-        { value: (d.my_submissions || []).filter(function (s) { return s.status === "submitted"; }).length, foot: "待评审提交" },
-        { value: scored.length ? Math.round(scored.reduce(function (a, s) { return a + Number(s.score || 0); }, 0) / scored.length) : 0, foot: "作业平均分" },
+        { value: pending, foot: "含退回待重交" },
+        { value: (d.my_submissions || []).filter(function (s) { return s.status === "submitted"; }).length, foot: "等待教师评审" },
+        { value: scored.length ? Math.round(scored.reduce(function (a, s) { return a + Number(s.score || 0); }, 0) / scored.length) : 0, foot: "已评分作业均分" },
         { value: wrong.total || 0, foot: "已讲解 " + (wrong.corrected || 0) + " 题" }
       ]);
       // 顶部副文案由学籍信息渲染（renderProfile），这里不再覆盖
@@ -2025,6 +2177,9 @@
     files: initFiles, tasks: initTasks, settings: initSettings, student: initStudent, tools: initTools
   };
   try { (inits[page] || function () {})(); } catch (e) { console.error("[live init]", e); }
+
+  /* 任何页面都可能弹 modalNewCourse（由 site.js initModal 动态构建），全局绑定表单提交 */
+  bindCourseCreateForm();
 
   /* Live 下：等 isLive 就绪（课程变更事件）后拉取真实模型名，替换全站写死的"智谱 GLM-4" */
   onLive(function () {

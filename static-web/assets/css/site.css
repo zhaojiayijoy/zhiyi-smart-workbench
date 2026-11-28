@@ -191,7 +191,7 @@ button,input,select,textarea{font-family:inherit;font-size:var(--edu-font,13.5px
 .brand .mark{width:28px;height:28px;border-radius:9px;background:linear-gradient(150deg,#426D5B,#365B4C);color:#FFFCF6;display:grid;place-items:center;font-weight:700;font-size:13px}
 .brand .name{font-weight:650;font-size:14px;letter-spacing:-.1px;line-height:1.2}
 .brand .sub{font-size:10.5px;color:var(--text-3)}
-.side-new{margin:6px 12px 8px}
+.side-new{margin:4px 12px 8px;display:flex;flex-direction:column;gap:6px}
 .side-new button{width:100%;border:1px solid var(--accent-line);background:var(--accent);color:#FFFCF6;border-radius:9px;padding:8px 10px;font-weight:600;cursor:pointer;box-shadow:0 1px 2px rgba(54,91,76,.25)}
 .side-new button:hover{background:var(--accent-2)}
 .nav{flex:1;overflow:auto;padding:2px 10px 14px}
@@ -409,6 +409,23 @@ td.wrap{white-space:normal}
 .compact-bar{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 16px;background:var(--panel);border:1px solid var(--line);border-radius:10px;margin-bottom:14px;box-shadow:var(--shadow)}
 .compact-bar h2{font-size:16px;margin:0;letter-spacing:-.2px}
 .compact-bar .sub{margin:2px 0 0;font-size:11.5px;color:var(--text-3)}
+/* 紧凑表单字段：用于弹窗内字段，减少行高 */
+.field.compact{margin-bottom:8px}
+.field.compact label{font-size:11.5px;margin-bottom:2px}
+.field.compact input,.field.compact textarea,.field.compact select{padding:5px 8px;font-size:12.5px}
+
+/* 侧栏头像卡 → 弹出菜单（popover，不是 modal 遮罩） */
+.side-popover{position:fixed;z-index:60;min-width:220px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:6px;box-shadow:0 8px 28px rgba(37,50,45,.14);opacity:0;transform:translateY(6px);pointer-events:none;transition:opacity .16s ease,transform .16s ease}
+.side-popover.on{opacity:1;transform:translateY(0);pointer-events:auto}
+.side-popover::after{content:"";position:absolute;left:28px;top:-5px;width:10px;height:10px;background:var(--panel);border-left:1px solid var(--line);border-top:1px solid var(--line);transform:rotate(45deg)}
+.sp-h{padding:10px 12px;border-bottom:1px solid var(--line);margin-bottom:2px}
+.sp-h b{display:block;font-size:13px;font-weight:600;color:var(--text)}
+.sp-h span{display:block;font-size:11px;color:var(--text-3);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:240px}
+.sp-item{display:flex;align-items:flex-start;gap:10px;width:100%;text-align:left;padding:9px 12px;border:none;background:transparent;border-radius:7px;cursor:pointer;color:var(--text);font:inherit}
+.sp-item:hover{background:var(--panel-2)}
+.sp-ic{font-size:15px;line-height:1;padding-top:1px;flex-shrink:0}
+.sp-item>span:last-child{display:flex;flex-direction:column;gap:1px}
+.sp-sub{font-size:11px;color:var(--text-3);font-weight:400}
 /* 学生反馈卡 */
 .fb{cursor:pointer;transition:border-color .15s,box-shadow .15s}
 .fb:hover{border-color:var(--accent-line);box-shadow:0 3px 12px rgba(37,50,45,.07)}
@@ -554,6 +571,10 @@ tbody tr:focus-visible,.tq:focus-visible{outline:2px solid var(--accent);outline
 .rule b{color:var(--text);font-weight:600}
 .qbox{background:#FBF7EE;border-left:3px solid var(--accent-line);border-radius:0 8px 8px 0;padding:10px 12px;font-size:12.5px;color:var(--text-2)}
 
+/* ===== 危险操作按钮（清空 / 删除类） ===== */
+.btn.danger{color:var(--warn);border-color:rgba(184,120,62,.45)}
+.btn.danger:hover{background:rgba(184,120,62,.10);border-color:var(--warn)}
+
 /* ===== 卡片内空状态：图标 + 标题 + 说明 + 行动入口 ===== */
 .empty-mini{display:flex;flex-direction:column;align-items:flex-start;gap:6px;padding:10px 0}
 .empty-mini .em-ic{width:26px;height:26px;border-radius:8px;background:var(--accent-soft);color:var(--accent);
@@ -575,6 +596,10 @@ tbody tr:focus-visible,.tq:focus-visible{outline:2px solid var(--accent);outline
   .content{padding:18px}
 }
 @media (max-width:680px){
+  /* 窄屏：顶栏不换行、表格保底可读宽度 */
+  .topbar{white-space:nowrap}
+  .topbar > *{flex-shrink:0}
+  .table-wrap table{min-width:640px}
   .g2,.g3,.g4,.g6,.quick{grid-template-columns:1fr}
   .page-head{flex-wrap:wrap}
   .course-summary{display:none}
@@ -636,3 +661,89 @@ body[data-page="courses"] .card-b .k{display:block;line-height:1.5;margin-bottom
 body[data-page="courses"] .proj-meta{line-height:1.6}
 body[data-page="courses"] .form-actions{flex-wrap:wrap;row-gap:6px}
 body[data-page="courses"] .form-actions .mini{line-height:1.5}
+
+/* ===== 侧栏 nav-sec：无活跃课程时不显示可收缩 ===== */
+.nav-sec.no-caret .caret{display:none!important}
+.nav-sec.no-caret .nav-sec-b{display:none!important}
+.nav-sec.no-caret .nav-sec-h{cursor:pointer}
+.nav-sec.no-caret .nav-sec-h:hover{background:var(--panel)}
+
+/* ===== AI 助手浮动按钮（FAB）===== */
+.assist-fab{
+  position:fixed;right:22px;bottom:22px;z-index:80;
+  width:48px;height:48px;border-radius:50%;
+  border:none;background:var(--accent);color:#FFFCF6;
+  box-shadow:0 4px 14px rgba(54,91,76,.35);
+  cursor:pointer;display:flex;align-items:center;justify-content:center;
+  transition:transform .15s, box-shadow .15s;
+}
+.assist-fab:hover{transform:scale(1.06);box-shadow:0 6px 20px rgba(54,91,76,.45)}
+.assist-fab .fab-ic{display:flex;align-items:center;justify-content:center}
+.assist-fab .fab-panel{
+  position:absolute;right:0;bottom:56px;width:340px;
+  background:var(--bg-2);border:1px solid var(--line);border-radius:14px;
+  box-shadow:0 12px 36px rgba(0,0,0,.18);
+  display:none;flex-direction:column;overflow:hidden;
+  transform-origin:bottom right;
+  animation:fabIn .18s ease-out;
+}
+.assist-fab.open .fab-panel{display:flex}
+@keyframes fabIn{from{opacity:0;transform:scale(.92) translateY(8px)}to{opacity:1;transform:none}}
+.assist-fab .fab-h{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:10px 14px;border-bottom:1px solid var(--line);
+}
+.assist-fab .fab-h b{font-size:13.5px;font-weight:600}
+.assist-fab .fab-h .x{
+  border:none;background:none;color:var(--text-3);cursor:pointer;font-size:18px;line-height:1;padding:0 2px;
+}
+.assist-fab .fab-h .x:hover{color:var(--text)}
+.assist-fab .fab-body{padding:12px 14px}
+.assist-fab .fab-sub{font-size:12px;color:var(--text-3);margin-bottom:10px;line-height:1.5}
+.assist-fab textarea{
+  width:100%;box-sizing:border-box;resize:none;border:1px solid var(--line);
+  background:var(--bg);color:var(--text);border-radius:9px;padding:8px 10px;
+  font-size:13px;font-family:inherit;line-height:1.5;outline:none;
+}
+.assist-fab textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(54,91,76,.12)}
+.assist-fab .fab-actions{display:flex;gap:8px;margin-top:10px;align-items:center}
+.assist-fab .fab-prompts{display:flex;gap:6px;flex-wrap:wrap;margin-top:12px}
+.assist-fab .fab-prompt{
+  border:1px solid var(--line);background:var(--panel);color:var(--text-2);
+  font-size:12px;padding:5px 10px;border-radius:16px;cursor:pointer;transition:background .12s;
+}
+.assist-fab .fab-prompt:hover{background:rgba(54,91,76,.1);border-color:var(--accent-line)}
+
+/* ===== AI 助手历史侧栏 ===== */
+.chat-history{
+  width:200px;flex-shrink:0;
+  border:1px solid var(--line);border-radius:12px;
+  background:var(--bg-2);display:flex;flex-direction:column;overflow:hidden;
+}
+.chat-history .ch-title{
+  padding:10px 12px;border-bottom:1px solid var(--line);
+  display:flex;align-items:center;justify-content:space-between;
+}
+.chat-history .ch-title b{font-size:13px;font-weight:600}
+.chat-history .ch-title .mini{color:var(--text-3)}
+.chat-history .ch-list{padding:6px;overflow-y:auto;flex:1;min-height:200px;max-height:calc(100vh - 260px)}
+.chat-history .ch-empty{font-size:12px;color:var(--text-3);padding:14px;text-align:center;line-height:1.6}
+.chat-history .ch-item{
+  display:block;width:100%;text-align:left;
+  padding:9px 10px;margin-bottom:4px;
+  border:1px solid transparent;border-radius:8px;
+  background:none;color:var(--text);cursor:pointer;
+  font-size:12.5px;line-height:1.4;
+  transition:background .12s, border-color .12s;
+}
+.chat-history .ch-item b{display:block;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.chat-history .ch-item .mini{color:var(--text-3);font-size:11px;margin-top:3px}
+.chat-history .ch-item:hover{background:var(--panel);border-color:var(--line)}
+
+@media(max-width:960px){
+  .chat-history{width:160px}
+  .assist-fab .fab-panel{width:min(320px, 85vw);right:0}
+}
+@media(max-width:680px){
+  .chat-history{display:none}
+}

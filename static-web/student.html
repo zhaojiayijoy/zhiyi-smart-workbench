@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>学生空间 · 致壹 智能教育工作台</title>
-<link rel="stylesheet" href="assets/css/site.css?v=1795789011">
+<link rel="stylesheet" href="assets/css/site.css?v=1795789601">
 <script src="assets/js/auth.js?v=1795770200"></script>
 </head>
 <body data-page="student" data-mode="student">
@@ -61,7 +61,7 @@
             <button data-tab="qa">我的答疑</button>
             <button data-tab="feedback">教师反馈</button>
             <button data-tab="review">错题回顾</button>
-            <button data-tab="profile">个人资料</button>
+            <button data-tab="settings">设置</button>
           </div>
 
           <div class="tabpane on" data-pane="home">
@@ -108,7 +108,8 @@
                 <h3>我要提问</h3>
                 <form data-sim="#stuAskOut" data-msg="问题已提交">
                   <div class="field"><label>你的问题</label><textarea required style="min-height:96px" placeholder="先写下你已经想到的思路"></textarea></div>
-                  <div class="field"><label>关联知识点</label><select><option>参照群体</option><option>锚定效应</option><option>消费者态度</option><option>损失厌恶</option></select></div>
+                  <div class="field"><label>关联知识点</label><select id="qaPointSelect" disabled><option value="">由课程内容自动识别</option></select>
+                    <span class="hint" id="qaPointHint">该课程尚未提供知识点，提交后由 AI 自动归类。</span></div>
                   <div class="form-actions"><button class="btn primary" type="submit">提交问题</button></div>
                 </form>
                 <div class="rule" id="stuAskOut" hidden style="margin-top:12px">提交后将在此显示教师或 AI 的反馈。</div>
@@ -124,8 +125,7 @@
                 <option value="read">已读</option>
               </select>
               <span class="mini" id="fbCount">共 0 条</span>
-              <span style="flex:1"></span>
-              <button class="btn sm" type="button" id="fbPrev">上一页</button>
+              <button class="btn sm" type="button" id="fbPrev" style="margin-left:auto">上一页</button>
               <span class="mini" id="fbPage">0 / 1</span>
               <button class="btn sm" type="button" id="fbNext">下一页</button>
             </div>
@@ -151,27 +151,10 @@
             </div>
           </div>
 
-          <div class="tabpane" data-pane="profile">
+          <div class="tabpane" data-pane="settings">
             <div class="grid g2" style="gap:14px">
-              <!-- 左列：个人资料 + 外观 -->
               <div>
                 <div class="card" style="margin-bottom:14px">
-                  <div class="card-h"><h3>个人资料</h3><span class="tag" id="stuBindTag">—</span></div>
-                  <div class="card-b">
-                    <div class="grid g2">
-                      <div class="field"><label>姓名</label><input id="pfName" type="text" placeholder="显示姓名"></div>
-                      <div class="field"><label>学号</label><input id="pfNo" type="text" disabled style="background:var(--panel-2)"></div>
-                      <div class="field"><label>学院</label><input id="pfCollege" type="text" placeholder="如：计算机学院"></div>
-                      <div class="field"><label>专业</label><input id="pfMajor" type="text" placeholder="如：移动应用开发"></div>
-                      <div class="field"><label>班级</label><input id="pfClass" type="text" placeholder="如：移动应用24-1"></div>
-                    </div>
-                    <div class="form-actions" style="margin-top:8px">
-                      <button class="btn primary" type="button" id="pfSaveBtn">保存资料</button>
-                      <span class="mini" id="pfSaveMsg" style="color:var(--acc)">—</span>
-                    </div>
-                  </div>
-                </div>
-                <div class="card">
                   <div class="card-h"><h3>外观</h3></div>
                   <div class="card-b">
                     <div class="grid g2">
@@ -202,7 +185,6 @@
                 </div>
               </div>
 
-              <!-- 右列：账号与安全 -->
               <div>
                 <div class="card" style="margin-bottom:14px">
                   <div class="card-h"><h3>修改密码</h3></div>
@@ -231,6 +213,7 @@
                 </div>
               </div>
             </div>
+            <div class="mini" style="margin-top:10px">注：学生姓名 / 学院 / 专业 / 班级等公开资料，点击左侧头像卡片 →「个人资料」快速修改。</div>
           </div>
 
         </div>
@@ -350,8 +333,8 @@
 })();
 </script>
 <script src="assets/js/data.js?v=1795420906"></script>
-<script src="assets/js/site.js?v=1795789002"></script>
+<script src="assets/js/site.js?v=1795789602"></script>
 <script src="assets/js/api.js?v=1795780000"></script>
-<script src="assets/js/live.js?v=1795789003"></script>
+<script src="assets/js/live.js?v=1795789603"></script>
 </body>
 </html>

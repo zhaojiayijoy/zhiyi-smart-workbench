@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>设置 · 致壹 智能教育工作台</title>
-<link rel="stylesheet" href="assets/css/site.css?v=1795789011">
+<link rel="stylesheet" href="assets/css/site.css?v=1795789601">
 <script src="assets/js/auth.js?v=1795770200"></script>
 </head>
 <body data-page="settings">
@@ -43,7 +43,7 @@
           </div>
 
           <div class="tabpane" data-pane="model">
-            <div class="grid g2">
+            <div>
               <div>
                 <div class="field"><label>服务商</label><select id="cfg_provider"><option value="zhipu" selected>智谱 AI（OpenAI 兼容）</option><option value="custom">自定义 OpenAI 兼容接口</option></select></div>
                 <div class="field"><label>Base URL</label><input id="cfg_base_url" type="text" value="https://open.bigmodel.cn/api/paas/v4"></div>
@@ -131,9 +131,7 @@
                 <div class="field"><label>日志级别</label><select id="advLog"><option>INFO</option><option>WARNING</option><option>DEBUG</option></select></div>
               </div>
               <div>
-                <div class="field"><label>默认开启双模型一致性检查</label>
-                  <div class="checks" style="padding-top:4px"><label class="chk on"><input id="advDual" type="checkbox" checked>开启</label></div>
-                </div>
+                <div class="field"><label class="chk on"><input id="advDual" type="checkbox" checked>默认开启双模型一致性检查</label></div>
                 <div class="field"><label>导出格式偏好</label><select id="advFormat"><option>Word + PPT + Excel</option><option>仅 Word</option><option>仅 PDF</option></select></div>
                 <div class="form-actions"><button class="btn" type="button" id="advSave" data-demo="高级设置已保存（示例）">保存</button></div>
               </div>
@@ -148,8 +146,8 @@
 
 <div class="toast"></div>
 <script src="assets/js/data.js?v=1795420906"></script>
-<script src="assets/js/site.js?v=1795789002"></script>
+<script src="assets/js/site.js?v=1795789602"></script>
 <script src="assets/js/api.js?v=1795770000"></script>
-<script src="assets/js/live.js?v=1795789003"></script>
+<script src="assets/js/live.js?v=1795789603"></script>
 </body>
 </html>

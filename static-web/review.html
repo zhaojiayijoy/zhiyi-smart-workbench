@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>作业评审 · 致壹 智能教育工作台</title>
-<link rel="stylesheet" href="assets/css/site.css?v=1795789011">
+<link rel="stylesheet" href="assets/css/site.css?v=1795789601">
 <script src="assets/js/auth.js?v=1795770200"></script>
 </head>
 <body data-page="review">
@@ -29,7 +29,7 @@
         <div class="card-h"><h2>上传学生提交</h2><div class="right"><span class="mini">支持多文件 · docx / xlsx / pdf / pptx</span></div></div>
         <div class="card-b">
           <div class="steps" id="reviewSteps">
-            <span class="step cur" data-step="1"><i>1</i>AI 评审</span><span class="arw">→</span>
+            <span class="step" data-step="1"><i>1</i>AI 评审</span><span class="arw">→</span>
             <span class="step" data-step="2"><i>2</i>教师复核</span><span class="arw">→</span>
             <span class="step" data-step="3"><i>3</i>发布成绩</span>
           </div>
@@ -191,6 +191,8 @@
   }
   var f1 = document.querySelector('form[data-sim="#reviewOut"]');
   if (f1) f1.addEventListener("submit", function(){ setStage(2); });
+  // 初始状态：未上传任何提交前不点亮任何步骤，避免"已完成"的误导
+  setStage(0);
   var f2 = document.querySelector('form[data-sim="#finalOut"]');
   if (f2) f2.addEventListener("submit", function(){
     Array.prototype.forEach.call(steps, function(s){
@@ -201,8 +203,8 @@
 })();
 </script>
 <script src="assets/js/data.js?v=1795420906"></script>
-<script src="assets/js/site.js?v=1795789002"></script>
+<script src="assets/js/site.js?v=1795789602"></script>
 <script src="assets/js/api.js?v=1795770000"></script>
-<script src="assets/js/live.js?v=1795789003"></script>
+<script src="assets/js/live.js?v=1795789603"></script>
 </body>
 </html>

@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>课程资源 · 致壹 智能教育工作台</title>
-<link rel="stylesheet" href="assets/css/site.css?v=1795789011">
+<link rel="stylesheet" href="assets/css/site.css?v=1795789601">
 <script src="assets/js/auth.js?v=1795770200"></script>
 </head>
 <body data-page="files">
@@ -16,7 +16,7 @@
 
       <div class="page-head">
         <div><h1>课程资源</h1><p class="sub">课程项目共用资料库，可设置教师可见或师生可见</p></div>
-        <div class="right"><button class="btn primary" type="button" data-demo="已打开本地上传（示例）">＋ 上传资料</button></div>
+        <div class="right"><button class="btn primary" type="button" id="filesQuickUpload" title="定位到下方上传表单">＋ 上传资料</button></div>
       </div>
 
       <div class="grid g3" style="margin-bottom:14px">
@@ -25,10 +25,10 @@
         <div class="kpi"><div class="label">本地占用</div><div class="value">—</div><div class="foot">仅保存在本机</div></div>
       </div>
 
-      <div class="card fold" style="margin-bottom:14px">
-        <div class="card-h" data-fold-head aria-expanded="false"><h2>＋ 添加资料</h2><div class="right"><span class="mini">PDF / DOCX / PPTX / XLSX / CSV / TXT</span><span class="fold-caret">▾</span></div></div>
+      <div class="card" id="fileUploadCard" style="margin-bottom:14px">
+        <div class="card-h"><h2>上传资料</h2><div class="right"><span class="mini">PDF / DOCX / PPTX / XLSX / CSV / TXT</span></div></div>
         <div class="card-b">
-          <form data-sim="#fileOut" data-msg="资料已加入课程">
+          <form id="fileUploadForm" data-sim="#fileOut" data-msg="资料已加入课程">
             <div class="grid g3">
               <div class="field"><label>选择文件</label><input type="file" multiple></div>
               <div class="field"><label>资料类型</label><select><option>教材</option><option>课程标准</option><option>案例</option><option>课件</option><option>作业模板</option><option>表格</option></select></div>
@@ -64,8 +64,8 @@
 
 <div class="toast"></div>
 <script src="assets/js/data.js?v=1795420906"></script>
-<script src="assets/js/site.js?v=1795789002"></script>
+<script src="assets/js/site.js?v=1795789602"></script>
 <script src="assets/js/api.js?v=1795770000"></script>
-<script src="assets/js/live.js?v=1795789003"></script>
+<script src="assets/js/live.js?v=1795789603"></script>
 </body>
 </html>

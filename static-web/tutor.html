@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>学生答疑 · 致壹 智能教育工作台</title>
-<link rel="stylesheet" href="assets/css/site.css?v=1795789011">
+<link rel="stylesheet" href="assets/css/site.css?v=1795789601">
 <script src="assets/js/auth.js?v=1795770200"></script>
 </head>
 <body data-page="tutor">
@@ -71,7 +71,7 @@
           <div class="card-b">
             <form data-sim="#askOut" data-msg="答疑已创建">
               <div class="field"><label>学生问题 *</label><textarea required style="min-height:96px" placeholder="粘贴学生原问题，保留原始表述"></textarea></div>
-              <div class="field"><label>关联知识点</label><select><option>参照群体</option><option>锚定效应</option><option>消费者态度</option><option>损失厌恶</option><option>其他</option></select></div>
+              <div class="field"><label>关联知识点</label><select id="tutorPointSelect" disabled><option value="">由 AI 自动识别</option></select></div>
               <div class="form-actions"><button class="btn" type="submit">创建答疑</button><button class="btn" type="reset">清空</button></div>
             </form>
             <div class="rule" id="askOut" hidden style="margin-top:12px">暂无数据</div>
@@ -85,8 +85,8 @@
 
 <div class="toast"></div>
 <script src="assets/js/data.js?v=1795420906"></script>
-<script src="assets/js/site.js?v=1795789002"></script>
+<script src="assets/js/site.js?v=1795789602"></script>
 <script src="assets/js/api.js?v=1795770000"></script>
-<script src="assets/js/live.js?v=1795789003"></script>
+<script src="assets/js/live.js?v=1795789603"></script>
 </body>
 </html>

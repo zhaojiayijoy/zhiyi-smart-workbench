@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>教学工具 · 致壹 智能教育工作台</title>
-<link rel="stylesheet" href="assets/css/site.css?v=1795789011">
+<link rel="stylesheet" href="assets/css/site.css?v=1795789601">
 <script src="assets/js/auth.js?v=1795770200"></script>
 </head>
 <body data-page="tools">
@@ -32,7 +32,7 @@
           <form class="composer" id="agentForm" style="margin-top:10px">
             <textarea rows="2" placeholder="输入内容，Enter 发送，Shift+Enter 换行"></textarea>
             <button class="btn primary" type="submit">发送</button>
-            <button class="btn ghost" type="button" id="agentClear">清空</button>
+            <button class="btn danger" type="button" id="agentClear">清空</button>
           </form>
           <div class="mini" id="agentNote" style="margin-top:6px">正在读取本地接口…</div>
         </div>
@@ -72,9 +72,9 @@
 
 <div class="toast"></div>
 <script src="assets/js/data.js?v=1795420906"></script>
-<script src="assets/js/site.js?v=1795789002"></script>
+<script src="assets/js/site.js?v=1795789602"></script>
 <script src="assets/js/api.js?v=1795770000"></script>
-<script src="assets/js/live.js?v=1795789003"></script>
+<script src="assets/js/live.js?v=1795789603"></script>
 <script>
 (function(){
   var btn = document.getElementById('timerBtn'), out = document.getElementById('timerResult'), t = null;
@@ -218,13 +218,18 @@
   form.querySelector('textarea').addEventListener('keydown', function(e){
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); }
   });
-  if (clearBtn) clearBtn.addEventListener('click', function(){ reset(); });
+  if (clearBtn) clearBtn.addEventListener('click', function(){
+    if (!window.confirm('确定清空当前对话上下文？此操作不可撤销。')) return;
+    reset();
+  });
 
   if (API && API.agent && API.agent.list) {
     API.agent.list().then(function(d){
       fill(d);
       state.textContent = '已连接';
-      note.textContent = '已连接本地接口：' + API.base + '（智谱 POST /v1/agents）';
+      var debug = false;
+      try { debug = localStorage.getItem("edu.debug") === "1"; } catch (e) {}
+      note.textContent = debug ? "已连接本地接口：" + API.base : "本地接口已连接";
     }).catch(function(){
       fill(null);
       state.textContent = '未连接';
