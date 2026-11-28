@@ -2,8 +2,8 @@
 
 - 密码使用 PBKDF2-HMAC-SHA256（随机盐）散列后存库，永不保存明文
 - 会话令牌写入 sessions 表，默认 7 天有效，退出登录即删除
-- 教师账号在启动时按 EDU_TEACHER_USER / EDU_TEACHER_PASS 创建；未配置时使用本地默认账号
-- 学生账号由名单回填：用户名 = 学号，初始密码 = 学号后 6 位（不足 6 位取全串）
+- 教师账号在启动时按 EDU_TEACHER_USER / EDU_TEACHER_PASS 创建（默认 teacher / Zhiyi@2026）
+- 学生账号由学生名单回填：用户名 = 学号，初始密码 = 学号后 6 位（不足 6 位取全串）
 """
 from __future__ import annotations
 
@@ -18,21 +18,6 @@ from app import db
 
 _PBKDF2_ROUNDS = 120_000
 SESSION_TTL = 7 * 24 * 3600
-PASSWORD_MIN_LENGTH = 12
-
-
-class LoginRateLimited(Exception):
-    def __init__(self, retry_after: int):
-        self.retry_after = retry_after
-        super().__init__("登录尝试过多，请稍后重试")
-
-
-def password_error(password: str) -> str:
-    if len(password) < PASSWORD_MIN_LENGTH:
-        return "新密码至少 12 位"
-    if len(password) > 256:
-        return "密码不能超过 256 位"
-    return ""
 
 
 def hash_password(password: str, rounds: int = _PBKDF2_ROUNDS) -> str:
@@ -54,12 +39,14 @@ def verify_password(password: str, stored: str) -> bool:
 
 def initial_password(student_no: str) -> str:
     """初始密码规则：学号后 6 位；学号不足 6 位时取整个学号。"""
-    no = str(student_no or "").strip()
-    return no[-6:] if len(no) >= 6 else no
+    s = str(student_no or "").strip()
+    if not s:
+        return ""
+    return s[-6:] if len(s) >= 6 else s
 
 
-TEACHER_USER = os.getenv("EDU_TEACHER_USER") or "teacher"
-TEACHER_PASS = os.getenv("EDU_TEACHER_PASS") or "Zhiyi@2026"
+TEACHER_USER = os.getenv("EDU_TEACHER_USER", "teacher")
+TEACHER_PASS = os.getenv("EDU_TEACHER_PASS", "Zhiyi@2026")
 
 
 def public_user(user: Optional[dict[str, Any]]) -> Optional[dict[str, Any]]:
@@ -90,6 +77,22 @@ def ensure_student_user(student_no: str, name: str = "", class_name: str = "") -
     return True
 
 
+DEMO_STUDENT_NO = "20240101"
+
+
+def ensure_demo_student() -> bool:
+    """系统中还没有任何学生账号时，创建一个演示学生，方便登录页展示初始账密。"""
+    if db.list_users("student"):
+        return False
+    no = DEMO_STUDENT_NO
+    db.create_user(
+        role="student", username=no, password_hash=hash_password(initial_password(no)),
+        display_name="演示学生", student_no=no, college="计算机学院",
+        major="智能科学与技术", class_name="智科 2401", bound=1, must_change=0,
+    )
+    return True
+
+
 def backfill_student_accounts() -> int:
     """把名单里出现过的学号都补成学生账号（历史名单升级用）。"""
     created, seen = 0, set()
@@ -105,7 +108,6 @@ def backfill_student_accounts() -> int:
 
 def ensure_bootstrap() -> dict[str, Any]:
     """启动时执行：建默认教师账号 + 回填学生账号 + 清理过期会话。"""
-    db.initialize()
     teacher_created = False
     if not db.get_user_by_username(TEACHER_USER):
         db.create_user(
@@ -114,9 +116,10 @@ def ensure_bootstrap() -> dict[str, Any]:
         )
         teacher_created = True
     students_created = backfill_student_accounts()
+    demo_created = ensure_demo_student()
     purged = db.purge_expired_sessions()
     return {"teacher_created": teacher_created, "students_created": students_created,
-            "sessions_purged": purged}
+            "demo_student_created": demo_created, "sessions_purged": purged}
 
 
 # ---------------------------------------------------------------------------
@@ -128,18 +131,11 @@ def new_session(user_id: int, role: str) -> str:
     return token
 
 
-def login(role: str, username: str, password: str, *, source: str = "local") -> tuple[Optional[dict[str, Any]], str]:
+def login(role: str, username: str, password: str) -> tuple[Optional[dict[str, Any]], str]:
     """校验账号密码并签发会话；返回 (user, token) 或 (None, 错误信息)。"""
     name = str(username or "").strip()
     if not name or not password:
         return None, "请输入账号和密码"
-    account_key = "account:" + hashlib.sha256(name.encode("utf-8")).hexdigest()
-    source_key = "source:" + hashlib.sha256(source.encode("utf-8")).hexdigest()
-    retry = db.reserve_login_attempt(account_key, source_key, time.time())
-    if retry:
-        raise LoginRateLimited(retry)
-    if len(name) > 256 or len(password) > 256:
-        return None, "账号或密码错误"
     user = db.get_user_by_username(name)
     if not user or not verify_password(password, user.get("password_hash") or ""):
         return None, "账号或密码错误"
@@ -147,7 +143,6 @@ def login(role: str, username: str, password: str, *, source: str = "local") -> 
         return None, "账号已停用，请联系教师"
     if user.get("role") != role:
         return None, "该账号不是" + ("教师账号" if role == "teacher" else "学生账号")
-    db.clear_login_attempts(account_key)
     return user, new_session(int(user["id"]), role)
 
 
@@ -169,10 +164,6 @@ def resolve_token(token: Optional[str]) -> Optional[dict[str, Any]]:
 
 def reset_password(user_id: int, password: str, must_change: bool = False) -> None:
     """改密；must_change=True 用于教师重置，学生下次登录必须先改密。"""
-    error = password_error(password)
-    if error:
-        raise ValueError(error)
     db.update_user(int(user_id), password_hash=hash_password(password),
-                   must_change=1 if must_change else 0,
-                   activation_expires_at=None)
+                   must_change=1 if must_change else 0)
     db.delete_user_sessions(int(user_id))

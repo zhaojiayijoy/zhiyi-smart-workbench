@@ -24,7 +24,6 @@ from urllib.parse import quote
 
 from fastapi import FastAPI, HTTPException, UploadFile, File, Form, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import Response, JSONResponse
 from pydantic import BaseModel, Field
 
@@ -34,9 +33,9 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 os.chdir(ROOT)
 
-from app import db, edu, agent, backup  # noqa: E402
+from app import db, edu, agent  # noqa: E402
 from app import db, rehearsal_engine, auth  # noqa: E402
-from app.config import ROOT as CFG_ROOT, EXPORT_DIR, PROJECT_DIR, UPLOAD_DIR, BACKUP_EXTRA_DIRS  # noqa: E402
+from app.config import ROOT as CFG_ROOT, EXPORT_DIR  # noqa: E402
 
 API_PORT = int(os.getenv("EDU_API_PORT", "8700"))
 
@@ -70,7 +69,7 @@ async def auth_guard(request: Request, call_next):
     if path in _AUTH_PUBLIC:
         return await call_next(request)
     token = _request_token(request)
-    user = await run_in_threadpool(auth.resolve_token, token)
+    user = auth.resolve_token(token)
     if not user:
         return JSONResponse(status_code=401,
                             content={"ok": False, "code": "unauthorized", "error": "未登录或登录已过期"})
@@ -274,28 +273,23 @@ class PasswordIn(BaseModel):
 
 
 class UpdateMeIn(BaseModel):
-    """学生更新自己的个人资料（display_name / 学籍字段）。"""
+    """更新自己的个人资料（名字 / 头像；学生另可改学籍字段）。"""
     display_name: str = ""
     college: str = ""
     major: str = ""
     class_name: str = ""
+    avatar: str = ""
 
 
 @app.post("/api/auth/login")
-def auth_login(body: LoginIn, request: Request):
+def auth_login(body: LoginIn):
     role = (body.role or "").strip().lower()
     if role not in ("teacher", "student"):
         raise HTTPException(400, "登录身份仅支持教师或学生")
-    try:
-        user, token = auth.login(role, body.username, body.password,
-                                  source=request.client.host if request.client else "unknown")
-    except auth.LoginRateLimited as e:
-        return JSONResponse(status_code=429, headers={"Retry-After": str(e.retry_after), "Cache-Control": "no-store"},
-                            content={"ok": False, "code": "rate_limited", "error": str(e)})
+    user, token = auth.login(role, body.username, body.password)
     if not user:
         return err(token, 401)
-    return JSONResponse(content=ok({"token": token, "user": auth.public_user(user)}),
-                        headers={"Cache-Control": "no-store"})
+    return ok({"token": token, "user": auth.public_user(user)})
 
 
 @app.get("/api/auth/me")
@@ -332,40 +326,46 @@ def auth_password(body: PasswordIn, request: Request) -> dict:
     user = _user(request)
     if not auth.verify_password(body.old_password or "", user.get("password_hash") or ""):
         return err("原密码不正确")
-    error = auth.password_error(body.new_password or "")
-    if error:
-        return err(error)
-    if body.old_password == body.new_password:
-        return err("新密码不能与原密码相同")
+    if len(body.new_password or "") < 6:
+        return err("新密码至少 6 位")
     auth.reset_password(int(user["id"]), body.new_password)
     return ok({"token": auth.new_session(int(user["id"]), str(user.get("role") or "student"))})
 
 
 @app.patch("/api/auth/me")
 def auth_patch_me(body: UpdateMeIn, request: Request) -> dict:
-    """学生更新个人资料：display_name、学籍三字段（college/major/class_name）。
-    至少传一个非空字段；若学籍三字段都填全，则自动 bound=1。"""
+    """更新个人资料：display_name、avatar（教师/学生通用）；
+    学生另可改学籍三字段（college/major/class_name），三者填全自动 bound=1。"""
     user = _user(request)
-    if user.get("role") != "student":
-        raise HTTPException(403, "仅学生账号可修改个人资料")
+    is_student = user.get("role") == "student"
     updates: dict = {}
     dn = (body.display_name or "").strip()
     col = (body.college or "").strip()
     maj = (body.major or "").strip()
     cls = (body.class_name or "").strip()
+    avatar = (body.avatar or "").strip()
     if dn:
+        if len(dn) > 30:
+            return err("名字不能超过 30 个字符")
         updates["display_name"] = dn
-    if col:
-        updates["college"] = col
-    if maj:
-        updates["major"] = maj
-    if cls:
-        _validate_student_class(user, cls)
-        updates["class_name"] = cls
+    if avatar:
+        if not avatar.startswith("data:image/"):
+            return err("头像格式不正确")
+        if len(avatar) > 700_000:
+            return err("头像图片太大，请换一张更小的（建议 512KB 以内）")
+        updates["avatar"] = avatar
+    if is_student:
+        if col:
+            updates["college"] = col
+        if maj:
+            updates["major"] = maj
+        if cls:
+            _validate_student_class(user, cls)
+            updates["class_name"] = cls
+        if col and maj and cls:
+            updates["bound"] = 1
     if not updates:
         return err("至少提供一个要修改的字段")
-    if col and maj and cls:
-        updates["bound"] = 1
     db.update_user(int(user["id"]), **updates)
     return ok(auth.public_user(db.get_user(int(user["id"]))))
 
@@ -921,7 +921,7 @@ def _parse_students(name: str, data: bytes, default_class: str = "") -> dict[str
 
 
 @app.post("/api/students/import")
-def import_students_api(response: Response, project_id: int = Form(...), file: UploadFile = File(...)) -> dict:
+def import_students_api(project_id: int = Form(...), file: UploadFile = File(...)) -> dict:
     if not db.get_project(project_id):
         raise HTTPException(404, "课程项目不存在")
     data = file.file.read()
@@ -936,7 +936,6 @@ def import_students_api(response: Response, project_id: int = Form(...), file: U
     for it in parsed["items"]:
         if auth.ensure_student_user(it["student_no"], it["name"], it["class_name"]):
             accounts += 1
-    response.headers["Cache-Control"] = "no-store"
     total = db.count_students(project_id)
     errs = parsed["errors"][:50]
     msg = f"新增 {res['added']} 人，更新 {res['updated']} 人"
@@ -952,6 +951,30 @@ def import_students_api(response: Response, project_id: int = Form(...), file: U
         "skipped": parsed["skipped"], "error_count": len(parsed["errors"]),
         "errors": errs, "total": total, "message": msg,
     })
+
+
+@app.post("/api/students/reset-passwords")
+def reset_student_passwords(project_id: int = Query(...)) -> dict:
+    """把该课程名单里的学生账号密码重置为初始规则（学号后 6 位），并返回一次性明文清单。"""
+    if not db.get_project(project_id):
+        raise HTTPException(404, "课程项目不存在")
+    rows = db.list_students(project_id)
+    out, reset = [], 0
+    for s in rows:
+        no = str(s.get("student_no") or "").strip()
+        if not no:
+            continue
+        user = db.get_user_by_username(no)
+        pwd = auth.initial_password(no)
+        if user:
+            auth.reset_password(int(user["id"]), pwd, must_change=True)
+            reset += 1
+        else:
+            auth.ensure_student_user(no, s.get("name") or "", s.get("class_name") or "")
+            reset += 1
+        out.append({"student_no": no, "name": s.get("name") or "", "password": pwd})
+    return ok({"items": out, "reset": reset,
+               "message": f"已把 {reset} 个学生账号重置为初始密码（学号后 6 位），请尽快分发并提醒学生修改"})
 
 
 @app.get("/api/students")
@@ -1728,7 +1751,6 @@ def finalize_review(tid: int, body: ReviewFinalizeIn) -> dict:
         "student_no": old_meta.get("student_no") or "",
         "submission_id": old_meta.get("submission_id") or 0,
         "submission_task_id": old_meta.get("submission_task_id") or 0,
-        "submission_version": old_meta.get("submission_version") or 0,
     }
     if task:
         db.update_task(tid, answer=comment, meta=meta)
@@ -1737,12 +1759,14 @@ def finalize_review(tid: int, body: ReviewFinalizeIn) -> dict:
                  "final_total": final_total, "status": body.status})
     _store_put("reviews", tid, item)
     # 学生提交的记录：将结果仅同步到对应的历史版本
-    new_status = {"published": "reviewed", "returned": "returned"}.get(body.status, "submitted")
-    db.update_submission_version_result(
-        tid, status=new_status,
-        score=final_total if body.status == "published" else None,
-        feedback=(body.reason or comment or "") if body.status == "returned" else (comment or ""),
-    )
+    sub = db.get_submission_by_review_task(tid)
+    if sub:
+        new_status = {"published": "reviewed", "returned": "returned"}.get(body.status, "submitted")
+        db.update_submission_version_result(
+            tid, status=new_status,
+            score=final_total if body.status == "published" else None,
+            feedback=(body.reason or comment or "") if body.status == "returned" else (comment or ""),
+        )
     return ok({"task_id": tid, "ai_total": ai_total, "final_total": final_total,
                "status": body.status, "teacher": meta["teacher"]})
 
@@ -2063,8 +2087,7 @@ def _published_homework(project_id: Optional[int], class_name: str = "") -> list
 def _wrong_payload(project_id: Optional[int], keys: set[str], *, student_mode: bool = False) -> dict[str, Any]:
     """错题本：由真实评审低分维度与答疑错因派生，无数据时返回空列表。"""
     items: list[dict[str, Any]] = []
-    for t in db.list_tasks(project_id=project_id, kind="review", limit=200,
-                          student_keys=keys if student_mode else None, released_only=student_mode):
+    for t in db.list_tasks(project_id=project_id, kind="review", limit=200):
         if student_mode and (not keys or not _released_review(t)):
             continue
         if not _matches_student(t, keys, student_mode=student_mode):
@@ -2093,8 +2116,7 @@ def _wrong_payload(project_id: Optional[int], keys: set[str], *, student_mode: b
                 "status": "待订正",
                 "ts": t.get("created_at") or 0,
             })
-    for t in db.list_tasks(project_id=project_id, kind="qa", limit=200,
-                          student_keys=keys if student_mode else None):
+    for t in db.list_tasks(project_id=project_id, kind="qa", limit=200):
         if student_mode and not keys:
             continue
         if not _matches_student(t, keys, student_mode=student_mode):
@@ -2127,8 +2149,7 @@ def _student_courses(user: dict) -> list[dict[str, Any]]:
 
 
 @app.get("/api/student/overview")
-def student_overview(request: Request, project_id: Optional[int] = Query(None),
-                     offset: int = Query(0, ge=0), limit: int = Query(50, ge=1, le=200)) -> dict:
+def student_overview(request: Request, project_id: Optional[int] = Query(None)) -> dict:
     """学生空间首页汇总：身份、可访问课程、已发布任务、我的反馈/答疑/错题。"""
     user = _user(request)
     if user.get("role") != "student":
@@ -2140,11 +2161,9 @@ def student_overview(request: Request, project_id: Optional[int] = Query(None),
     lessons = _published_lessons(pid, cls) if pid else []
     trainings = _published_trainings(pid, cls) if pid else []
     homework = _published_homework(pid, cls) if pid else []
-    reviews = ([t for t in db.list_tasks(project_id=pid, kind="review", limit=limit + 1,
-                                        offset=offset, student_keys=keys, released_only=True)
+    reviews = ([t for t in db.list_tasks(project_id=pid, kind="review", limit=200)
                 if _stu_key(t) in keys and _released_review(t)] if pid else [])
-    qa = ([t for t in db.list_tasks(project_id=pid, kind="qa", limit=limit + 1,
-                                   offset=offset, student_keys=keys)
+    qa = ([t for t in db.list_tasks(project_id=pid, kind="qa", limit=200)
            if _stu_key(t) in keys] if pid else [])
     wrong = _wrong_payload(pid, keys, student_mode=True) if pid else {"items": [], "total": 0, "corrected": 0}
     submissions = (db.list_submissions(pid, str(user.get("student_no") or "")) if pid else [])
@@ -2155,10 +2174,8 @@ def student_overview(request: Request, project_id: Optional[int] = Query(None),
         "lessons": [_student_task(t) for t in lessons],
         "trainings": [_student_task(t) for t in trainings],
         "homework": [_student_task(t) for t in homework],
-        "my_reviews": [_student_record(t) for t in reviews[:limit]],
-        "my_qa": [_student_record(t) for t in qa[:limit]],
-        "pagination": {"offset": offset, "limit": limit, "reviews_has_more": len(reviews) > limit,
-                       "qa_has_more": len(qa) > limit},
+        "my_reviews": [_student_record(t) for t in reviews],
+        "my_qa": [_student_record(t) for t in qa],
         "my_submissions": submissions,
         "wrong": wrong,
     })
@@ -2169,7 +2186,7 @@ def student_dashboard(request: Request, project_id: Optional[int] = Query(None),
                       student: str = Query("")) -> dict:
     user = _user(request)
     if user.get("role") == "student":
-        result = student_overview(request, project_id, offset=0, limit=200)
+        result = student_overview(request, project_id)
         result["data"]["tutor_threads"] = []
         return result
     else:
@@ -2206,7 +2223,7 @@ def student_wrong(request: Request, project_id: Optional[int] = Query(None),
 
 @app.post("/api/student/task/{tid}/submit")
 def student_submit_task(tid: int, request: Request, note: str = Form(""),
-                        file: Optional[UploadFile] = File(None), request_key: str = Form("")) -> dict:
+                        file: Optional[UploadFile] = File(None)) -> dict:
     """学生提交作业：附件落库 → 进入教师评审队列（生成 review 任务）。"""
     user = _user(request)
     if user.get("role") != "student":
@@ -2224,20 +2241,6 @@ def student_submit_task(tid: int, request: Request, note: str = Form(""),
                  else bool((task.get("meta") or {}).get("published")))
     if not published or not _audience_match(task, cls):
         raise HTTPException(403, "该任务未发布给你所在的班级")
-    if request_key and (not 16 <= len(request_key) <= 100 or
-                        not all(c.isascii() and (c.isalnum() or c == '-') for c in request_key)):
-        raise HTTPException(400, "提交请求标识无效")
-    def receipt(previous):
-        if not previous.get("review_task_id"):
-            raise HTTPException(409, "同一提交仍在处理中，请稍后重试；如持续未完成，请联系教师确认后重新提交")
-        return ok({"submission_id": previous["id"], "version": previous["version"],
-                   "review_task_id": previous["review_task_id"], "file_id": previous["file_id"],
-                   "file_name": previous["file_name"], "status": previous["status"],
-                   "score": previous.get("score"), "replayed": True,
-                   "message": "已确认原提交，无需重复提交"})
-    previous = db.get_submission_request(int(user["id"]), tid, request_key)
-    if previous:
-        return receipt(previous)
     if not file or not file.filename:
         return err("请选择要提交的作业文件")
     data = file.file.read(20 * 1024 * 1024 + 1)
@@ -2261,10 +2264,7 @@ def student_submit_task(tid: int, request: Request, note: str = Form(""),
     student_no = str(user.get("student_no") or "")
     sub = db.upsert_submission(project_id=int(pid), task_id=int(tid), student_id=int(user["id"]),
                                student_no=student_no, student_name=student_name,
-                               file_id=int(fid), file_name=name, note=note.strip(), request_key=request_key)
-    if sub.get("replayed"):
-        db.delete_file(int(fid))
-        return receipt(sub)
+                               file_id=int(fid), file_name=name, note=note.strip())
     review = {}
     if text.strip():
         try:
@@ -2278,17 +2278,15 @@ def student_submit_task(tid: int, request: Request, note: str = Form(""),
         "student": student_name, "student_no": student_no, "class_name": cls,
         "file": name, "files": [name], "file_id": int(fid), "ai": review,
         "submission_id": int(sub["id"]), "submission_task_id": int(tid),
-        "submission_version": int(sub["version"]),
         "status": "submitted", "final_total": None,
     }
     rid = db.save_task(prompt=f"{student_name}：{name}", kind="review",
                        project_id=int(pid), meta=meta_r)
-    db.set_submission_review(int(sub["id"]), int(sub["version"]), int(rid))
+    db.set_submission_review(int(sub["id"]), int(rid))
     item = {"project_id": int(pid), "review": review, "student": student_name,
             "file_name": name, "ts": _now(), "status": "submitted",
             "file_id": int(fid), "submission_id": int(sub["id"]),
             "submission_task_id": int(tid), "student_no": student_no}
-    item["submission_version"] = int(sub["version"])
     _store_put("reviews", int(rid), item)
     return ok({"submission_id": sub["id"], "review_task_id": rid, "status": "submitted",
                "version": sub["version"], "file_id": fid, "file_name": name, "score": None,
@@ -2615,14 +2613,23 @@ def set_lesson_status(tid: int, body: TrainingStatusIn) -> dict:
 # ---------------------------------------------------------------------------
 @app.get("/api/maintenance/backup")
 def export_backup() -> Response:
-    try:
-        data = backup.create_backup(project_root=PROJECT_DIR, upload_root=UPLOAD_DIR,
-                                     export_root=EXPORT_DIR, extra_roots=BACKUP_EXTRA_DIRS)
-    except (ValueError, OSError) as e:
-        raise HTTPException(409, f"备份未完成：{e}") from e
-    response = _file_resp(data, f"workbench_backup_{time.strftime('%Y%m%d_%H%M%S')}.zip", "application/zip")
-    response.headers["Cache-Control"] = "no-store"
-    return response
+    import io as _io
+    import zipfile
+    data_dir = CFG_ROOT / ".data"
+    buf = _io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
+        if db.DB_PATH.exists():
+            z.write(db.DB_PATH, "workbench.db")
+        for sub in ("uploads", "exports"):
+            root = data_dir / sub
+            if not root.exists():
+                continue
+            for f in root.rglob("*"):
+                if f.is_file():
+                    z.write(f, str(f.relative_to(data_dir)).replace("\\", "/"))
+    return _file_resp(buf.getvalue(),
+                      f"workbench_backup_{time.strftime('%Y%m%d_%H%M')}.zip",
+                      "application/zip")
 
 
 @app.post("/api/maintenance/cleanup")

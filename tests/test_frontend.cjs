@@ -6,18 +6,10 @@ const test = require('node:test');
 const root = path.resolve(__dirname, '..');
 const source = name => fs.readFileSync(path.join(root, 'static-web/assets/js', name), 'utf8');
 
-test('login opens directly with student-number initial password guidance', () => {
-  const login = fs.readFileSync(path.join(root, 'static-web/login.html'), 'utf8');
-  assert.doesNotMatch(login, /loginIntro|login-intro\.mp4|管理员配置|教师分配|激活密码/);
-  assert.match(login, /学生初始密码为学号后 6 位/);
-  assert.match(login, /userEl\.focus\(\)/);
-});
-
 function apiContext(port = '8701') {
   const calls = [];
   const context = {window: {}, location: {hostname: '127.0.0.1', port,
     protocol: 'http:', origin: `http://127.0.0.1:${port}`},
-    URLSearchParams,
     localStorage: {getItem: key => key === 'edu.token' ? 'test-token' : null},
     fetch: async (url, options) => {
       calls.push({url, options});
@@ -46,12 +38,6 @@ test('rehearsal client uses configured origin and authorization on every call', 
 
 test('separate static preview retains API port mapping', () => {
   assert.equal(apiContext('8765').api.base, 'http://127.0.0.1:8700/api');
-});
-
-test('student overview accepts safe pagination arguments', async () => {
-  const {api, calls} = apiContext();
-  await api.student.overview(7, 50, 25);
-  assert.equal(calls[0].url, 'http://127.0.0.1:8701/api/student/overview?offset=50&limit=25&project_id=7');
 });
 
 test('demo button uses demo service and escapes model content', async () => {

@@ -57,13 +57,6 @@ if not PROJECT_DIR.is_absolute():
     PROJECT_DIR = (ROOT / PROJECT_DIR).resolve()
 PROJECT_DIR.mkdir(parents=True, exist_ok=True)
 
-# Only explicitly configured external course directories may enter a backup.
-BACKUP_EXTRA_DIRS = tuple(
-    Path(p).expanduser().resolve() if Path(p).expanduser().is_absolute()
-    else (ROOT / Path(p).expanduser()).resolve()
-    for p in (item.strip() for item in os.getenv("BACKUP_EXTRA_DIRS", "").split(os.pathsep)) if p
-)
-
 # 未归属项目时的默认输出目录
 EXPORT_DIR = (ROOT / ".data" / "exports").resolve()
 EXPORT_DIR.mkdir(parents=True, exist_ok=True)

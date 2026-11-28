@@ -4,14 +4,45 @@
 
   var ICONS = {
     home: '<path d="M2.5 7.5 8 2.5l5.5 5V14h-4v-4h-3v4h-4z"/>',
+    studentHome: '<path d="M2.9 6.9 8 2.3l5.1 4.6v4.5a1 1 0 0 1-1 1H3.9a1 1 0 0 1-1-1z"/>' +
+      '<circle cx="8" cy="8.2" r="1.15"/>' +
+      '<path d="M3 13.6h10"/>' +
+      '<circle cx="3" cy="13.6" r=".9" fill="currentColor" stroke="none"/>' +
+      '<circle cx="13" cy="13.6" r=".9" fill="currentColor" stroke="none"/>',
+    openbook: '<path d="M2.8 4.4c1.8-.8 3.6-.7 5.2.2 1.6-.9 3.4-1 5.2-.2v7.1c-1.8-.8-3.6-.7-5.2.2-1.6-.9-3.4-1-5.2-.2z"/>' +
+      '<path d="M8 4.6v7.3"/><path d="M4.6 6.4c.9-.3 1.8-.3 2.6.1"/>',
     book: '<path d="M4 2.5h5.5a2 2 0 0 1 2 2V14H6a2 2 0 0 1-2-2z"/><path d="M4 2.5V14"/>',
     spark: '<path d="M8 2.5 9.2 6l3.5 1.2L9.2 8.4 8 12 6.8 8.4 3.3 7.2 6.8 6z"/>',
+    prep: '<path d="M10.2 2.6 12.6 5 6.4 11.2 3.4 11.9 4.1 8.9z"/><path d="M9 3.8 11.4 6.2"/>' +
+      '<rect x="8.2" y="8.6" width="5.8" height="4.2" rx="1.2"/><path d="M9.6 10.7h2.8"/>' +
+      '<path d="M4.6 2.4 5 3.5 6.1 3.9 5 4.3 4.6 5.4 4.2 4.3 3.1 3.9 4.2 3.5z"/>',
+    lab: '<rect x="2.2" y="3.4" width="9.4" height="7.2" rx="1.2"/><path d="M3.4 4.6h7"/>' +
+      '<path d="M10.6 7.6h1.8v2.2l1.4 2.3c.3.6-.1 1.2-.8 1.2h-3c-.7 0-1.1-.6-.8-1.2l1.4-2.3z"/>' +
+      '<path d="M9.9 11.4h3.2"/>',
     tool: '<path d="M10.5 2.5 13.5 5.5 11.6 7.4 8.6 4.4z"/><path d="M8.6 6.2 3 11.8V13h1.2l5.6-5.6"/>',
+    ask: '<rect x="2.6" y="3.2" width="10.8" height="7.2" rx="2.2"/><path d="M6.4 10.4 5.2 13.1 8.9 10.4"/>' +
+      '<path d="M6.9 5.5a1.3 1.3 0 1 1 1.8 1.2c-.4.2-.5.5-.5.9"/>' +
+      '<circle cx="8.1" cy="9.1" r="0.55" fill="currentColor" stroke="none"/>',
     chat: '<path d="M2.8 3h10.4v7.2H7L3.4 13V3z"/>',
+    reviewpen: '<path d="M11.4 2.6 13.4 4.6 6.2 11.8 3.4 12.5 4.1 9.7z"/><path d="M10.3 3.7 12.3 5.7"/>' +
+      '<circle cx="11.8" cy="11.8" r="2.2"/><path d="M10.8 11.8l.8.8 1.5-1.5"/>',
+    feedbackNote: '<rect x="2.4" y="3.1" width="8.3" height="8.9" rx="1.5"/>' +
+      '<circle cx="4.4" cy="3.1" r=".85" fill="currentColor" stroke="none"/>' +
+      '<path d="M5.6 6.9 7.6 8.9M7.6 6.9 5.6 8.9"/>' +
+      '<path d="M14 11.4a2.2 2.2 0 1 1-2.2-2.2"/><path d="M11.8 9.2v2.2h2.2"/>',
     check: '<path d="M3 8.4 6.2 11.6 13 4.8"/>',
+    chartline: '<rect x="2.6" y="2.6" width="10.8" height="10.8" rx="1.7"/>' +
+      '<path d="M4.5 10.2 6.5 8 7.9 9.1 11.4 5.4"/>' +
+      '<path d="M4.5 11.6h6.6"/>',
     chart: '<path d="M3 13V8.2M6.7 13V4.5M10.4 13V9.4M13.5 13V6.6"/><path d="M2 13.6h12"/>',
     grid: '<rect x="2.5" y="2.5" width="4.5" height="4.5" rx="1"/><rect x="9" y="2.5" width="4.5" height="4.5" rx="1"/><rect x="2.5" y="9" width="4.5" height="4.5" rx="1"/><rect x="9" y="9" width="4.5" height="4.5" rx="1"/>',
+    outlineDoc: '<path d="M3 2.6h6.1l3.1 3.1v7.7H3z"/><path d="M9.1 2.6v3.1h3.1"/>' +
+      '<path d="M4.8 6.4h4"/><path d="M4.8 8.6h3"/>' +
+      '<path d="M11.4 4.6 13.3 6.5 9.9 9.9 8.5 10.2 8.8 8.8z"/><path d="M10.6 5.4 12.5 7.3"/>',
     file: '<path d="M4 2.5h5.5L12.5 5.5V13.5H4z"/><path d="M9.3 2.6v3h3"/>',
+    resources: '<path d="M2.4 6.6h3.2l1.2 1.6h6.8v5a1.2 1.2 0 0 1-1.2 1.2H3.6a1.2 1.2 0 0 1-1.2-1.2z"/>' +
+      '<path d="M7.2 8.2V2.9h3.6L12.4 4.5v3.7"/>' +
+      '<path d="M8.4 5h2.4"/><path d="M8.4 6.4h1.6"/>',
     clock: '<circle cx="8" cy="8" r="5.4"/><path d="M8 5v3.2l2.2 1.4"/>',
     gear: '<circle cx="8" cy="8" r="2.2"/><path d="M8 1.8v1.6M8 12.6v1.6M1.8 8h1.6M12.6 8h1.6M3.6 3.6l1.1 1.1M11.3 11.3l1.1 1.1M12.4 3.6l-1.1 1.1M4.7 11.3l-1.1 1.1"/>',
     user: '<circle cx="8" cy="5.6" r="2.6"/><path d="M3.2 13.5c.6-2.3 2.5-3.6 4.8-3.6s4.2 1.3 4.8 3.6"/>',
@@ -29,30 +60,31 @@
     {
       label: "课前准备",
       items: [
-        { href: "courses.html", icon: "book", text: "课程项目", page: "courses" },
-        { href: "outline.html", icon: "file", text: "备课大纲", page: "outline" },
-        { href: "lesson.html", icon: "spark", text: "一键备课", page: "lesson" }
+        { href: "courses.html", icon: "openbook", text: "课程项目", page: "courses" },
+        { href: "files.html", icon: "resources", text: "课程资源", page: "files" },
+        { href: "outline.html", icon: "outlineDoc", text: "备课大纲", page: "outline" },
+        { href: "lesson.html", icon: "prep", text: "一键备课", page: "lesson" }
       ]
     },
     {
       label: "发布与课堂",
       items: [
-        { href: "tasks.html", icon: "grid", text: "任务中心", page: "tasks" },
+        { href: "tasks.html", icon: "clock", text: "任务中心", page: "tasks" },
         { href: "rehearsal.html", icon: "eye", text: "课堂预演", page: "rehearsal" },
-        { href: "training.html", icon: "tool", text: "创建实训", page: "training" }
+        { href: "training.html", icon: "lab", text: "创建实训", page: "training" }
       ]
     },
     {
       label: "答疑与批改",
       items: [
-        { href: "tutor.html", icon: "chat", text: "学生答疑", page: "tutor" },
-        { href: "review.html", icon: "check", text: "作业评审", page: "review" }
+        { href: "tutor.html", icon: "ask", text: "学生答疑", page: "tutor" },
+        { href: "review.html", icon: "reviewpen", text: "作业评审", page: "review" }
       ]
     },
     {
       label: "分析与工具",
       items: [
-        { href: "analytics.html", icon: "chart", text: "学情分析", page: "analytics" },
+        { href: "analytics.html", icon: "chartline", text: "学情分析", page: "analytics" },
         { href: "tools.html", icon: "tool", text: "教学工具", page: "tools" }
       ]
     }
@@ -62,10 +94,10 @@
     {
       label: "我的学习",
       items: [
-        { href: "student.html#home", icon: "home", text: "学生首页", page: "student" },
+        { href: "student.html#home", icon: "studentHome", text: "学生首页", page: "student" },
         { href: "student.html#tasks", icon: "clock", text: "我的任务", page: "student" },
         { href: "student.html#qa", icon: "chat", text: "我的答疑", page: "student" },
-        { href: "student.html#feedback", icon: "check", text: "教师反馈", page: "student" },
+        { href: "student.html#feedback", icon: "feedbackNote", text: "教师反馈", page: "student" },
         { href: "student.html#review", icon: "book", text: "错题回顾", page: "student" },
         { href: "student.html#settings", icon: "user", text: "设置", page: "student" }
       ]
@@ -561,6 +593,19 @@
     }
   }
 
+
+  function refreshSideFoot(nu) {
+    var f = document.querySelector(".side-foot");
+    if (!f || !nu) return;
+    var label = nu.display_name || nu.username || "";
+    var av = f.querySelector(".avatar");
+    if (av) av.innerHTML = nu.avatar ? '<img src="' + nu.avatar + '" alt="">' : escHtml((label || "师").slice(-2));
+    var b = f.querySelector("b");
+    if (b && label) b.textContent = label;
+  }
+  // /auth/me 返回后刷新侧栏用户信息（头像、名字）
+  document.addEventListener("edu-auth-ready", function (e) { refreshSideFoot(e.detail); });
+
   /* ---------- AI 助手浮动按钮（可缩放 = 点击展开小面板） ---------- */
   function initAssistantFab() {
     // assistant.html 本身不需要 FAB（它就是 AI 助手页面）
@@ -588,10 +633,59 @@
       '</span>';
     document.body.appendChild(btn);
 
+    // 液态玻璃：注入 SVG 折射滤镜（供 .fab-panel::before 的 backdrop-filter 引用）
+    if (!document.getElementById("lgLensDefs")) {
+      var defs = document.createElement("div");
+      defs.id = "lgLensDefs";
+      defs.setAttribute("aria-hidden", "true");
+      defs.style.cssText = "position:absolute;width:0;height:0;overflow:hidden";
+      defs.innerHTML =
+        '<svg xmlns="http://www.w3.org/2000/svg" width="0" height="0">' +
+          '<filter id="lgLens" x="-15%" y="-15%" width="130%" height="130%" color-interpolation-filters="sRGB">' +
+            '<feTurbulence type="fractalNoise" baseFrequency="0.004 0.009" numOctaves="2" seed="7" result="noise"/>' +
+            '<feGaussianBlur in="noise" stdDeviation="1.6" result="soft"/>' +
+            '<feDisplacementMap in="SourceGraphic" in2="soft" scale="28" xChannelSelector="R" yChannelSelector="G"/>' +
+          '</filter>' +
+        '</svg>';
+      document.body.appendChild(defs);
+    }
+
     var panel = btn.querySelector(".fab-panel");
     var ta = btn.querySelector("#fabInput");
-    function open() { btn.classList.add("open"); setTimeout(function () { if (ta) ta.focus(); }, 50); }
-    function close() { btn.classList.remove("open"); }
+    function hasDraft() { return !!(ta && ta.value && ta.value.trim()); }
+    var leaveTimer = null, lastX = null, lastY = null, KEEP_R = 100;
+    function stopWatch() { if (leaveTimer) { clearInterval(leaveTimer); leaveTimer = null; } }
+    function distToBtn(x, y) {
+      var r = btn.getBoundingClientRect();
+      var dx = Math.max(r.left - x, 0, x - r.right);
+      var dy = Math.max(r.top - y, 0, y - r.bottom);
+      return Math.sqrt(dx * dx + dy * dy);
+    }
+    function shouldKeep() {
+      if (hasDraft()) return true;                 // 输入过文字 → 一直保留
+      if (lastX === null) return true;             // 没有鼠标信息（键盘操作）→ 保留
+      if (panel.matches(":hover")) return true;    // 光标在卡片上
+      if (distToBtn(lastX, lastY) <= KEEP_R) return true; // 光标在按钮周围 100px 内
+      return false;
+    }
+    function startWatch() {
+      stopWatch();
+      leaveTimer = setInterval(function () {
+        if (!btn.classList.contains("open")) { stopWatch(); return; }
+        if (shouldKeep()) return;
+        close();
+      }, 200);
+    }
+    function open() { btn.classList.add("open"); startWatch(); setTimeout(function () { if (ta) ta.focus(); }, 50); }
+    function close() { btn.classList.remove("open"); stopWatch(); }
+    // 光标在按钮 100px 范围内或卡片上时保持；超出且无内容则收起
+    document.addEventListener("pointermove", function (e) {
+      lastX = e.clientX; lastY = e.clientY;
+      if (!btn.classList.contains("open") || hasDraft()) return;
+      if (panel.contains(e.target)) return;
+      if (distToBtn(e.clientX, e.clientY) <= KEEP_R) return;
+      close();
+    }, { passive: true });
 
     btn.addEventListener("click", function (e) {
       if (e.target.closest("[data-fab-close]")) { close(); return; }
@@ -688,13 +782,16 @@
       : '<button type="button" data-go="' + homeHref + '">' + homeBtnText + '</button>';
     aside.innerHTML =
       '<a class="brand" href="' + homeHref + '">' +
-        '<div class="mark">致</div>' +
+        '<div class="mark"><img src="assets/img/logo-z.png?v=1795865037" alt="致壹" width="28" height="28"></div>' +
         '<div><div class="name">' + window.EDU.brand.name + '</div><div class="sub">' + window.EDU.brand.sub + "</div></div>" +
       "</a>" +
       '<div class="side-new">' + homeBtn + newBtn + "</div>" +
       '<nav class="nav">' + nav + "</nav>" +
-      '<div class="side-foot"><div class="avatar">' + (u.initials || "") + "</div>" +
-        "<div><b>" + (isStudent ? (u.name || "学生") : "本地用户") + "</b><span>" + (isStudent ? (u.class || "") : "教师 · 单租户") + "</span></div></div>";
+      '<button class="side-foot" type="button" title="个人资料与设置">' +
+        '<div class="avatar">' + ((au && au.avatar) ? '<img src="' + au.avatar + '" alt="">' : escHtml(u.initials || "")) + "</div>" +
+        '<div class="sf-meta"><b>' + escHtml(u.name || (isStudent ? "学生" : "教师")) + "</b><span>" + escHtml(isStudent ? (u.class || "") : "教师 · 单租户") + "</span></div>" +
+        '<span class="sf-hint">' + ic("user", 14) + "</span>" +
+      "</button>";
 
     var projSec = aside.querySelector("#navProjects");
     if (projSec) initSideProjects(projSec);
@@ -757,7 +854,9 @@
         '<button class="sp-item" type="button" data-side-item="profile"><span class="sp-ic">👤</span><span>个人资料<span class="sp-sub">修改姓名 / 学院 / 专业 / 班级</span></span></button>' +
         '<button class="sp-item" type="button" data-side-item="settings"><span class="sp-ic">⚙</span><span>设置<span class="sp-sub">外观 / 密码 / 账号状态</span></span></button>';
     } else {
-      items = '<button class="sp-item" type="button" data-side-item="settings"><span class="sp-ic">⚙</span><span>设置<span class="sp-sub">外观 / 密码 / 账号状态</span></span></button>';
+      items =
+        '<button class="sp-item" type="button" data-side-item="profile"><span class="sp-ic">👤</span><span>教师<span class="sp-sub">修改名字 / 头像</span></span></button>' +
+        '<button class="sp-item" type="button" data-side-item="settings"><span class="sp-ic">⚙</span><span>设置<span class="sp-sub">外观 / 密码 / 账号状态</span></span></button>';
     }
     pop.innerHTML =
       '<div class="sp-h"><b>' + (fullUser.display_name || fullUser.username || u.name || "本地用户") + '</b><span>' + classLine + '</span></div>' + items;
@@ -1174,6 +1273,11 @@
       '<div class="modal" style="max-width:520px">' +
       '<div class="modal-h"><b>个人资料</b><button class="x" type="button" data-close-modal>×</button></div>' +
       '<div class="modal-b">' +
+      '<div class="pf-top"><button class="pf-avatar" type="button" id="mpPick" title="点击更换头像">' +
+        (u.avatar ? '<img src="' + u.avatar + '" alt="">' : "<span>" + escHtml((u.display_name || u.username || "师").slice(-2)) + "</span>") +
+        "<i>更换头像</i></button>" +
+        '<input type="file" id="mpFile" accept="image/*" hidden>' +
+      "</div>" +
       '<div class="field compact"><label>姓名</label><input id="mpName" value="' + (u.display_name || "") + '"></div>' +
       '<div class="field compact"><label>学号（只读）</label><input value="' + (u.username || "") + '" readonly></div>' +
       '<div class="grid g2" style="gap:8px">' +
@@ -1191,6 +1295,35 @@
       '</div>';
 
     var saveBtn = mask.querySelector("#mpSave");
+    var nameBox = mask.querySelector("#mpName");
+    if (nameBox) setTimeout(function () { nameBox.focus(); }, 40);
+    // 头像：选择图片 → 居中裁剪为 256x256 → 转 dataURL
+    var pendingAvatar = "";
+    var pfFile = mask.querySelector("#mpFile");
+    var pfPick = mask.querySelector("#mpPick");
+    if (pfPick && pfFile) {
+      pfPick.addEventListener("click", function () { pfFile.click(); });
+      pfFile.addEventListener("change", function () {
+        var f = pfFile.files && pfFile.files[0];
+        if (!f) return;
+        if (!/^image\//.test(f.type)) { toast("请选择图片文件"); return; }
+        var fr = new FileReader();
+        fr.onload = function () {
+          var img = new Image();
+          img.onload = function () {
+            var size = 256, cv = document.createElement("canvas");
+            cv.width = size; cv.height = size;
+            var g = cv.getContext("2d");
+            var s = Math.min(img.width, img.height);
+            g.drawImage(img, (img.width - s) / 2, (img.height - s) / 2, s, s, 0, 0, size, size);
+            pendingAvatar = cv.toDataURL("image/jpeg", 0.86);
+            pfPick.innerHTML = '<img src="' + pendingAvatar + '" alt=""><i>更换头像</i>';
+          };
+          img.src = fr.result;
+        };
+        fr.readAsDataURL(f);
+      });
+    }
     if (saveBtn) saveBtn.addEventListener("click", function () {
       var body = {},
         dn = (mask.querySelector("#mpName").value || "").trim(),
@@ -1201,16 +1334,20 @@
       if (col) body.college = col;
       if (maj) body.major = maj;
       if (cls) body.class_name = cls;
+      if (pendingAvatar) body.avatar = pendingAvatar;
       if (!Object.keys(body).length) { toast("没有需要保存的内容"); return; }
       saveBtn.disabled = true; saveBtn.innerHTML = '<span class="spin"></span> 保存中…';
       var msg = mask.querySelector("#mpSaveMsg");
       var useAPI = (typeof window.EduAPI !== "undefined" && EduAPI.auth);
       var p = useAPI ? EduAPI.auth.updateMe(body) : apiFetch("/api/auth/me", "PATCH", body);
-      p.then(function () {
+      p.then(function (nu) {
         saveBtn.disabled = false; saveBtn.textContent = "保存资料";
         toast("资料已保存");
         if (msg) msg.textContent = "✓ 已保存";
-        if (window.EduAuth && window.EduAuth.user) { Object.assign(window.EduAuth.user, body); }
+        if (window.EduAuth && window.EduAuth.user) {
+          Object.assign(window.EduAuth.user, (nu && nu.id) ? nu : body);
+          try { localStorage.setItem("edu.user", JSON.stringify(window.EduAuth.user)); } catch (e) {}
+        }
         try { if (typeof Edu.renderSidebar === "function") Edu.renderSidebar(); } catch (e) {}
         setTimeout(function () { mask.classList.remove("on"); }, 450);
       }).catch(function (err) {
@@ -1375,20 +1512,8 @@
   }
 
   /* ---------- 在线检测与课程刷新 ---------- */
-  function liveBadge(on) {
-    var el = document.getElementById("liveBadge");
-    if (!el) { el = document.createElement("div"); el.id = "liveBadge"; document.body.appendChild(el); }
-    el.style.cssText = "position:fixed;right:12px;bottom:12px;z-index:60;font-size:11px;padding:5px 10px;" +
-      "border-radius:20px;line-height:1;box-shadow:0 2px 8px rgba(37,50,45,.12);" +
-      (on ? "background:#DCE8E1;color:#294D40;border:1px solid #365B4C;"
-          : "background:#EEE8DB;color:#66736C;border:1px solid #CDBFA7;");
-    el.textContent = on ? "● 已连接真实接口" : "○ 演示模式";
-    el.title = on ? "本地接口 8700 已连接，数据为真实数据" :
-      "未连接本地接口，当前为内置演示数据；启动 api_server.py 后刷新即接入真实数据";
-  }
-
   function initLive() {
-    if (!window.EduAPI) { liveBadge(false); return; }
+    if (!window.EduAPI) { return; }
     EduAPI.health().then(function () {
       Edu.state.live = true;
       return EduAPI.courses.list().then(function (list) {
@@ -1406,12 +1531,10 @@
           }).join("") : '<option value="">（暂无课程）</option>';
           pick.value = target;
         }
-        liveBadge(true);
         emitCourseChange();
         renderTopCourseSummary();
       });
     }).catch(function () {
-      liveBadge(false);
       Edu.state.courses = [];
       // 优先恢复上次选中的课程（含本地保存的自定义课程），避免刷新后串课
       var saved = null; try { saved = localStorage.getItem("edu.course"); } catch (e) {}
@@ -1617,5 +1740,125 @@
     initLive();
     initVersions();
     initAssistantFab();
+  });
+})();
+
+/* ===== 目录锚点：点击平滑滚动（约 600ms，预留 64px 吸顶偏移）+ 滚动自动高亮 ===== */
+(function () {
+  "use strict";
+
+  var DURATION = 600;
+  var navs = [].slice.call(document.querySelectorAll("[data-toc], .toc"));
+  if (!navs.length) return;
+
+  function offsetTop() {
+    var v = parseInt(getComputedStyle(document.documentElement).getPropertyValue("--anchor-offset"), 10);
+    return isNaN(v) ? 64 : v;
+  }
+
+  // 找到元素最近的纵向滚动容器；没有则返回 null（用 window 滚动）
+  function scrollParent(el) {
+    var p = el.parentNode;
+    while (p && p !== document.body && p !== document.documentElement) {
+      var s = getComputedStyle(p);
+      if (/(auto|scroll)/.test(s.overflowY) && p.scrollHeight > p.clientHeight + 1) return p;
+      p = p.parentNode;
+    }
+    return null;
+  }
+
+  function readScroll(box) { return box ? box.scrollTop : (window.pageYOffset || document.documentElement.scrollTop); }
+  function writeScroll(box, v) { if (box) box.scrollTop = v; else window.scrollTo(0, v); }
+
+  function smoothTo(box, to, dur) {
+    var from = readScroll(box);
+    var delta = to - from;
+    if (Math.abs(delta) < 1) return;
+    if (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      writeScroll(box, to);
+      return;
+    }
+    var t0 = 0;
+    function step(now) {
+      if (!t0) t0 = now;
+      var t = Math.min(1, (now - t0) / dur);
+      var e = t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;   // easeInOutCubic
+      writeScroll(box, from + delta * e);
+      if (t < 1) window.requestAnimationFrame(step);
+    }
+    window.requestAnimationFrame(step);
+  }
+
+  function targetOf(link) {
+    var href = link.getAttribute("href") || "";
+    if (href.charAt(0) !== "#" || href.length < 2) return null;
+    var id = decodeURIComponent(href.slice(1));
+    return document.getElementById(id);
+  }
+
+  navs.forEach(function (nav) {
+    var links = [].slice.call(nav.querySelectorAll('a[href^="#"]'));
+    if (!links.length) return;
+
+    var items = links.map(function (a) {
+      var sec = targetOf(a);
+      return sec ? { a: a, sec: sec } : null;
+    }).filter(Boolean);
+    if (!items.length) return;
+
+    var box = scrollParent(items[0].sec);
+    var current = -1;
+    var ticking = false;
+
+    function setActive(i) {
+      if (i === current) return;
+      current = i;
+      items.forEach(function (it, k) {
+        it.a.classList.toggle("is-current", k === i);
+        if (k === i) it.a.setAttribute("aria-current", "true");
+        else it.a.removeAttribute("aria-current");
+      });
+    }
+
+    function spy() {
+      ticking = false;
+      var base = box ? box.getBoundingClientRect().top : 0;
+      var line = offsetTop() + 8;
+      var idx = 0;
+      for (var i = 0; i < items.length; i++) {
+        if (items[i].sec.getBoundingClientRect().top - base <= line) idx = i;
+      }
+      // 触底时高亮最后一项
+      var maxScroll = box ? box.scrollHeight - box.clientHeight : document.documentElement.scrollHeight - window.innerHeight;
+      if (readScroll(box) >= maxScroll - 2) idx = items.length - 1;
+      setActive(idx);
+    }
+
+    function requestSpy() {
+      if (ticking) return;
+      ticking = true;
+      window.requestAnimationFrame(spy);
+    }
+
+    links.forEach(function (a) {
+      a.addEventListener("click", function (e) {
+        var sec = targetOf(a);
+        if (!sec) return;
+        e.preventDefault();
+        var container = scrollParent(sec);
+        var base = container ? container.getBoundingClientRect().top : 0;
+        var to = sec.getBoundingClientRect().top - base + readScroll(container) - offsetTop();
+        smoothTo(container, Math.max(0, to), DURATION);
+        if (history.replaceState) history.replaceState(null, "", "#" + sec.id);
+        else location.hash = sec.id;
+        var idx = -1;
+        items.forEach(function (it, k) { if (it.a === a) idx = k; });
+        setActive(idx);
+      });
+    });
+
+    (box || window).addEventListener("scroll", requestSpy, { passive: true });
+    window.addEventListener("resize", requestSpy);
+    requestSpy();
   });
 })();

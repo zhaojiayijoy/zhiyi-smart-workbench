@@ -9,7 +9,7 @@
     if (saved) return saved;
     // 本地预览：静态站跑在 8765，接口在 8700
     var host = location.hostname;
-    if (location.protocol === "file:" || ((host === "localhost" || host === "127.0.0.1") && location.port === "8765")) return "http://127.0.0.1:8700/api";
+    if (host === "localhost" || host === "127.0.0.1" || host === "") return "http://127.0.0.1:8700/api";
     // 服务器部署：静态站与接口同源（同一个 uvicorn 端口）
     return location.origin + "/api";
   })();
@@ -37,7 +37,7 @@
           if (res.status === 401 && path.indexOf("/auth/login") < 0 && window.EduAuth) {
             window.EduAuth.clearSession();
           }
-          var e = new Error((json && (json.error || json.detail)) || ("HTTP " + res.status));
+          var e = new Error((json && json.error) || ("HTTP " + res.status));
           e.status = res.status;
           e.code = json && json.code;
           throw e;
@@ -79,18 +79,6 @@
     base: BASE,
     health: function () { return _req("/health"); },
 
-    rehearsals: {
-      list: function (cid) { return _req("/rehearsals?courseId=" + encodeURIComponent(cid)); },
-      get: function (rid) { return _req("/rehearsals/" + encodeURIComponent(rid)); },
-      create: function (body) { return _req("/rehearsals", { method: "POST", body: body }); },
-      demo: function (body) { return _req("/rehearsals/demo", { method: "POST", body: body }); },
-      patch: function (rid, pid, action) {
-        if (["apply", "reject", "undo"].indexOf(action) < 0) return Promise.reject(new Error("无效操作"));
-        return _req("/rehearsals/" + encodeURIComponent(rid) + "/patches/" + encodeURIComponent(pid) + "/" + action,
-          { method: "POST", body: {} });
-      }
-    },
-
     auth: {
       login: function (role, username, password) {
         return _req("/auth/login", { method: "POST", body: { role: role, username: username, password: password } });
@@ -123,27 +111,23 @@
         fd.append("file", file);
         return _req("/students/import", { method: "POST", body: fd, form: true });
       },
-      clear: function (pid) { return _req("/students?project_id=" + (pid || ""), { method: "DELETE" }); }
+      clear: function (pid) { return _req("/students?project_id=" + (pid || ""), { method: "DELETE" }); },
+      resetPasswords: function (pid) { return _req("/students/reset-passwords?project_id=" + (pid || ""), { method: "POST" }); }
     },
     student: {
       versions: function (sid) { return _req("/student/submissions/" + encodeURIComponent(sid) + "/versions"); },
       downloadVersion: function (sid, version, filename) {
         return download("/student/submissions/" + encodeURIComponent(sid) + "/versions/" + encodeURIComponent(version) + "/file", filename);
       },
-      overview: function (pid, offset, limit) {
-        var query = new URLSearchParams({offset: offset || 0, limit: limit || 50});
-        if (pid) query.set("project_id", pid);
-        return _req("/student/overview?" + query.toString());
-      },
+      overview: function (pid) { return _req("/student/overview" + (pid ? "?project_id=" + pid : "")); },
       dashboard: function (pid) { return _req("/student/dashboard" + (pid ? "?project_id=" + pid : "")); },
       wrong: function (pid) { return _req("/student/wrong" + (pid ? "?project_id=" + pid : "")); },
       ask: function (pid, question, kp) {
         return _req("/student/ask", { method: "POST", body: { project_id: pid, question: question, knowledge_point: kp || "" } });
       },
-      submit: function (taskId, file, note, requestKey) {
+      submit: function (taskId, file, note) {
         var fd = new FormData();
         fd.append("note", note || "");
-        if (requestKey) fd.append("request_key", requestKey);
         if (file) fd.append("file", file);
         return _req("/student/task/" + taskId + "/submit", { method: "POST", body: fd, form: true });
       },

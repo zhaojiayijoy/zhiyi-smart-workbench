@@ -89,15 +89,7 @@ def _timeline_from_lesson(lesson: Optional[dict], course: Optional[dict]) -> lis
     if not lesson:
         return _default_timeline()
     timeline = []
-    pkg = (lesson.get("meta") or {}).get("pkg") or {}
-    steps = (pkg.get("lesson_plan") or {}).get("steps") or []
-    if steps:
-        return [{"stageId": f"stage-{i}", "name": step.get("phase") or f"阶段 {i}",
-                 "minutes": step.get("minutes") or 5, "objective": step.get("design_intent") or "",
-                 "activities": [step.get("teacher") or ""], "practice": step.get("student") or ""}
-                for i, step in enumerate(steps, 1) if isinstance(step, dict)]
-    answer = lesson.get("answer") or ""
-    lesson_plan = answer.get("教案", "") if isinstance(answer, dict) else str(answer)
+    lesson_plan = (lesson.get("answer") or {}).get("教案") or (lesson.get("meta") or {}).get("教案") or ""
     stages = re.findall(r"(?:^|\n)\s*(\d+)[.、]\s*(导入|讲解|新授|互动|练习|实训|讨论|总结|作业|拓展)[^\n]*", lesson_plan)
     if stages:
         for i, (idx, name) in enumerate(stages, start=1):
@@ -168,7 +160,8 @@ def run_rehearsal(*, rehearsal_id: int, course_id: int,
                 risks=live_result.get("risks", []),
                 patches=live_result.get("patches", []),
                 summary=summary,
-                is_demo=False, error="",
+                generation_model="deepseek",
+                review_model="zhipu" if use_review_model else "",
                 completed_at=time.time(),
             )
             return
@@ -348,7 +341,7 @@ def _finalize_demo(rehearsal_id: int, course: Optional[dict],
         rehearsal_id,
         status="completed",
         timeline=timeline, events=events, risks=risks, patches=patches,
-        summary=summary, completed_at=time.time(), is_demo=True,
+        summary=summary, completed_at=time.time(),
     )
 
 
@@ -372,8 +365,7 @@ def _live_run(course: Optional[dict], lesson_pkg: Optional[dict],
         }, ensure_ascii=False)
     lesson_text = ""
     if lesson_pkg:
-        pkg = (lesson_pkg.get("meta") or {}).get("pkg") or lesson_pkg.get("answer") or ""
-        lesson_text = json.dumps(pkg, ensure_ascii=False)[:12000]
+        lesson_text = (lesson_pkg.get("answer") or "")[:2000]
 
     persona_text = json.dumps({k: PERSONAS[k] for k in personas if k in PERSONAS}, ensure_ascii=False)
     timeline_text = json.dumps(timeline, ensure_ascii=False)
