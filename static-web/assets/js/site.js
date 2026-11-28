@@ -92,7 +92,7 @@
     var btn = document.getElementById("themeToggle");
     if (!btn) return;
     var dark = isDarkTheme();
-    btn.textContent = dark ? "☀" : "☾";
+    btn.textContent = dark ? "☽" : "☀";
     btn.setAttribute("aria-pressed", dark ? "true" : "false");
     btn.setAttribute("title", dark ? "切换到亮色" : "切换到暗色");
   }
