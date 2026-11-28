@@ -10,13 +10,55 @@
 from __future__ import annotations
 
 import json
+import hashlib
+import secrets
 import sqlite3
+import threading
 import time
+from pathlib import Path
 from typing import Any, Optional
 
 from app.config import ROOT
 
 DB_PATH = (ROOT / ".data" / "workbench.db").resolve()
+_SCHEMA_VERSION = 4
+_INIT_LOCK = threading.RLock()
+
+
+class _Connection(sqlite3.Connection):
+    def __exit__(self, *args):
+        try:
+            return super().__exit__(*args)
+        finally:
+            self.close()
+
+
+def _conn() -> sqlite3.Connection:
+    DB_PATH.parent.mkdir(parents=True, exist_ok=True)
+    conn = sqlite3.connect(DB_PATH, timeout=10, factory=_Connection)
+    conn.row_factory = sqlite3.Row
+    try:
+        if conn.execute("PRAGMA user_version").fetchone()[0] < _SCHEMA_VERSION:
+            with _INIT_LOCK:
+                if conn.execute("PRAGMA user_version").fetchone()[0] < _SCHEMA_VERSION:
+                    _initialize(conn)
+        return conn
+    except Exception:
+        conn.close()
+        raise
+
+
+def initialize() -> None:
+    with _conn():
+        pass
+
+
+def backup_to(destination: str | Path) -> None:
+    with _conn() as source:
+        with sqlite3.connect(destination, factory=_Connection) as target:
+            source.backup(target)
+            if target.execute("PRAGMA integrity_check").fetchone()[0] != "ok":
+                raise ValueError("数据库备份完整性检查失败")
 
 # "rows" 是 SQLite 关键字，统一加双引号
 _PROJECTS_SCHEMA = """
@@ -158,10 +200,8 @@ def _migrate(conn: sqlite3.Connection) -> None:
         conn.commit()
 
 
-def _conn() -> sqlite3.Connection:
-    DB_PATH.parent.mkdir(parents=True, exist_ok=True)
-    conn = sqlite3.connect(DB_PATH, timeout=10)
-    conn.row_factory = sqlite3.Row
+def _initialize(conn: sqlite3.Connection) -> None:
+    previous_version = int(conn.execute("PRAGMA user_version").fetchone()[0])
     # 1) 先建 projects 表
     conn.executescript(_PROJECTS_SCHEMA)
     # 2) 建 files/tasks 表（如果不存在，全新表自带 project_id 列）
@@ -243,6 +283,11 @@ def _conn() -> sqlite3.Connection:
             created_at REAL NOT NULL,
             expires_at REAL NOT NULL
         );
+        CREATE TABLE IF NOT EXISTS login_attempts (
+            key TEXT PRIMARY KEY,
+            started_at REAL NOT NULL,
+            attempts INTEGER NOT NULL
+        );
         CREATE TABLE IF NOT EXISTS submissions (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             project_id INTEGER NOT NULL,
@@ -284,7 +329,32 @@ def _conn() -> sqlite3.Connection:
     )
     # 3) 对旧库：补 ALTER TABLE project_id 列，补默认项目并迁移归属
     _migrate(conn)
+    user_cols = {r[1] for r in conn.execute("PRAGMA table_info(users)")}
+    if "activation_expires_at" not in user_cols:
+        conn.execute("ALTER TABLE users ADD COLUMN activation_expires_at REAL")
+    if previous_version < 4:
+        pending = conn.execute(
+            "SELECT id, COALESCE(NULLIF(TRIM(student_no), ''), username) AS student_no"
+            " FROM users WHERE role='student' AND must_change=1"
+        ).fetchall()
+        for user in pending:
+            student_no = str(user["student_no"] or "").strip()
+            if not student_no:
+                continue
+            password = student_no[-6:] if len(student_no) >= 6 else student_no
+            salt = secrets.token_hex(16)
+            digest = hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), salt.encode("utf-8"), 120_000)
+            conn.execute(
+                "UPDATE users SET password_hash=?, activation_expires_at=NULL, updated_at=? WHERE id=?",
+                (f"pbkdf2_sha256$120000${salt}${digest.hex()}", time.time(), int(user["id"])),
+            )
+        conn.execute("DELETE FROM sessions WHERE user_id IN"
+                     " (SELECT id FROM users WHERE role='student' AND must_change=1)")
+    conn.commit()
     # 4) 幂等回填当前快照为首个历史版本
+    version_cols = {r[1] for r in conn.execute("PRAGMA table_info(submission_versions)")}
+    if "request_key" not in version_cols:
+        conn.execute("ALTER TABLE submission_versions ADD COLUMN request_key TEXT NOT NULL DEFAULT ''")
     conn.execute(
         "INSERT OR IGNORE INTO submission_versions (submission_id, version, project_id, task_id,"
         " student_id, student_no, student_name, file_id, file_name, note, review_task_id,"
@@ -306,9 +376,18 @@ def _conn() -> sqlite3.Connection:
         CREATE INDEX IF NOT EXISTS idx_sessions_user ON sessions(user_id);
         CREATE INDEX IF NOT EXISTS idx_submissions_task ON submissions(task_id, student_no);
         CREATE INDEX IF NOT EXISTS idx_submissions_project ON submissions(project_id, student_no);
+        CREATE INDEX IF NOT EXISTS idx_login_attempts_started ON login_attempts(started_at);
+        CREATE INDEX IF NOT EXISTS idx_versions_review ON submission_versions(review_task_id);
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_versions_request
+            ON submission_versions(student_id, task_id, request_key) WHERE request_key<>'';
+        CREATE INDEX IF NOT EXISTS idx_tasks_student ON tasks(project_id, kind,
+            TRIM(CAST(json_extract(CASE WHEN json_valid(meta) THEN meta ELSE '{}' END,
+                                   '$.student_no') AS TEXT)), created_at DESC, id DESC);
         """
     )
-    return conn
+    _ensure_rehearsal_table(conn)
+    conn.execute(f"PRAGMA user_version={_SCHEMA_VERSION}")
+    conn.commit()
 
 
 def _d(r: sqlite3.Row) -> dict[str, Any]:
@@ -649,7 +728,8 @@ def get_task(task_id: int) -> Optional[dict[str, Any]]:
 
 
 def list_tasks(project_id: Optional[int] = None, limit: int = 200,
-               kind: Optional[str] = None) -> list[dict[str, Any]]:
+               kind: Optional[str] = None, *, student_keys: Optional[set[str]] = None,
+               released_only: bool = False, offset: int = 0) -> list[dict[str, Any]]:
     clauses, args = [], []
     if project_id is not None:
         clauses.append("project_id=?")
@@ -657,12 +737,23 @@ def list_tasks(project_id: Optional[int] = None, limit: int = 200,
     if kind:
         clauses.append("kind=?")
         args.append(kind)
+    # Invalid legacy JSON cannot bypass the identity filter or break the query.
+    safe_meta = "CASE WHEN json_valid(meta) THEN meta ELSE '{}' END"
+    if student_keys is not None:
+        keys = sorted(str(k).strip() for k in student_keys if str(k).strip())
+        if not keys:
+            return []
+        clauses.append(f"TRIM(CAST(json_extract({safe_meta}, '$.student_no') AS TEXT))"
+                       f" IN ({','.join('?' for _ in keys)})")
+        args.extend(keys)
+    if released_only:
+        clauses.append(f"json_extract({safe_meta}, '$.status') IN ('published','returned')")
     where = ("WHERE " + " AND ".join(clauses)) if clauses else ""
     with _conn() as c:
         rows = c.execute(
             f"SELECT {_TASK_COLS} FROM tasks {where}"
-            " ORDER BY created_at DESC, id DESC LIMIT ?",
-            tuple(args) + (int(limit),),
+            " ORDER BY created_at DESC, id DESC LIMIT ? OFFSET ?",
+            tuple(args) + (max(1, min(int(limit), 10000)), max(0, int(offset))),
         ).fetchall()
     out: list[dict[str, Any]] = []
     for r in rows:
@@ -785,9 +876,7 @@ def _ensure_rehearsal_table(conn: sqlite3.Connection) -> None:
 
 
 def _conn_rehearsals() -> sqlite3.Connection:
-    conn = _conn()
-    _ensure_rehearsal_table(conn)
-    return conn
+    return _conn()
 
 
 def create_rehearsal(*, course_id: int, lesson_package_id: Optional[int] = None,
@@ -995,21 +1084,22 @@ def student_enrollments(student_no: str) -> list[dict[str, Any]]:
 # users / sessions（教师与学生账号、登录会话）
 # ---------------------------------------------------------------------------
 _USER_COLS = ("id, role, username, password_hash, display_name, student_no,"
-              " college, major, class_name, bound, must_change, status, created_at, updated_at")
+              " college, major, class_name, bound, must_change, status, activation_expires_at, created_at, updated_at")
 
 
 def create_user(*, role: str, username: str, password_hash: str,
                 display_name: str = "", student_no: str = "",
                 college: str = "", major: str = "", class_name: str = "",
-                bound: int = 0, must_change: int = 0) -> int:
+                bound: int = 0, must_change: int = 0,
+                activation_expires_at: Optional[float] = None) -> int:
     now = time.time()
     with _conn() as c:
         cur = c.execute(
             "INSERT INTO users (role, username, password_hash, display_name, student_no,"
-            " college, major, class_name, bound, must_change, status, created_at, updated_at)"
-            " VALUES (?,?,?,?,?,?,?,?,?,?,'active',?,?)",
+            " college, major, class_name, bound, must_change, status, activation_expires_at, created_at, updated_at)"
+            " VALUES (?,?,?,?,?,?,?,?,?,?,'active',?,?,?)",
             (role, username, password_hash, display_name, student_no,
-             college, major, class_name, int(bound), int(must_change), now, now),
+             college, major, class_name, int(bound), int(must_change), activation_expires_at, now, now),
         )
         c.commit()
         return int(cur.lastrowid)
@@ -1028,7 +1118,28 @@ def get_user(user_id: int) -> Optional[dict[str, Any]]:
 
 
 _USER_FIELDS = {"password_hash", "display_name", "student_no", "college", "major",
-                "class_name", "bound", "must_change", "status"}
+                 "class_name", "bound", "must_change", "status", "activation_expires_at"}
+
+
+def reserve_login_attempt(account_key: str, source_key: str, now: float,
+                          window: int = 900) -> int:
+    """Atomically reserve an attempt across API workers, before password hashing."""
+    with _conn() as c:
+        c.execute("BEGIN IMMEDIATE")
+        c.execute("DELETE FROM login_attempts WHERE started_at<=?", (now - window,))
+        for key, maximum in ((account_key, 8), (source_key, 200)):
+            row = c.execute("SELECT started_at, attempts FROM login_attempts WHERE key=?", (key,)).fetchone()
+            if row and row["attempts"] >= maximum:
+                return max(1, int(row["started_at"] + window - now) + 1)
+        for key in (account_key, source_key):
+            c.execute("INSERT INTO login_attempts(key,started_at,attempts) VALUES(?,?,1)"
+                      " ON CONFLICT(key) DO UPDATE SET attempts=attempts+1", (key, now))
+    return 0
+
+
+def clear_login_attempts(account_key: str) -> None:
+    with _conn() as c:
+        c.execute("DELETE FROM login_attempts WHERE key=?", (account_key,))
 
 
 def update_user(user_id: int, **fields: Any) -> None:
@@ -1116,10 +1227,16 @@ def _insert_submission_version(c: sqlite3.Connection, sid: int, version: int,
 
 def upsert_submission(*, project_id: int, task_id: int, student_id: int,
                       student_no: str, student_name: str, file_id: int = 0,
-                      file_name: str = "", note: str = "") -> dict[str, Any]:
+                      file_name: str = "", note: str = "", request_key: str = "") -> dict[str, Any]:
     now = time.time()
     with _conn() as c:
         c.execute("BEGIN IMMEDIATE")
+        if request_key:
+            previous = c.execute(f"SELECT {_VER_COLS} FROM submission_versions"
+                                 " WHERE student_id=? AND task_id=? AND request_key=?",
+                                 (int(student_id), int(task_id), request_key)).fetchone()
+            if previous:
+                return {**_d(previous), "id": previous["submission_id"], "replayed": True}
         row = c.execute("SELECT id FROM submissions WHERE task_id=? AND student_no=?",
                         (int(task_id), str(student_no))).fetchone()
         if row:
@@ -1145,6 +1262,9 @@ def upsert_submission(*, project_id: int, task_id: int, student_id: int,
                   "file_name": file_name, "note": note, "review_task_id": 0, "status": "submitted",
                   "score": None, "feedback": ""}
         _insert_submission_version(c, sid, version, values, now)
+        if request_key:
+            c.execute("UPDATE submission_versions SET request_key=? WHERE submission_id=? AND version=?",
+                      (request_key, sid, version))
         r = c.execute(f"SELECT {_SUB_COLS} FROM submissions WHERE id=?", (sid,)).fetchone()
         c.commit()
     result = _d(r)
@@ -1152,13 +1272,27 @@ def upsert_submission(*, project_id: int, task_id: int, student_id: int,
     return result
 
 
-def set_submission_review(sid: int, review_task_id: int) -> None:
+def get_submission_request(student_id: int, task_id: int, request_key: str) -> Optional[dict[str, Any]]:
+    if not request_key:
+        return None
     with _conn() as c:
-        c.execute("UPDATE submissions SET review_task_id=?, updated_at=? WHERE id=?",
-                  (int(review_task_id), time.time(), int(sid)))
-        c.execute("UPDATE submission_versions SET review_task_id=? WHERE submission_id=?"
-                  " AND version=(SELECT MAX(version) FROM submission_versions WHERE submission_id=?)",
-                  (int(review_task_id), int(sid), int(sid)))
+        row = c.execute(f"SELECT {_VER_COLS} FROM submission_versions"
+                        " WHERE student_id=? AND task_id=? AND request_key=?",
+                        (int(student_id), int(task_id), request_key)).fetchone()
+    return {**_d(row), "id": row["submission_id"]} if row else None
+
+
+def set_submission_review(sid: int, version: int, review_task_id: int) -> None:
+    with _conn() as c:
+        c.execute("BEGIN IMMEDIATE")
+        cur = c.execute("UPDATE submission_versions SET review_task_id=?"
+                        " WHERE submission_id=? AND version=? AND review_task_id=0",
+                        (int(review_task_id), int(sid), int(version)))
+        if cur.rowcount != 1:
+            raise ValueError("提交版本不存在或已关联评审")
+        c.execute("UPDATE submissions SET review_task_id=?, updated_at=? WHERE id=?"
+                  " AND ?=(SELECT MAX(version) FROM submission_versions WHERE submission_id=?)",
+                  (int(review_task_id), time.time(), int(sid), int(version), int(sid)))
         c.commit()
 
 

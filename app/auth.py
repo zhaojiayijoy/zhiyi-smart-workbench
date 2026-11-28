@@ -2,8 +2,8 @@
 
 - 密码使用 PBKDF2-HMAC-SHA256（随机盐）散列后存库，永不保存明文
 - 会话令牌写入 sessions 表，默认 7 天有效，退出登录即删除
-- 教师账号在启动时按 EDU_TEACHER_USER / EDU_TEACHER_PASS 创建（密码必须显式设置）
-- 学生账号由学生名单回填：用户名 = 学号，初始密码 = 学号后 6 位（不足 6 位取全串）
+- 教师账号在启动时按 EDU_TEACHER_USER / EDU_TEACHER_PASS 创建；未配置时使用本地默认账号
+- 学生账号由名单回填：用户名 = 学号，初始密码 = 学号后 6 位（不足 6 位取全串）
 """
 from __future__ import annotations
 
@@ -18,6 +18,21 @@ from app import db
 
 _PBKDF2_ROUNDS = 120_000
 SESSION_TTL = 7 * 24 * 3600
+PASSWORD_MIN_LENGTH = 12
+
+
+class LoginRateLimited(Exception):
+    def __init__(self, retry_after: int):
+        self.retry_after = retry_after
+        super().__init__("登录尝试过多，请稍后重试")
+
+
+def password_error(password: str) -> str:
+    if len(password) < PASSWORD_MIN_LENGTH:
+        return "新密码至少 12 位"
+    if len(password) > 256:
+        return "密码不能超过 256 位"
+    return ""
 
 
 def hash_password(password: str, rounds: int = _PBKDF2_ROUNDS) -> str:
@@ -39,14 +54,12 @@ def verify_password(password: str, stored: str) -> bool:
 
 def initial_password(student_no: str) -> str:
     """初始密码规则：学号后 6 位；学号不足 6 位时取整个学号。"""
-    s = str(student_no or "").strip()
-    if not s:
-        return ""
-    return s[-6:] if len(s) >= 6 else s
+    no = str(student_no or "").strip()
+    return no[-6:] if len(no) >= 6 else no
 
 
-TEACHER_USER = os.getenv("EDU_TEACHER_USER", "teacher")
-TEACHER_PASS = os.getenv("EDU_TEACHER_PASS", "")
+TEACHER_USER = os.getenv("EDU_TEACHER_USER") or "teacher"
+TEACHER_PASS = os.getenv("EDU_TEACHER_PASS") or "Zhiyi@2026"
 
 
 def public_user(user: Optional[dict[str, Any]]) -> Optional[dict[str, Any]]:
@@ -92,10 +105,9 @@ def backfill_student_accounts() -> int:
 
 def ensure_bootstrap() -> dict[str, Any]:
     """启动时执行：建默认教师账号 + 回填学生账号 + 清理过期会话。"""
+    db.initialize()
     teacher_created = False
     if not db.get_user_by_username(TEACHER_USER):
-        if len(TEACHER_PASS) < 12 or TEACHER_PASS == "Zhiyi@2026":
-            raise RuntimeError("首次启动前请设置 EDU_TEACHER_PASS，至少 12 位，不可使用旧默认密码")
         db.create_user(
             role="teacher", username=TEACHER_USER, password_hash=hash_password(TEACHER_PASS),
             display_name="教师", bound=1,
@@ -116,11 +128,18 @@ def new_session(user_id: int, role: str) -> str:
     return token
 
 
-def login(role: str, username: str, password: str) -> tuple[Optional[dict[str, Any]], str]:
+def login(role: str, username: str, password: str, *, source: str = "local") -> tuple[Optional[dict[str, Any]], str]:
     """校验账号密码并签发会话；返回 (user, token) 或 (None, 错误信息)。"""
     name = str(username or "").strip()
     if not name or not password:
         return None, "请输入账号和密码"
+    account_key = "account:" + hashlib.sha256(name.encode("utf-8")).hexdigest()
+    source_key = "source:" + hashlib.sha256(source.encode("utf-8")).hexdigest()
+    retry = db.reserve_login_attempt(account_key, source_key, time.time())
+    if retry:
+        raise LoginRateLimited(retry)
+    if len(name) > 256 or len(password) > 256:
+        return None, "账号或密码错误"
     user = db.get_user_by_username(name)
     if not user or not verify_password(password, user.get("password_hash") or ""):
         return None, "账号或密码错误"
@@ -128,6 +147,7 @@ def login(role: str, username: str, password: str) -> tuple[Optional[dict[str, A
         return None, "账号已停用，请联系教师"
     if user.get("role") != role:
         return None, "该账号不是" + ("教师账号" if role == "teacher" else "学生账号")
+    db.clear_login_attempts(account_key)
     return user, new_session(int(user["id"]), role)
 
 
@@ -149,6 +169,10 @@ def resolve_token(token: Optional[str]) -> Optional[dict[str, Any]]:
 
 def reset_password(user_id: int, password: str, must_change: bool = False) -> None:
     """改密；must_change=True 用于教师重置，学生下次登录必须先改密。"""
+    error = password_error(password)
+    if error:
+        raise ValueError(error)
     db.update_user(int(user_id), password_hash=hash_password(password),
-                   must_change=1 if must_change else 0)
+                   must_change=1 if must_change else 0,
+                   activation_expires_at=None)
     db.delete_user_sessions(int(user_id))

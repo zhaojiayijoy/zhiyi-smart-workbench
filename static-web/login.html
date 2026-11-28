@@ -70,8 +70,8 @@
       <div class="login-msg" id="loginMsg"></div>
       <button class="btn primary" type="submit" id="loginBtn">登录</button>
     </form>
-    <div class="login-hint" id="loginHint">教师账号由管理员配置；学生请使用教师分配的账号登录。</div>
-    <div class="login-foot">学生初始密码为「学号后 6 位」（学号不足 6 位时即学号本身），首次登录后请自行修改。</div>
+    <div class="login-hint" id="loginHint">教师使用教师账号登录；学生使用学号登录。</div>
+    <div class="login-foot">学生初始密码为学号后 6 位（不足 6 位时使用完整学号），首次登录后请自行修改。</div>
   </div>
 </div>
 
@@ -104,7 +104,10 @@
     userEl.value = "";
     passEl.value = "";
     msg.textContent = "";
-    hint.style.display = role === "teacher" ? "" : "none";
+    hint.textContent = role === "teacher"
+      ? "教师使用教师账号登录；学生使用学号登录。"
+      : "学生初始密码为学号后 6 位（不足 6 位时使用完整学号）。";
+    hint.style.display = "";
     document.querySelectorAll(".login-tabs button").forEach(function (b) {
       b.classList.toggle("on", b.getAttribute("data-role") === role);
     });

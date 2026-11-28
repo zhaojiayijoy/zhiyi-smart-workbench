@@ -839,11 +839,6 @@ td{padding:6px 12px}
 }
 
 /* ---------- 自定义光标 ---------- */
-@media (hover:hover) and (pointer:fine){
-  html.tc-cursor-on,
-  html.tc-cursor-on body,
-  html.tc-cursor-on body *{cursor:none!important}
-}
 .tc-cursor-dot,
 .tc-cursor-ring{position:fixed;top:0;left:0;pointer-events:none;z-index:2147483647;opacity:0;transition:opacity .18s ease}
 .tc-cursor-dot{
@@ -860,7 +855,7 @@ td{padding:6px 12px}
   transition:transform .22s cubic-bezier(.22,.61,.36,1),opacity .22s ease,background-color .22s ease
 }
 .tc-cursor-ring.is-active::after{transform:scale(1);opacity:.38;background:var(--accent-soft)}
-html.tc-cursor-on:not(.tc-cursor-hidden) .tc-cursor-dot{opacity:.92}
+html.tc-cursor-on .tc-cursor-dot{display:none}
 html.tc-cursor-on:not(.tc-cursor-hidden) .tc-cursor-ring{opacity:1}
 html.tc-cursor-on .tc-cursor-dot.is-subtle{opacity:0}
 html.tc-cursor-hidden .tc-cursor-dot,
@@ -869,7 +864,7 @@ html.tc-cursor-hidden .tc-cursor-ring{opacity:0}
   .tc-cursor-dot,.tc-cursor-ring{display:none!important}
 }
 @media (prefers-reduced-motion:reduce){
-  .tc-cursor-ring::after{transition:none}
+  .tc-cursor-ring,.tc-cursor-dot,.tc-spotlight{display:none!important}
 }
 
 /* ---------- 光标聚光灯 ---------- */

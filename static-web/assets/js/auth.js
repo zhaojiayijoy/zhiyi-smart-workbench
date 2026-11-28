@@ -154,7 +154,7 @@
     var m = openModal("修改密码",
       (forced ? '<p class="mini" style="margin:0 0 10px">首次登录或密码被重置后，必须先修改初始密码才能进入空间。</p>' : "") +
       field("原密码", "pwdOld", "password") +
-      field("新密码（至少 6 位）", "pwdNew", "password") +
+      field("新密码（12–256 位）", "pwdNew", "password") +
       field("确认新密码", "pwdNew2", "password") +
       '<div class="mini" id="pwdMsg"></div>',
       (forced ? "" : '<button class="btn" type="button" data-x>取消</button>') +
@@ -167,7 +167,7 @@
       var again = m.el.querySelector("#pwdNew2").value;
       var msg = m.el.querySelector("#pwdMsg");
       if (!oldPwd || !newPwd) { msg.textContent = "请填写原密码与新密码"; return; }
-      if (newPwd.length < 6) { msg.textContent = "新密码至少 6 位"; return; }
+      if (newPwd.length < 12 || newPwd.length > 256) { msg.textContent = "新密码需为 12–256 位"; return; }
       if (newPwd !== again) { msg.textContent = "两次输入的新密码不一致"; return; }
       raw("/auth/password", { method: "POST", body: { old_password: oldPwd, new_password: newPwd } })
         .then(function (r) {

@@ -1779,6 +1779,34 @@
     var currentPid = null;
     var profile = null;
     var courses = [];
+    var recordData = null, loadGeneration = 0, paging = false;
+
+    function loadMore() {
+      if (!recordData || paging) return;
+      var generation = loadGeneration;
+      var page = recordData.pagination || {};
+      paging = true;
+      $all('[data-student-more]').forEach(function (b) { busy(b, true, "加载中…"); });
+      API.student.overview(currentPid, (page.offset || 0) + (page.limit || 50), page.limit || 50).then(function (d) {
+        if (generation !== loadGeneration) return;
+        ["my_reviews", "my_qa"].forEach(function (field) {
+          var seen = {};
+          recordData[field] = (recordData[field] || []).concat(d[field] || []).filter(function (r) {
+            if (seen[r.id]) return false;
+            seen[r.id] = true;
+            return true;
+          });
+        });
+        recordData.pagination = d.pagination;
+        renderStudent(recordData, recordData.wrong);
+      }).catch(function (err) {
+        if (generation === loadGeneration) notify("历史记录加载失败：" + (err.message || err));
+      }).then(function () {
+        if (generation !== loadGeneration) return;
+        paging = false;
+        $all('[data-student-more]').forEach(function (b) { busy(b, false); });
+      });
+    }
 
     function renderProfile(p) {
       // 学生页的「个人资料」tab 已移除：现在改资料走侧栏头像卡弹窗；
@@ -1828,6 +1856,8 @@
         if (pfFont && look.font) pfFont.value = String(look.font);
         var pfSidebar = document.getElementById("pfSidebar");
         if (pfSidebar && look.sidebar) pfSidebar.value = look.sidebar;
+        var pfCursor = document.getElementById("pfCursor");
+        if (pfCursor && window.EduCursor) pfCursor.checked = window.EduCursor.isEnabled();
       } catch (e) {}
 
       var pick = document.getElementById("coursePick");
@@ -1842,6 +1872,10 @@
 
     function load(projectId) {
       if (window.__eduMustChange) return Promise.resolve(null);
+      var generation = ++loadGeneration;
+      paging = false;
+      recordData = null;
+      $all('[data-student-more]').forEach(function (b) { b.hidden = true; });
       var qp = projectId;
       if (qp === undefined) {
         try { qp = new URLSearchParams(location.search).get("project_id") || undefined; } catch (e) { qp = undefined; }
@@ -1852,6 +1886,8 @@
       historyVersions._versionRequest = null;
       historyVersions.textContent = '';
       return API.student.overview(qp).then(function (d) {
+        if (generation !== loadGeneration) return;
+        recordData = d;
         courses = d.courses || [];
         currentPid = d.project_id || null;
         Edu.state.courses = courses;
@@ -1862,6 +1898,7 @@
           EduAuth.openBind({ forced: true, onDone: function () { load(); } });
         }
       }).catch(function (err) {
+        if (generation !== loadGeneration) return;
         notify("学生数据加载失败：" + (err.message || err));
       });
     }
@@ -1924,7 +1961,7 @@
       var newPwd = document.getElementById("pfNewPwd").value;
       var newPwd2 = document.getElementById("pfNewPwd2").value;
       if (!oldPwd || !newPwd) { notify("请填写原密码和新密码"); return; }
-      if (newPwd.length < 6) { notify("新密码至少 6 位"); return; }
+      if (newPwd.length < 12 || newPwd.length > 256) { notify("新密码需为 12–256 位"); return; }
       if (newPwd !== newPwd2) { notify("两次新密码输入不一致"); return; }
       busy(pfPwdSave, true, "更新中…");
       var msg = document.getElementById("pfPwdMsg");
@@ -1958,6 +1995,7 @@
       var sidebar = document.getElementById("pfSidebar").value || "open";
       try {
         localStorage.setItem("edu.look", JSON.stringify({ theme: theme, font: font, sidebar: sidebar }));
+        if (window.EduCursor) window.EduCursor.setEnabled(document.getElementById("pfCursor").checked);
         // 顶栏切换按钮读的是 edu.prefs，这里保持同步并立即应用
         try {
           var pref = JSON.parse(localStorage.getItem("edu.prefs") || "{}");
@@ -1973,6 +2011,13 @@
     if (outBtn) outBtn.addEventListener("click", function () { EduAuth.logout(); });
 
     function openSubmit(taskId, title) {
+      var requestKey = "";
+      function renewRequest() {
+        var bytes = new Uint8Array(16);
+        window.crypto.getRandomValues(bytes);
+        requestKey = Array.prototype.map.call(bytes, function (n) { return n.toString(16).padStart(2, "0"); }).join("");
+      }
+      renewRequest();
       var mask = document.createElement("div");
       mask.className = "modal-mask on";
       mask.innerHTML = '<div class="modal" style="max-width:480px">' +
@@ -1987,6 +2032,8 @@
         '<div class="modal-f"><button class="btn" type="button" data-x>取消</button>' +
         '<button class="btn primary" type="button" data-ok>上传并提交</button></div></div>';
       document.body.appendChild(mask);
+      mask.querySelector("#subFile").addEventListener("change", renewRequest);
+      mask.querySelector("#subNote").addEventListener("input", renewRequest);
       function close() { if (mask.parentNode) mask.parentNode.removeChild(mask); }
       mask.addEventListener("click", function (e) {
         if (e.target === mask || e.target.closest("[data-x]")) { close(); return; }
@@ -1996,8 +2043,9 @@
         var msg = mask.querySelector("#subMsg");
         if (!f) { msg.textContent = "请选择作业文件"; return; }
         var btn = mask.querySelector("[data-ok]");
+        if (btn.disabled) return;
         btn.disabled = true; btn.textContent = "提交中…";
-        API.student.submit(taskId, f, note).then(function (r) {
+        API.student.submit(taskId, f, note, requestKey).then(function (r) {
           close();
           notify(r.message || "已提交，等待教师评审");
           load(currentPid);
@@ -2153,7 +2201,7 @@
         myQa.forEach(function (t) { items.push({ q: t.prompt, ts: t.created_at, st: t.status === "ok" ? "已解决" : "进行中" }); });
         (d.tutor_threads || []).forEach(function (th) { items.push({ q: th.question, ts: th.ts, st: "AI 引导中" }); });
         if (!items.length) qaStack.innerHTML = '<div class="rule">暂无提问记录。</div>';
-        else qaStack.innerHTML = items.slice(0, 10).map(function (it) {
+        else qaStack.innerHTML = items.map(function (it) {
           return '<div class="rule"><b>' + h(it.q || "(无问题)") + '</b><br><span class="mini">' + (fmtTime(it.ts) || "") + " · " + h(it.st) + '</span></div>';
         }).join("");
       }
@@ -2184,8 +2232,19 @@
           }).join("");
         }
         var fbCount = document.getElementById("fbCount");
-        if (fbCount) fbCount.textContent = "共 " + myRev.length + " 条";
+        if (fbCount) fbCount.textContent = "已加载 " + myRev.length + " 条";
       }
+      var page = d.pagination || {};
+      [qaStack, fbList].forEach(function (container) {
+        if (!container || !(page.qa_has_more || page.reviews_has_more)) return;
+        var more = document.createElement("button");
+        more.type = "button";
+        more.className = "btn sm";
+        more.setAttribute("data-student-more", "");
+        more.textContent = "加载更多";
+        more.addEventListener("click", loadMore);
+        container.appendChild(more);
+      });
       // 错题本：由真实评审低分维度与答疑错因派生
       var rvTb = document.getElementById("rvTbody");
       if (rvTb) {

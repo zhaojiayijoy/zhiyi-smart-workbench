@@ -123,23 +123,27 @@
         fd.append("file", file);
         return _req("/students/import", { method: "POST", body: fd, form: true });
       },
-      clear: function (pid) { return _req("/students?project_id=" + (pid || ""), { method: "DELETE" }); },
-      resetPasswords: function (pid) { return _req("/students/reset-passwords?project_id=" + (pid || ""), { method: "POST" }); }
+      clear: function (pid) { return _req("/students?project_id=" + (pid || ""), { method: "DELETE" }); }
     },
     student: {
       versions: function (sid) { return _req("/student/submissions/" + encodeURIComponent(sid) + "/versions"); },
       downloadVersion: function (sid, version, filename) {
         return download("/student/submissions/" + encodeURIComponent(sid) + "/versions/" + encodeURIComponent(version) + "/file", filename);
       },
-      overview: function (pid) { return _req("/student/overview" + (pid ? "?project_id=" + pid : "")); },
+      overview: function (pid, offset, limit) {
+        var query = new URLSearchParams({offset: offset || 0, limit: limit || 50});
+        if (pid) query.set("project_id", pid);
+        return _req("/student/overview?" + query.toString());
+      },
       dashboard: function (pid) { return _req("/student/dashboard" + (pid ? "?project_id=" + pid : "")); },
       wrong: function (pid) { return _req("/student/wrong" + (pid ? "?project_id=" + pid : "")); },
       ask: function (pid, question, kp) {
         return _req("/student/ask", { method: "POST", body: { project_id: pid, question: question, knowledge_point: kp || "" } });
       },
-      submit: function (taskId, file, note) {
+      submit: function (taskId, file, note, requestKey) {
         var fd = new FormData();
         fd.append("note", note || "");
+        if (requestKey) fd.append("request_key", requestKey);
         if (file) fd.append("file", file);
         return _req("/student/task/" + taskId + "/submit", { method: "POST", body: fd, form: true });
       },

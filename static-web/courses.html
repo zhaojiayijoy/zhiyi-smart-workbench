@@ -88,7 +88,6 @@
             <span class="mini" id="rosterMeta">—</span>
             <button class="btn sm" type="button" id="rosterUploadBtn">上传名单</button>
             <input type="file" id="rosterFile" accept=".xlsx,.csv" hidden>
-            <button class="btn sm" type="button" id="rosterResetPwdBtn">重置初始密码</button>
             <button class="btn sm ghost" type="button" id="rosterClearBtn">清空名单</button>
           </div>
         </div>
@@ -400,29 +399,6 @@
         if (result){ result.hidden = false; result.innerHTML = "已清空 " + (res.deleted || 0) + " 名学生。"; }
         load();
       }).catch(function(err){ alert("清空失败：" + (err.message || err)); });
-    });
-  }
-
-  var resetPwdBtn = document.getElementById("rosterResetPwdBtn");
-  if (resetPwdBtn){
-    resetPwdBtn.addEventListener("click", function(){
-      var pid = curId();
-      if (!pid || !liveOk()) return;
-      if (!window.confirm("把所有学生账号重置为初始密码（学号后 6 位）？\n重置后旧密码立即失效，学生会话也会被强制退出。")) return;
-      resetPwdBtn.disabled = true;
-      EduAPI.students.resetPasswords(pid).then(function(res){
-        if (result){
-          result.hidden = false;
-          result.innerHTML = "<b>" + esc(res.message || "已重置") + "</b>" +
-            '<div class="table-wrap" style="margin-top:8px"><table><thead><tr><th>学号</th><th>姓名</th><th>初始密码</th></tr></thead><tbody>' +
-            (res.items || []).map(function(s){
-              return "<tr><td>" + esc(s.student_no) + "</td><td>" + esc(s.name || "—") +
-                "</td><td><b>" + esc(s.password) + "</b></td></tr>";
-            }).join("") + "</tbody></table></div>";
-        }
-      }).catch(function(err){
-        if (result){ result.hidden = false; result.innerHTML = '<span style="color:var(--warn)">重置失败：' + esc(err.message || err) + "</span>"; }
-      }).then(function(){ resetPwdBtn.disabled = false; });
     });
   }
 
