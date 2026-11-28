@@ -7,13 +7,13 @@
 #   3. PATH 中的 python.exe（自动跳过 Windows Store 占位程序）
 #   4. %LOCALAPPDATA%\Programs\Python\Python3*\python.exe、C:\Python3*\python.exe
 #   5. py -3 启动器
-# 端口与监听地址可用环境变量覆盖：FLOWMIND_PORT（默认 8501）、FLOWMIND_HOST（默认 0.0.0.0）
+# 端口与监听地址可用环境变量覆盖：FLOWMIND_PORT（默认 8501）、FLOWMIND_HOST（默认 127.0.0.1）
 
 $wd = Split-Path -Parent $MyInvocation.MyCommand.Path
 Set-Location $wd
 
 $port = if ($env:FLOWMIND_PORT) { [int]$env:FLOWMIND_PORT } else { 8501 }
-$bindHost = if ($env:FLOWMIND_HOST) { $env:FLOWMIND_HOST } else { '0.0.0.0' }
+$bindHost = if ($env:FLOWMIND_HOST) { $env:FLOWMIND_HOST } else { '127.0.0.1' }
 $log = Join-Path $wd 'streamlit.err.log'
 
 function Write-Log([string]$msg) {

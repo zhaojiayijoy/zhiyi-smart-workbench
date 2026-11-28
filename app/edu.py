@@ -244,6 +244,9 @@ def course_context(project_id: int | None, *, student_mode: bool = False,
         lines.append(f"课程说明：{p['description']}")
     files = db.list_files(project_id=int(project_id),
                           visibility="student" if student_mode else None, limit=60)
+    if student_mode:
+        # Protect legacy uploads that were incorrectly marked as shared context.
+        files = [f for f in files if f.get("category") != "学生作业"]
     if file_ids is not None:
         allow = {int(x) for x in file_ids}
         files = [f for f in files if int(f["id"]) in allow]
@@ -2049,12 +2052,14 @@ def aggregate_analytics(project_id: int | None, *, sources: list[str] | None = N
             if not name:
                 continue
             try:
-                dim_sum.setdefault(name, []).append(float(d.get("score", 0)))
+                confirmed = ((meta.get("teacher") or {}).get("scores") or {}).get(name)
+                dim_sum.setdefault(name, []).append(float(confirmed if confirmed is not None else d.get("score", 0)))
             except (TypeError, ValueError):
                 continue
         stu = (meta.get("student") or "").strip()
         try:
-            total = float(meta.get("final_total") or ai.get("total") or 0)
+            final = meta.get("final_total")
+            total = float(final if final is not None else ai.get("total") or 0)
         except (TypeError, ValueError):
             total = 0.0
         if stu:

@@ -1,4 +1,7 @@
-# Python 3.9 及以上（本机验证版本：3.9.13 / Windows）
+# Python 3.11+
+fastapi>=0.115,<1
+uvicorn>=0.30,<1
+python-multipart>=0.0.18,<1
 pandas>=2.0,<3.0
 numpy>=1.24
 openpyxl>=3.1

@@ -742,17 +742,15 @@ def delete_artifact(kind: str, ref: Any) -> None:
 
 
 def reset_all() -> None:
-    """清空业务数据（项目 / 资料 / 任务 / 产物），保留表结构。"""
+    """Clear business data and student accounts; retain teachers and ID sequences."""
     with _conn() as c:
-        c.execute("DELETE FROM files")
-        c.execute("DELETE FROM tasks")
-        c.execute("DELETE FROM artifacts")
-        c.execute("DELETE FROM rehearsals")
-        c.execute("DELETE FROM projects")
-        try:
-            c.execute("DELETE FROM sqlite_sequence")
-        except sqlite3.OperationalError:
-            pass
+        tables = {r[0] for r in c.execute("SELECT name FROM sqlite_master WHERE type='table'")}
+        for table in ("submission_versions", "submissions", "students", "files",
+                      "tasks", "artifacts", "rehearsals", "projects"):
+            if table in tables:
+                c.execute(f'DELETE FROM "{table}"')
+        c.execute("DELETE FROM sessions WHERE user_id IN (SELECT id FROM users WHERE role='student')")
+        c.execute("DELETE FROM users WHERE role='student'")
 
 
 # ---------------------------------------------------------------------------
@@ -815,7 +813,8 @@ def update_rehearsal(rehearsal_id: int, *, status: Optional[str] = None,
                      timeline: Optional[list] = None, events: Optional[list] = None,
                      risks: Optional[list] = None, patches: Optional[list] = None,
                      summary: Optional[dict] = None, error: Optional[str] = None,
-                     completed_at: Optional[float] = None) -> None:
+                     completed_at: Optional[float] = None,
+                     is_demo: Optional[bool] = None) -> None:
     sets, args = [], []
     for col, val in (
         ("status", status), ("summary", summary), ("error", error),
@@ -831,6 +830,9 @@ def update_rehearsal(rehearsal_id: int, *, status: Optional[str] = None,
     if completed_at is not None:
         sets.append("completed_at=?")
         args.append(completed_at)
+    if is_demo is not None:
+        sets.append("is_demo=?")
+        args.append(int(is_demo))
     if not sets:
         return
     args.append(int(rehearsal_id))
@@ -897,6 +899,8 @@ def update_rehearsal_patch(rehearsal_id: int, patch_id: str, status: str,
     if not session:
         return None
     patches = session.get("patches") or []
+    if not any(p.get("patchId") == patch_id for p in patches):
+        return None
     for p in patches:
         if p.get("patchId") == patch_id:
             p["status"] = status
@@ -977,6 +981,13 @@ def list_all_students() -> list[dict[str, Any]]:
         rows = c.execute(
             "SELECT student_no, name, class_name FROM students ORDER BY student_no"
         ).fetchall()
+    return [_d(r) for r in rows]
+
+
+def student_enrollments(student_no: str) -> list[dict[str, Any]]:
+    with _conn() as c:
+        rows = c.execute("SELECT project_id, student_no, class_name FROM students WHERE student_no=?",
+                         (student_no,)).fetchall()
     return [_d(r) for r in rows]
 
 

@@ -9,7 +9,7 @@
     if (saved) return saved;
     // 本地预览：静态站跑在 8765，接口在 8700
     var host = location.hostname;
-    if (host === "localhost" || host === "127.0.0.1" || host === "") return "http://127.0.0.1:8700/api";
+    if (location.protocol === "file:" || ((host === "localhost" || host === "127.0.0.1") && location.port === "8765")) return "http://127.0.0.1:8700/api";
     // 服务器部署：静态站与接口同源（同一个 uvicorn 端口）
     return location.origin + "/api";
   })();
@@ -37,7 +37,7 @@
           if (res.status === 401 && path.indexOf("/auth/login") < 0 && window.EduAuth) {
             window.EduAuth.clearSession();
           }
-          var e = new Error((json && json.error) || ("HTTP " + res.status));
+          var e = new Error((json && (json.error || json.detail)) || ("HTTP " + res.status));
           e.status = res.status;
           e.code = json && json.code;
           throw e;
@@ -78,6 +78,18 @@
     },
     base: BASE,
     health: function () { return _req("/health"); },
+
+    rehearsals: {
+      list: function (cid) { return _req("/rehearsals?courseId=" + encodeURIComponent(cid)); },
+      get: function (rid) { return _req("/rehearsals/" + encodeURIComponent(rid)); },
+      create: function (body) { return _req("/rehearsals", { method: "POST", body: body }); },
+      demo: function (body) { return _req("/rehearsals/demo", { method: "POST", body: body }); },
+      patch: function (rid, pid, action) {
+        if (["apply", "reject", "undo"].indexOf(action) < 0) return Promise.reject(new Error("无效操作"));
+        return _req("/rehearsals/" + encodeURIComponent(rid) + "/patches/" + encodeURIComponent(pid) + "/" + action,
+          { method: "POST", body: {} });
+      }
+    },
 
     auth: {
       login: function (role, username, password) {

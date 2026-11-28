@@ -3,7 +3,7 @@
 # 也可用环境变量临时覆盖：STREAMLIT_SERVER_ADDRESS / STREAMLIT_SERVER_PORT
 
 [server]
-address = "0.0.0.0"
+address = "127.0.0.1"
 port = 8501
 headless = true
 fileWatcherType = "none"

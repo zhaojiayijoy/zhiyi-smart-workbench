@@ -12,7 +12,7 @@
     try { saved = localStorage.getItem("edu_api_base"); } catch (e) { saved = null; }
     if (saved) return saved;
     var host = location.hostname;
-    if (host === "localhost" || host === "127.0.0.1" || host === "") return "http://127.0.0.1:8700/api";
+    if (location.protocol === "file:" || ((host === "localhost" || host === "127.0.0.1") && location.port === "8765")) return "http://127.0.0.1:8700/api";
     return location.origin + "/api";
   })();
 
@@ -58,7 +58,7 @@
         var j = null;
         try { j = JSON.parse(txt); } catch (e) {}
         if (!res.ok || (j && j.ok === false)) {
-          var err = new Error((j && j.error) || ("HTTP " + res.status));
+          var err = new Error((j && (j.error || j.detail)) || ("HTTP " + res.status));
           err.status = res.status;
           throw err;
         }

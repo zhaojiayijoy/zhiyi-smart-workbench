@@ -2,13 +2,14 @@
 
 把 Streamlit 版的真实能力（课程/文件/任务读写 + 大模型生成 + Office 导出）
 包装为 REST 接口，供静态站（static-web/）调用。启动：
-    python api_server.py          # 监听 0.0.0.0:8700
+    python api_server.py          # 默认仅监听本机 127.0.0.1:8700
 
 静态站默认请求 http://127.0.0.1:8700/api ；若未启动则前端回退到内置演示数据。
 """
 from __future__ import annotations
 
 import csv
+import copy
 import io
 import json
 import os
@@ -313,6 +314,7 @@ def auth_bind(body: BindIn, request: Request) -> dict:
     class_name = (body.class_name or "").strip()
     if not (college and major and class_name):
         return err("学院、专业、班级均为必填")
+    _validate_student_class(user, class_name)
     db.update_user(int(user["id"]), college=college, major=major,
                    class_name=class_name, bound=1)
     return ok(auth.public_user(db.get_user(int(user["id"]))))
@@ -348,6 +350,7 @@ def auth_patch_me(body: UpdateMeIn, request: Request) -> dict:
     if maj:
         updates["major"] = maj
     if cls:
+        _validate_student_class(user, cls)
         updates["class_name"] = cls
     if not updates:
         return err("至少提供一个要修改的字段")
@@ -1977,13 +1980,72 @@ def agent_chat(body: AgentChatIn) -> dict:
 # 学生空间（一律按登录学生做数据隔离）
 # ---------------------------------------------------------------------------
 def _stu_key(t: dict) -> str:
-    return ((t.get("meta") or {}).get("student") or "").strip()
+    meta = t.get("meta") or {}
+    return str(meta.get("student_no") or "").strip()
+
+
+def _matches_student(t: dict, keys: set[str], *, student_mode: bool = False) -> bool:
+    if student_mode:
+        return bool(keys) and _stu_key(t) in keys
+    legacy = str((t.get("meta") or {}).get("student") or "").strip()
+    return not keys or _stu_key(t) in keys or legacy in keys
 
 
 def _student_keys(user: dict) -> set[str]:
-    """学生的可见标识：学号与姓名都算，兼容旧数据里只写姓名的记录。"""
-    keys = {str(user.get("student_no") or "").strip(), str(user.get("display_name") or "").strip()}
+    """Authorization uses the immutable student number, never an editable name."""
+    keys = {str(user.get("student_no") or "").strip()}
     return {k for k in keys if k}
+
+
+def _enrollments(user: dict) -> list[dict]:
+    no = str(user.get("student_no") or "").strip()
+    return db.student_enrollments(no) if no else []
+
+
+def _validate_student_class(user: dict, class_name: str) -> None:
+    classes = {str(s.get("class_name") or "").strip() for s in _enrollments(user)}
+    if not class_name or class_name not in classes:
+        raise HTTPException(403, "班级与教师导入的名单不符，请联系教师确认")
+
+
+def _student_project(user: dict, project_id: Optional[int]) -> Optional[int]:
+    ids = [int(c["id"]) for c in _student_courses(user)]
+    if project_id is not None:
+        if project_id not in ids:
+            raise HTTPException(403, "该课程不在你的名单范围")
+        return project_id
+    return ids[0] if ids else None
+
+
+def _student_class(user: dict, project_id: Optional[int]) -> str:
+    return next((str(s.get("class_name") or "").strip() for s in _enrollments(user)
+                 if s.get("project_id") == project_id), "")
+
+
+def _student_task(t: dict) -> dict:
+    """Only release student-facing fields, not the teacher's generated package."""
+    meta = t.get("meta") or {}
+    public = {k: meta[k] for k in ("description", "due", "published", "published_at") if k in meta}
+    public["pkg"] = {"title": (meta.get("pkg") or {}).get("title") or t.get("prompt") or ""}
+    return {k: t.get(k) for k in ("id", "kind", "project_id", "prompt", "created_at")} | {"meta": public}
+
+
+def _student_record(t: dict) -> dict:
+    meta = t.get("meta") or {}
+    fields = ("student_no", "status", "knowledge_point", "error_type")
+    public = {k: meta[k] for k in fields if k in meta}
+    if t.get("kind") == "review":
+        public.update({k: meta[k] for k in ("file", "submission_task_id") if k in meta})
+        teacher = meta.get("teacher") or {}
+        teacher_fields = ("total", "comment", "reason", "scores") if meta.get("status") == "published" else ("comment", "reason")
+        public["teacher"] = {k: teacher[k] for k in teacher_fields if k in teacher}
+        if meta.get("status") == "published":
+            public["final_total"] = meta.get("final_total")
+    return {k: t.get(k) for k in ("id", "kind", "project_id", "prompt", "created_at")} | {"meta": public}
+
+
+def _released_review(t: dict) -> bool:
+    return (t.get("meta") or {}).get("status") in ("published", "returned")
 
 
 def _audience_match(t: dict, class_name: str) -> bool:
@@ -2012,16 +2074,23 @@ def _published_homework(project_id: Optional[int], class_name: str = "") -> list
             if bool((t.get("meta") or {}).get("published")) and _audience_match(t, class_name)]
 
 
-def _wrong_payload(project_id: Optional[int], keys: set[str]) -> dict[str, Any]:
+def _wrong_payload(project_id: Optional[int], keys: set[str], *, student_mode: bool = False) -> dict[str, Any]:
     """错题本：由真实评审低分维度与答疑错因派生，无数据时返回空列表。"""
     items: list[dict[str, Any]] = []
     for t in db.list_tasks(project_id=project_id, kind="review", limit=200):
-        if keys and _stu_key(t) not in keys:
+        if student_mode and (not keys or not _released_review(t)):
+            continue
+        if not _matches_student(t, keys, student_mode=student_mode):
             continue
         meta = t.get("meta") or {}
         ai = meta.get("ai") or {}
         topic = meta.get("file") or t.get("prompt") or "作业"
-        for d in ai.get("dimensions") or []:
+        for d in ([] if student_mode and meta.get("status") != "published" else ai.get("dimensions") or []):
+            if student_mode:
+                scores = (meta.get("teacher") or {}).get("scores") or {}
+                if d.get("name") not in scores:
+                    continue
+                d = {"name": d.get("name"), "score": scores[d["name"]], "max": d.get("max")}
             try:
                 score = float(d.get("score") or 0)
                 mx = float(d.get("max") or 0)
@@ -2038,7 +2107,9 @@ def _wrong_payload(project_id: Optional[int], keys: set[str]) -> dict[str, Any]:
                 "ts": t.get("created_at") or 0,
             })
     for t in db.list_tasks(project_id=project_id, kind="qa", limit=200):
-        if keys and _stu_key(t) not in keys:
+        if student_mode and not keys:
+            continue
+        if not _matches_student(t, keys, student_mode=student_mode):
             continue
         meta = t.get("meta") or {}
         et = (meta.get("error_type") or "").strip()
@@ -2058,15 +2129,13 @@ def _wrong_payload(project_id: Optional[int], keys: set[str]) -> dict[str, Any]:
 
 
 def _student_courses(user: dict) -> list[dict[str, Any]]:
-    """学生可见课程：完成学籍绑定后，仅返回班级一致的未归档课程。"""
+    """Course access is granted by the teacher's roster, not profile fields."""
     if not user.get("bound"):
         return []
-    cls = (user.get("class_name") or "").strip()
-    if not cls:
-        return []
+    enrolled = {s["project_id"] for s in _enrollments(user)}
     return [_course_out(p) for p in db.list_projects()
             if (p.get("status") or "active") != "archived"
-            and (p.get("class_name") or "").strip() == cls]
+            and p["id"] in enrolled]
 
 
 @app.get("/api/student/overview")
@@ -2076,28 +2145,27 @@ def student_overview(request: Request, project_id: Optional[int] = Query(None)) 
     if user.get("role") != "student":
         raise HTTPException(403, "仅学生账号可访问")
     courses = _student_courses(user)
-    ids = {int(c["id"]) for c in courses if c and c.get("id") is not None}
-    pid = project_id if project_id in ids else (courses[0]["id"] if courses else None)
+    pid = _student_project(user, project_id)
     keys = _student_keys(user)
-    cls = (user.get("class_name") or "").strip()
+    cls = _student_class(user, pid)
     lessons = _published_lessons(pid, cls) if pid else []
     trainings = _published_trainings(pid, cls) if pid else []
     homework = _published_homework(pid, cls) if pid else []
     reviews = ([t for t in db.list_tasks(project_id=pid, kind="review", limit=200)
-                if not keys or _stu_key(t) in keys] if pid else [])
+                if _stu_key(t) in keys and _released_review(t)] if pid else [])
     qa = ([t for t in db.list_tasks(project_id=pid, kind="qa", limit=200)
-           if not keys or _stu_key(t) in keys] if pid else [])
-    wrong = _wrong_payload(pid, keys) if pid else {"items": [], "total": 0, "corrected": 0}
+           if _stu_key(t) in keys] if pid else [])
+    wrong = _wrong_payload(pid, keys, student_mode=True) if pid else {"items": [], "total": 0, "corrected": 0}
     submissions = (db.list_submissions(pid, str(user.get("student_no") or "")) if pid else [])
     return ok({
         "profile": auth.public_user(user),
         "courses": courses,
         "project_id": pid,
-        "lessons": lessons,
-        "trainings": trainings,
-        "homework": homework,
-        "my_reviews": reviews,
-        "my_qa": qa,
+        "lessons": [_student_task(t) for t in lessons],
+        "trainings": [_student_task(t) for t in trainings],
+        "homework": [_student_task(t) for t in homework],
+        "my_reviews": [_student_record(t) for t in reviews],
+        "my_qa": [_student_record(t) for t in qa],
         "my_submissions": submissions,
         "wrong": wrong,
     })
@@ -2108,16 +2176,15 @@ def student_dashboard(request: Request, project_id: Optional[int] = Query(None),
                       student: str = Query("")) -> dict:
     user = _user(request)
     if user.get("role") == "student":
-        keys = _student_keys(user)
-        allowed = {int(c["id"]) for c in _student_courses(user) if c and c.get("id") is not None}
-        if project_id is not None and int(project_id) not in allowed:
-            raise HTTPException(403, "该课程不在你的班级范围")
+        result = student_overview(request, project_id)
+        result["data"]["tutor_threads"] = []
+        return result
     else:
         keys = {student.strip()} if student.strip() else set()
     reviews = [t for t in db.list_tasks(project_id=project_id, kind="review", limit=200)
-               if not keys or _stu_key(t) in keys]
+               if _matches_student(t, keys)]
     qa = [t for t in db.list_tasks(project_id=project_id, kind="qa", limit=200)
-          if not keys or _stu_key(t) in keys]
+          if _matches_student(t, keys)]
     return ok({
         "my_qa": qa, "my_reviews": reviews,
         "trainings": _published_trainings(project_id,
@@ -2136,6 +2203,9 @@ def student_wrong(request: Request, project_id: Optional[int] = Query(None),
     user = _user(request)
     if user.get("role") == "student":
         keys = _student_keys(user)
+        pid = _student_project(user, project_id)
+        return ok(_wrong_payload(pid, keys, student_mode=True) if pid else
+                  {"items": [], "total": 0, "corrected": 0})
     else:
         keys = {student.strip()} if student.strip() else set()
     return ok(_wrong_payload(project_id, keys))
@@ -2155,7 +2225,7 @@ def student_submit_task(tid: int, request: Request, note: str = Form(""),
     allowed = {int(c["id"]) for c in _student_courses(user) if c and c.get("id") is not None}
     if pid not in allowed:
         raise HTTPException(403, "该任务不在你的班级范围")
-    cls = str(user.get("class_name") or "")
+    cls = _student_class(user, pid)
     published = (str(((task.get("meta") or {}).get("pkg") or {}).get("status") or "") == "published"
                  if task.get("kind") == "training"
                  else bool((task.get("meta") or {}).get("published")))
@@ -2163,7 +2233,7 @@ def student_submit_task(tid: int, request: Request, note: str = Form(""),
         raise HTTPException(403, "该任务未发布给你所在的班级")
     if not file or not file.filename:
         return err("请选择要提交的作业文件")
-    data = file.file.read()
+    data = file.file.read(20 * 1024 * 1024 + 1)
     if not data:
         return err("文件为空")
     if len(data) > 20 * 1024 * 1024:
@@ -2177,8 +2247,8 @@ def student_submit_task(tid: int, request: Request, note: str = Form(""),
     fid = db.save_file(
         name=name, ext=meta.get("ext") or ext, kind="doc", content=data, size=len(data),
         rows=meta.get("rows", 0), cols=meta.get("cols", 0), chars=meta.get("chars", 0),
-        parsed_text=text or None, project_id=pid, visibility="both", category="学生作业",
-        ai_context=1, parse_status="parsed" if text.strip() else "failed",
+        parsed_text=text or None, project_id=pid, visibility="teacher", category="学生作业",
+        ai_context=0, parse_status="parsed" if text.strip() else "failed",
     )
     student_name = str(user.get("display_name") or user.get("student_no") or "学生")
     student_no = str(user.get("student_no") or "")
@@ -2219,6 +2289,8 @@ def _submission_versions_for_user(sid: int, user: dict[str, Any]) -> list[dict[s
         raise HTTPException(404, "提交记录不存在")
     if user.get("role") == "student" and str(sub.get("student_no")) != str(user.get("student_no")):
         raise HTTPException(404, "提交记录不存在")
+    if user.get("role") == "student":
+        _student_project(user, int(sub["project_id"]))
     if user.get("role") not in ("student", "teacher"):
         raise HTTPException(403, "无权访问")
     return db.list_submission_versions(int(sid))
@@ -2272,6 +2344,7 @@ def student_submission_file(sid: int, request: Request) -> Response:
     sub = db.get_submission(int(sid))
     if not sub or str(sub.get("student_no")) != str(user.get("student_no")):
         raise HTTPException(404, "提交记录不存在")
+    _student_project(user, int(sub["project_id"]))
     f = db.get_file(int(sub.get("file_id") or 0), with_content=True)
     if not f or f.get("content") is None:
         raise HTTPException(404, "附件不存在")
@@ -2294,8 +2367,7 @@ def student_ask(body: StudentAskIn, request: Request) -> dict:
     question = (body.question or "").strip()
     if not question:
         return err("请填写问题")
-    allowed = {int(c["id"]) for c in _student_courses(user) if c and c.get("id") is not None}
-    pid = int(body.project_id) if body.project_id in allowed else (min(allowed) if allowed else None)
+    pid = _student_project(user, body.project_id)
     if pid is None:
         return err("当前班级暂无可用课程，无法提问")
     display = str(user.get("display_name") or user.get("student_no") or "学生")
@@ -2627,21 +2699,39 @@ def export_grades(project_id: Optional[int] = Query(None),
 
 
 # ---------- AI 课堂预演 ----------
+@app.post("/api/rehearsals/demo", summary="创建演示预演（不调用模型）")
+def api_create_demo_rehearsal(body: dict):
+    cid = int(body.get("courseId") or 0)
+    if not cid or not db.get_project(cid):
+        raise HTTPException(400, "课程不存在")
+    rid = rehearsal_engine.create_demo_rehearsal(cid, body.get("personas"))
+    return {"ok": True, "id": rid}
+
+
 @app.post("/api/rehearsals", summary="创建课堂预演")
 def api_create_rehearsal(body: dict):
     cid = int(body.get("courseId") or 0)
     if not cid or not db.get_project(cid):
         raise HTTPException(400, "课程不存在")
     personas = body.get("personas") or ["novice", "challenger", "operator"]
+    use_review_model = body.get("useReviewModel", True)
+    if not isinstance(use_review_model, bool):
+        raise HTTPException(400, "双模型审核设置必须为布尔值")
     lp_id = body.get("lessonPackageId")
-    # 先落库，然后异步执行
+    lesson = db.get_task(int(lp_id)) if lp_id else None
+    if lp_id and (not lesson or lesson.get("kind") != "lesson" or lesson.get("project_id") != cid):
+        raise HTTPException(400, "备课包不属于当前课程")
+    if not lp_id:
+        lessons = db.list_tasks(project_id=cid, kind="lesson", limit=1)
+        lp_id = lessons[0]["id"] if lessons else None
+    # Persist the selected lesson so reruns cannot silently switch source packages.
     rid = db.create_rehearsal(
         course_id=cid, lesson_package_id=int(lp_id) if lp_id else None,
-        personas=personas, generation_model="deepseek", review_model="zhipu",
+        personas=personas, generation_model="deepseek", review_model="zhipu" if use_review_model else "",
     )
     # 同步执行（简单部署下不用 asyncio）
     try:
-        rehearsal_engine.run_rehearsal(rehearsal_id=rid, course_id=cid, personas=personas, use_review_model=True)
+        rehearsal_engine.run_rehearsal(rehearsal_id=rid, course_id=cid, personas=personas, use_review_model=use_review_model)
     except Exception as exc:
         db.update_rehearsal(rid, status="failed", error=str(exc))
     return {"ok": True, "id": rid}
@@ -2670,7 +2760,7 @@ def api_run_rehearsal(rid: int):
         rehearsal_engine.run_rehearsal(
             rehearsal_id=int(rid), course_id=int(s["course_id"]),
             personas=s.get("personas") or ["novice", "challenger", "operator"],
-            use_review_model=True,
+            use_review_model=bool(s.get("review_model")),
         )
     except Exception as exc:
         db.update_rehearsal(int(rid), status="failed", error=str(exc))
@@ -2682,8 +2772,8 @@ def api_demo_rehearsal(rid: int):
     s = db.get_rehearsal(int(rid))
     if not s:
         raise HTTPException(404, "预演记录不存在")
-    rehearsal_engine.create_demo_rehearsal(int(s["course_id"]), s.get("personas"))
-    return {"ok": True}
+    demo_id = rehearsal_engine.create_demo_rehearsal(int(s["course_id"]), s.get("personas"))
+    return {"ok": True, "id": demo_id}
 
 
 @app.post("/api/rehearsals/{rid}/patches/{pid}/apply", summary="应用某个修补（生成备课包新草稿）")
@@ -2691,45 +2781,82 @@ def api_apply_patch(rid: int, pid: str, body: dict = {}):
     s = db.get_rehearsal(int(rid))
     if not s:
         raise HTTPException(404, "预演记录不存在")
+    if s.get("is_demo") or not s.get("lesson_package_id"):
+        raise HTTPException(400, "演示预演不能修改真实备课包")
+    _check_rehearsal_draft(s)
     session = db.update_rehearsal_patch(int(rid), pid, "applied")
     if not session:
         raise HTTPException(404, "修补不存在")
-    # 修补写回：找到关联备课包，更新 artifacts（作为 v2 草稿）
-    risk = next((r for r in session.get("risks", []) if pid in r.get("patches", [])), None)
-    patch = next((p for p in session.get("patches", []) if p.get("patchId") == pid), None)
-    lesson_ref = f"lesson_package_{s.get('lesson_package_id') or 'latest_'+str(s['course_id'])}"
-    current_lesson = db.get_task(int(s["lesson_package_id"])) if s.get("lesson_package_id") else None
-    old_payload = (current_lesson or {}).get("answer") or {}
-    # 生成 v2 payload（把 patch 的 after 追加进去）
-    new_section = (patch or {}).get("after", "")
-    target = (patch or {}).get("targetSection") or "课堂修改"
-    if new_section and isinstance(old_payload, dict):
-        # 按目标物追加
-        key_map = {"lesson_plan": "教案", "ppt": "PPT大纲", "exercise": "课堂练习",
-                   "training_task": "实训任务要求", "rubric": "评分量规"}
-        key = key_map.get((patch or {}).get("targetArtifact"), "教案")
-        section_map = (patch or {}).get("targetSection", "")
-        existing = old_payload.get(key, "")
-        if isinstance(existing, str):
-            old_payload[key] = existing + f"\n\n### 修补草稿 v2（{target}）\n{new_section}"
-        elif isinstance(existing, list):
-            old_payload[key] = existing + [f"[v2草稿] {target}: {new_section}"]
-        else:
-            old_payload[key] = new_section
-    # 保存为新 artifacts v2 草稿
-    db.save_artifact("lesson_package_v2", str(s["course_id"]), old_payload, project_id=int(s["course_id"]))
-    return {"ok": True, "session": session, "patchedRef": f"{lesson_ref}_v2_draft"}
+    draft_id = _save_rehearsal_draft(session)
+    return {"ok": True, "session": db.get_rehearsal(rid), "draft_task_id": draft_id}
+
+
+def _check_rehearsal_draft(session: dict) -> dict:
+    source = db.get_task(int(session.get("lesson_package_id") or 0))
+    if not source or source.get("project_id") != session["course_id"] or source.get("kind") != "lesson":
+        raise HTTPException(400, "原备课包不存在或不属于当前课程")
+    if not isinstance((source.get("meta") or {}).get("pkg"), dict):
+        raise HTTPException(400, "原备课包格式不支持修补")
+    plan = source["meta"]["pkg"].get("lesson_plan", {})
+    if not isinstance(plan, dict):
+        raise HTTPException(400, "原备课包教案格式不支持修补")
+    draft_id = (session.get("summary") or {}).get("draft_task_id")
+    draft = db.get_task(int(draft_id)) if draft_id else None
+    if draft and (draft.get("meta") or {}).get("published"):
+        raise HTTPException(409, "修补草稿已经发布，请先取消发布再修改")
+    return source
+
+
+def _save_rehearsal_draft(session: dict) -> int:
+    source = _check_rehearsal_draft(session)
+    pkg = copy.deepcopy(source["meta"]["pkg"])
+    applied = [p for p in session.get("patches") or [] if p.get("status") == "applied"]
+    # Preserve structured content and record targeted changes as reviewable supplements.
+    plan = pkg.setdefault("lesson_plan", {})
+    preparation = plan.get("preparation") or []
+    if not isinstance(preparation, list):
+        preparation = [str(preparation)]
+    plan["preparation"] = preparation + [
+        f"[预演修补/{p.get('targetArtifact', '')}/{p.get('targetSection', '')}] {p.get('after', '')}"
+        for p in applied]
+    pkg["rehearsal_patches"] = copy.deepcopy(applied)
+    meta = {"pkg": pkg, "topic": source.get("prompt"), "version": "v2",
+            "published": False, "review_status": "待教师确认",
+            "source_task_id": source["id"], "rehearsal_id": session["id"]}
+    summary = dict(session.get("summary") or {})
+    draft_id = summary.get("draft_task_id")
+    if draft_id and db.get_task(int(draft_id)):
+        db.update_task(int(draft_id), meta=meta)
+        STORE["lessons"].pop(int(draft_id), None)
+    else:
+        draft_id = db.save_task(prompt=f"{source.get('prompt') or '备课包'}（预演修补草稿）",
+                                kind="lesson", project_id=session["course_id"], meta=meta)
+    summary["draft_task_id"] = int(draft_id)
+    db.update_rehearsal(session["id"], summary=summary)
+    return int(draft_id)
 
 
 @app.post("/api/rehearsals/{rid}/patches/{pid}/reject", summary="拒绝修补（不应用）")
 def api_reject_patch(rid: int, pid: str):
+    existing = db.get_rehearsal(rid) or {}
+    patch = next((p for p in existing.get("patches") or [] if p.get("patchId") == pid), {})
+    if patch.get("status") == "applied":
+        raise HTTPException(409, "请先撤销已应用的修补")
     s = db.update_rehearsal_patch(int(rid), pid, "rejected")
     return {"ok": bool(s), "session": s}
 
 
 @app.post("/api/rehearsals/{rid}/patches/{pid}/undo", summary="撤销已应用的修补（恢复 pending）")
 def api_undo_patch(rid: int, pid: str):
+    existing = db.get_rehearsal(rid)
+    if not existing:
+        raise HTTPException(404, "预演记录不存在")
+    if (existing.get("summary") or {}).get("draft_task_id"):
+        _check_rehearsal_draft(existing)
     s = db.update_rehearsal_patch(int(rid), pid, "pending")
+    if s and (s.get("summary") or {}).get("draft_task_id"):
+        _save_rehearsal_draft(s)
+        s = db.get_rehearsal(rid)
     return {"ok": bool(s), "session": s}
 
 
@@ -2750,5 +2877,5 @@ if _STATIC_DIR.is_dir():
 if __name__ == "__main__":
     import uvicorn
     print(f"致壹 智能教育工作台 API → http://127.0.0.1:{API_PORT}")
-    uvicorn.run(app, host="0.0.0.0", port=API_PORT, log_level="warning",
+    uvicorn.run(app, host=os.getenv("EDU_API_HOST", "127.0.0.1"), port=API_PORT, log_level="warning",
                 timeout_keep_alive=30)

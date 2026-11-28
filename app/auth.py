@@ -2,7 +2,7 @@
 
 - 密码使用 PBKDF2-HMAC-SHA256（随机盐）散列后存库，永不保存明文
 - 会话令牌写入 sessions 表，默认 7 天有效，退出登录即删除
-- 教师账号在启动时按 EDU_TEACHER_USER / EDU_TEACHER_PASS 创建（默认 teacher / Zhiyi@2026）
+- 教师账号在启动时按 EDU_TEACHER_USER / EDU_TEACHER_PASS 创建（密码必须显式设置）
 - 学生账号由学生名单回填：用户名 = 学号，初始密码 = 学号后 6 位（不足 6 位取全串）
 """
 from __future__ import annotations
@@ -46,7 +46,7 @@ def initial_password(student_no: str) -> str:
 
 
 TEACHER_USER = os.getenv("EDU_TEACHER_USER", "teacher")
-TEACHER_PASS = os.getenv("EDU_TEACHER_PASS", "Zhiyi@2026")
+TEACHER_PASS = os.getenv("EDU_TEACHER_PASS", "")
 
 
 def public_user(user: Optional[dict[str, Any]]) -> Optional[dict[str, Any]]:
@@ -94,6 +94,8 @@ def ensure_bootstrap() -> dict[str, Any]:
     """启动时执行：建默认教师账号 + 回填学生账号 + 清理过期会话。"""
     teacher_created = False
     if not db.get_user_by_username(TEACHER_USER):
+        if len(TEACHER_PASS) < 12 or TEACHER_PASS == "Zhiyi@2026":
+            raise RuntimeError("首次启动前请设置 EDU_TEACHER_PASS，至少 12 位，不可使用旧默认密码")
         db.create_user(
             role="teacher", username=TEACHER_USER, password_hash=hash_password(TEACHER_PASS),
             display_name="教师", bound=1,
