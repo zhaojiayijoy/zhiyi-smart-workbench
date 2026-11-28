@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>课程资源 · 致壹 智能教育工作台</title>
-<link rel="stylesheet" href="assets/css/site.css?v=1795789601">
+<link rel="stylesheet" href="assets/css/site.css?v=1795789921">
 <script src="assets/js/auth.js?v=1795770200"></script>
 </head>
 <body data-page="files">
@@ -16,16 +16,20 @@
 
       <div class="page-head">
         <div><h1>课程资源</h1><p class="sub">课程项目共用资料库，可设置教师可见或师生可见</p></div>
-        <div class="right"><button class="btn primary" type="button" id="filesQuickUpload" title="定位到下方上传表单">＋ 上传资料</button></div>
+        <div class="right"><span class="tag">本地运行</span></div>
       </div>
 
-      <div class="grid g3" style="margin-bottom:14px">
+      <div class="card" style="margin-bottom:14px" data-panel="资料概览" data-panel-width="820px" data-panel-ic="▦">
+        <div class="card-b">
+      <div class="grid g3">
         <div class="kpi"><div class="label">资料总数</div><div class="value">—</div><div class="foot">当前课程</div></div>
         <div class="kpi"><div class="label">已解析正文</div><div class="value">—</div><div class="foot">可用于备课检索</div></div>
         <div class="kpi"><div class="label">本地占用</div><div class="value">—</div><div class="foot">仅保存在本机</div></div>
       </div>
+        </div>
+      </div>
 
-      <div class="card" id="fileUploadCard" style="margin-bottom:14px">
+      <div class="card" id="fileUploadCard" style="margin-bottom:14px" data-panel="上传新资料" data-panel-width="760px" data-panel-ic="＋">
         <div class="card-h"><h2>上传资料</h2><div class="right"><span class="mini">PDF / DOCX / PPTX / XLSX / CSV / TXT</span></div></div>
         <div class="card-b">
           <form id="fileUploadForm" data-sim="#fileOut" data-msg="资料已加入课程">
@@ -64,8 +68,8 @@
 
 <div class="toast"></div>
 <script src="assets/js/data.js?v=1795420906"></script>
-<script src="assets/js/site.js?v=1795789812"></script>
+<script src="assets/js/site.js?v=1795789922"></script>
 <script src="assets/js/api.js?v=1795770000"></script>
-<script src="assets/js/live.js?v=1795789603"></script>
+<script src="assets/js/live.js?v=1795789903"></script>
 </body>
 </html>

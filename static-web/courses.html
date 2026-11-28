@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>课程项目 · 致壹 智能教育工作台</title>
-<link rel="stylesheet" href="assets/css/site.css?v=1795789601">
+<link rel="stylesheet" href="assets/css/site.css?v=1795789921">
 <script src="assets/js/auth.js?v=1795770200"></script>
 </head>
 <body data-page="courses">
@@ -17,11 +17,14 @@
       <div class="page-head">
         <div><h1>课程项目</h1><p class="sub" id="pageSub">课程是备课、答疑、实训与学情分析共用的上下文</p></div>
         <div class="right">
-          <a class="btn primary" href="lesson.html">继续备课</a>
+          <button class="btn primary" type="button" data-open-new-course>＋ 新建课程项目</button>
+          <a class="btn" href="lesson.html">继续备课</a>
         </div>
       </div>
 
-      <div class="grid g6" style="margin-bottom:14px">
+      <div class="card" style="margin-bottom:14px" data-panel="课程概览" data-panel-width="860px" data-panel-ic="▦">
+        <div class="card-b">
+      <div class="grid g6">
         <a class="kpi" href="files.html" title="进入课程资料"><div class="label">课程资料</div><div class="value" id="kpiFiles">—</div><div class="foot">教材 / 标准 / 案例 / 课件</div></a>
         <a class="kpi" href="lesson.html" title="查看最近备课包"><div class="label">最近备课包</div><div class="value" id="kpiLesson" style="font-size:14px">—</div><div class="foot" id="kpiLessonFoot">尚无备课记录</div></a>
         <a class="kpi" href="tasks.html" title="进入实训任务"><div class="label">实训任务</div><div class="value" id="kpiTasks">—</div><div class="foot" id="kpiTasksFoot">点击查看与发布任务</div></a>
@@ -29,10 +32,20 @@
         <a class="kpi" href="analytics.html" title="查看学情分析"><div class="label">高频薄弱知识点</div><div class="value" id="kpiWeak" style="font-size:14px">—</div><div class="foot" id="kpiWeakFoot">待分析</div></a>
         <a class="kpi" href="lesson.html" title="备下一课"><div class="label">下一课建议</div><div class="value" id="kpiNext" style="font-size:14px">—</div><div class="foot" id="kpiNextFoot">—</div></a>
       </div>
+        </div>
+      </div>
 
       <div class="card" style="margin-bottom:14px" id="currentCourseCard">
         <div class="card-h"><h2>课程基本信息</h2><div class="right"><span class="tag acc">当前</span></div></div>
         <div class="card-b" id="currentCourseBody">
+          <div class="state is-empty" id="currentCourseEmpty" hidden style="margin:0">
+            <div class="state-ic">＋</div>
+            <div><b>还没有课程项目</b><span>先建一门课程，备课、实训、评审都会挂在这门课程之下。</span></div>
+            <div class="state-actions">
+              <button class="btn sm primary" type="button" data-open-new-course>＋ 新建课程项目</button>
+            </div>
+          </div>
+          <div id="currentCourseData">
           <div class="grid g3">
             <div><span class="k mini">课程名称</span><div style="font-weight:600" data-fill="course.name">—</div></div>
             <div><span class="k mini">授课班级或对象</span><div data-fill="course.classWithSize">—</div></div>
@@ -47,18 +60,19 @@
             <div><span class="k mini">重点</span><div style="font-size:12.5px;color:var(--text-2)" data-fill="course.key">—</div></div>
             <div><span class="k mini">难点</span><div style="font-size:12.5px;color:var(--text-2)" data-fill="course.diff">—</div></div>
           </div>
+          </div>
         </div>
       </div>
 
-      <div class="card" style="margin-bottom:14px" id="roundsCard">
+      <div class="card" style="margin-bottom:14px" id="roundsCard" data-panel="教学轮次" data-panel-width="760px">
         <div class="card-h"><h2>教学轮次（子项目）</h2><div class="right"><span class="mini" id="roundsCount">—</span></div></div>
         <div class="card-b" id="roundsBody">
           <div class="mini" style="padding:6px 0">本课程还没有历史轮次。完成本轮并发起新的教学任务后，上一轮会自动打包归档到这里。</div>
         </div>
       </div>
 
-      <div class="card fold" style="margin-bottom:14px" id="allCoursesCard">
-        <div class="card-h" data-fold-head aria-expanded="false"><h2>全部课程</h2><div class="right"><span class="mini" id="allCourseCount">—</span><span class="fold-caret">▾</span></div></div>
+      <div class="card" style="margin-bottom:14px" id="allCoursesCard" data-panel="全部课程" data-panel-width="860px" data-panel-ic="▤">
+        <div class="card-h"><h2>全部课程</h2><div class="right"><span class="mini" id="allCourseCount">—</span></div></div>
         <div class="table-wrap">
           <table>
             <thead><tr><th>课程</th><th>班级</th><th>课时</th><th>进度</th><th>资料</th><th>操作</th></tr></thead>
@@ -67,7 +81,7 @@
         </div>
       </div>
 
-      <div class="card" id="rosterCard" style="margin-bottom:14px">
+      <div class="card" id="rosterCard" style="margin-bottom:14px" data-panel="学生名单" data-panel-width="900px" data-panel-ic="☺">
         <div class="card-h">
           <h2>学生名单</h2>
           <div class="right">
@@ -96,17 +110,15 @@
 
 <div class="toast"></div>
 <script src="assets/js/data.js?v=1795420906"></script>
-<script src="assets/js/site.js?v=1795789812"></script>
+<script src="assets/js/site.js?v=1795789922"></script>
 <script src="assets/js/api.js?v=1795770000"></script>
-<script src="assets/js/live.js?v=1795789603"></script>
+<script src="assets/js/live.js?v=1795789903"></script>
 <script>
 /* ===== courses.html 页面专属逻辑 ===== */
 (function(){
   "use strict";
 
   var $ = function(id){ return document.getElementById(id); };
-  var form = $("newCourseForm");
-  var archiveChk = $("nf_archivePrev");
 
   function esc(s){
     return String(s == null ? "" : s).replace(/[&<>"']/g, function(c){
@@ -122,28 +134,6 @@
 
   function roundDone(c){
     return !!(c && c.totalSessions > 0 && (c.currentSession || 0) >= c.totalSessions);
-  }
-
-  /** 归档选项：当前课程已完成时默认勾选并提示 */
-  function refreshArchiveOption(){
-    if (!archiveChk) return;
-    var c = Edu.getSelectedCourse();
-    var done = roundDone(c);
-    archiveChk.disabled = !Edu.isLive();
-    archiveChk.checked = done;
-    var hint = $("archiveHint");
-    if (!hint) return;
-    if (!c) {
-      hint.textContent = "当前没有可归档的课程，创建后将作为独立课程。";
-    } else if (!Edu.isLive()) {
-      hint.textContent = "未连接本地接口，归档与轮次功能不可用。";
-    } else if (done) {
-      hint.textContent = "当前课程已完成（第 " + c.currentSession + " / " + c.totalSessions +
-        " 次课），提交后会打包归档为历史轮次，并沿用当前教学进度创建「" + (c.name || "当前课程") + "」的新一轮。";
-    } else {
-      hint.textContent = "当前课程尚未标记完成（第 " + (c.currentSession || 0) + " / " +
-        (c.totalSessions || 0) + " 次课）；勾选后也会打包归档为历史轮次，并沿用当前教学进度创建新一轮。";
-    }
   }
 
   /** 渲染教学轮次（子项目） */
@@ -202,61 +192,12 @@
     return (Edu.state.courses && Edu.state.courses.length) ? Edu.state.courses : (window.EDU.courses || []);
   }
 
-  /** 把表单里的所有值收集成一个课程对象，数字字段清洗后存数字 */
-  function collectForm(){
-    var hours = Edu.normalizeNumber(form.nf_hours.value);
-    var size = Edu.normalizeNumber(form.nf_size.value);
-    var totalSess = Edu.normalizeNumber(form.nf_totalSessions.value);
-    var curSess = Edu.normalizeNumber(form.nf_currentSession.value);
-    return {
-      name: (form.nf_name.value || "").trim(),
-      class: (form.nf_class.value || "").trim(),
-      classSize: size,
-      totalHours: hours,
-      totalSessions: totalSess,
-      currentSession: curSess,
-      textbook: (form.nf_textbook.value || "").trim(),
-      desc: (form.nf_desc.value || "").trim(),
-      objectives: (form.nf_objectives.value || "").trim(),
-      key: (form.nf_key.value || "").trim(),
-      diff: (form.nf_diff.value || "").trim(),
-      resourceCount: 0
-    };
-  }
-
-  /** 校验：课程名非空；当前课次 ≤ 总课次 */
-  function validateDraft(d){
-    var errors = [];
-    if (!d.name) errors.push("课程名称不能为空");
-    if (!d.class) errors.push("班级不能为空");
-    if (d.currentSession && d.totalSessions && d.currentSession > d.totalSessions)
-      errors.push("当前课次不能大于总课次");
-    return errors;
-  }
-
-  /** 更新顶部草稿预览条 + 顶栏课程摘要 */
-  function refreshDraft(){
-    var d = collectForm();
-    if (d.name || d.class || d.totalHours){
-      Edu.state.draftCourse = d;
-      var bar = $("draftPreviewBar");
-      var txt = $("draftPreviewText");
-      var parts = [];
-      if (d.name) parts.push(d.name);
-      if (d.class) parts.push(d.class);
-      if (d.totalHours) parts.push(d.totalHours + "课时");
-      txt.textContent = parts.join(" · ") || "尚未填写任何内容";
-      bar.hidden = false;
-    } else {
-      Edu.state.draftCourse = null;
-      $("draftPreviewBar").hidden = true;
-    }
-    Edu.renderTopCourseSummary && Edu.renderTopCourseSummary();
-  }
-
   /** 重写 data-fill：因为我们新增了 classWithSize、textbook、note、objectives、key、diff 等字段 */
   function enhancedFill(){
     var c = Edu.getSelectedCourse();
+    var empty = $("currentCourseEmpty"), data = $("currentCourseData");
+    if (empty) empty.hidden = !!c;
+    if (data) data.hidden = !c;
     document.querySelectorAll("[data-fill]").forEach(function(el){
       var key = el.getAttribute("data-fill");
       if (!c) { el.textContent = "—"; return; }
@@ -328,9 +269,8 @@
       '</tr>';
     }).join("");
   }
-  /** 绑定：全部课程表格的切换按钮 + 表单实时草稿 + 表单提交 */
+  /** 绑定：全部课程表格的切换按钮 */
   function bindLocal(){
-    // 表格行切换（事件委托）
     document.addEventListener("click", function(e){
       var b = e.target.closest("[data-switch-course]");
       if (!b) return;
@@ -339,98 +279,6 @@
       enhancedFill();
       toast("已切换到「" + (Edu.getSelectedCourse().name || "") + "」");
     });
-
-    // 表单实时草稿（input 事件）
-    form.addEventListener("input", function(){ refreshDraft(); });
-
-    // 重置按钮也清草稿
-    form.addEventListener("reset", function(){
-      setTimeout(function(){
-        Edu.state.draftCourse = null;
-        $("draftPreviewBar").hidden = true;
-        Edu.renderTopCourseSummary();
-      }, 50);
-    });
-
-    // 表单提交
-    form.addEventListener("submit", function(e){
-      e.preventDefault();
-      var d = collectForm();
-      var errs = validateDraft(d);
-      if (errs.length){
-        toast(errs[0]);
-        return;
-      }
-      // 生成新课程
-      var newId = "c" + Date.now();
-      var newCourse = Object.assign({}, d, { id: newId });
-      var cur = Edu.getSelectedCourse();
-      var useArchive = !!(archiveChk && archiveChk.checked && cur && Edu.isLive()
-        && window.EduAPI && EduAPI.courses && typeof EduAPI.courses.archiveRound === "function");
-
-      // Live 模式 → 归档上一轮并创建新一轮 / 直接创建
-      if (Edu.isLive() && window.EduAPI && EduAPI.courses && typeof EduAPI.courses.create === "function"){
-        var req = useArchive ? EduAPI.courses.archiveRound(cur.id, d) : EduAPI.courses.create(newCourse);
-        req.then(function(c){
-          // 归档接口返回 {next, archived_id, zip_file_id}；创建接口返回新课程
-          var created = useArchive
-            ? ((c && c.next) || Object.assign({}, newCourse))
-            : (c || Object.assign({}, newCourse));
-          if (useArchive) toast("上一轮已打包归档");
-          // 刷新课程列表
-          return EduAPI.courses.list().then(function(list){
-            Edu.state.courses = list || [];
-            finishCreate(created);
-          });
-        }).catch(function(err){
-          toast((useArchive ? "归档并创建新一轮失败：" : "创建课程失败：") + (err.message || err));
-        });
-      } else {
-        // 演示模式 → 写入 localStorage 持久化，刷新后仍然存在
-        if (Edu.addCustomCourse) Edu.addCustomCourse(newCourse);
-        if (!Edu.state.courses.length) Edu.state.courses = list();
-        var exists = Edu.state.courses.some(function (c) {
-          return String(c.id) === String(newCourse.id);
-        });
-        if (!exists) Edu.state.courses.push(newCourse);
-        finishCreate(newCourse);
-      }
-    });
-  }
-
-  /** 创建成功后的收尾 */
-  function finishCreate(newCourse){
-    Edu.selectCourse(newCourse.id);
-    // 刷新顶栏下拉选项
-    var pick = document.querySelector("#coursePick");
-    if (pick){
-      var opt = document.createElement("option");
-      opt.value = newCourse.id;
-      opt.textContent = newCourse.name + " · " + (newCourse.class || "");
-      pick.appendChild(opt);
-      pick.value = newCourse.id;
-    }
-    // 清空表单
-    form.reset();
-    // 隐藏草稿预览
-    Edu.state.draftCourse = null;
-    $("draftPreviewBar").hidden = true;
-    // 成功提示
-    $("courseCreated").hidden = false;
-    $("courseCreated").textContent = "✅ 课程「" + newCourse.name + "」已创建并设为当前课程。";
-    toast("课程已创建：" + newCourse.name);
-    // 刷新所有派生视图
-    enhancedFill();
-    renderAllCourses();
-    renderRounds();
-    refreshArchiveOption();
-    if (Edu.renderTopCourseSummary) Edu.renderTopCourseSummary();
-    // agent 工作流：Live 模式下进入备课大纲页，先出大纲、审查通过后再生成备课包
-    if (Edu.isLive()) {
-      setTimeout(function () {
-        location.href = "outline.html?course=" + encodeURIComponent(newCourse.id) + "&autogen=1";
-      }, 700);
-    }
   }
 
   // 页面加载后初始化
@@ -438,10 +286,9 @@
     enhancedFill();
     renderAllCourses();
     renderRounds();
-    refreshArchiveOption();
     bindLocal();
     // 课程切换 → 重新填数据
-    Edu.onCourseChange(function(){ enhancedFill(); refreshArchiveOption(); renderRounds(); });
+    Edu.onCourseChange(function(){ enhancedFill(); renderRounds(); });
     // Live API 课程列表加载后 → 重绘表格
     Edu.onCourseChange(function(){
       if (Edu.isLive() && Edu.state.courses.length) renderAllCourses();

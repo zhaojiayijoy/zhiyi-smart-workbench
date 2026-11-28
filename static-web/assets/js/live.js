@@ -272,14 +272,18 @@
       API.courses.create(vals).then(function (c) {
         busy(btn, false);
         notify("课程已创建：" + c.name);
-        return API.courses.list().then(function (list) { Edu.state.courses = list || []; });
-      }).then(function () {
-        selectCourse((Edu.state.courses && Edu.state.courses[0] && Edu.state.courses[0].id) || null);
+        return API.courses.list().then(function (list) {
+          Edu.state.courses = list || [];
+          return c;
+        });
+      }).then(function (c) {
+        selectCourse((c && c.id) || (Edu.state.courses && Edu.state.courses[0] && Edu.state.courses[0].id) || null);
         form.reset();
         // 创建成功后关掉 modal
         var m = form.closest(".modal-mask");
         if (m) m.classList.remove("on");
-        try { loadCourses(); } catch (e) {}
+        // 新建教学任务后自动跳转到课程项目页面
+        location.href = "courses.html";
       }).catch(function (err) { busy(btn, false); notify("创建失败：" + (err.message || err)); });
     });
   }

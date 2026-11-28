@@ -56,7 +56,7 @@
         { href: "student.html#qa", icon: "chat", text: "我的答疑", page: "student" },
         { href: "student.html#feedback", icon: "check", text: "教师反馈", page: "student" },
         { href: "student.html#review", icon: "book", text: "错题回顾", page: "student" },
-        { href: "student.html#profile", icon: "user", text: "个人资料", page: "student" }
+        { href: "student.html#settings", icon: "user", text: "设置", page: "student" }
       ]
     }
   ];
@@ -470,30 +470,27 @@
     }
 
     head.addEventListener("click", function () {
-      function toggle() { setOpen(!sec.classList.contains("open")); }
-      // 已判定为无活跃课程 → 不再 toggle，只弹引导窗
-      if (sec.classList.contains("no-caret")) { showEmptyCoursesModal(); return; }
-      if (!window.EduAPI || !EduAPI.courses) { toggle(); return; }
-      var cached2 = (Edu.state && Edu.state.courses) || [];
-      var hasActive = cached2.some(isActive);
-      if (hasActive) { toggle(); return; }
-      EduAPI.courses.list(true).then(function (list) {
-        list = list || [];
-        Edu.state.courses = list;
-        applyVisual(list);
-        var active = list.filter(isActive);
-        if (active.length === 0) { showEmptyCoursesModal(); return; }
-        toggle();
-      }).catch(function () { toggle(); });
+      // 课程项目入口：直接打开课程项目页面；已在该页时才展开/收起项目列表
+      var onCourses = (document.body && document.body.getAttribute("data-page") === "courses");
+      if (!onCourses) {
+        location.href = "courses.html";
+        return;
+      }
+      setOpen(!sec.classList.contains("open"));
     });
 
     body.addEventListener("click", function (e) {
       var b = e.target.closest("[data-proj-id]");
       if (!b) return;
       var id = b.getAttribute("data-proj-id");
-      var name = b.querySelector(".p-name");
       Edu.selectCourse(id);
-      toast("已切换到「" + (name ? name.textContent : "") + "」");
+      var onCourses = (document.body && document.body.getAttribute("data-page") === "courses");
+      if (onCourses) {
+        var name = b.querySelector(".p-name");
+        toast("已切换到「" + (name ? name.textContent : "") + "」");
+      } else {
+        location.href = "courses.html";
+      }
     });
 
     // 右键：分享 / 删除该项目
@@ -691,14 +688,14 @@
     var projSec = aside.querySelector("#navProjects");
     if (projSec) initSideProjects(projSec);
 
-    var newTaskBtn = aside.querySelector("[data-new-task]");
-    if (newTaskBtn) {
-      newTaskBtn.addEventListener("click", function () {
-        var mask = document.getElementById("modalNewCourse");
-        if (!mask) { initModal(); mask = document.getElementById("modalNewCourse"); }
-        if (mask) mask.classList.add("on");
-      });
-    }
+    // 「新建教学任务」按钮（侧栏 / 页内 data-open-new-course）→ 任意页面都弹新建课程项目弹窗
+    document.addEventListener("click", function (e) {
+      if (!e.target.closest("[data-new-task], [data-open-new-course]")) return;
+      e.preventDefault();
+      var mask = document.getElementById("modalNewCourse");
+      if (!mask) { initModal(); mask = document.getElementById("modalNewCourse"); }
+      if (mask) mask.classList.add("on");
+    });
     // 侧栏底部头像卡 → 弹出菜单（上方弹，不是 modal 遮罩）
     var foot = aside.querySelector(".side-foot");
     if (foot) {
@@ -1008,6 +1005,101 @@
     });
 
     /* 关闭 modal（新建课程 / 新建任务）；个人资料 modal 由 openProfileModal 动态创建 */
+  }
+
+  /* ---------- 卡片弹窗化：.card[data-panel] → 独立按钮 + 独立弹窗 ----------
+     约定：给卡片加 data-panel="标题" 即可把它挪进自己的弹窗，并在页面上留一个按钮。
+     可选：data-panel-width="860px"、data-panel-ic="▤"、data-panel-auto（卡片由隐藏变可见时自动弹出） */
+  function initPanels() {
+    var cards = [].slice.call(document.querySelectorAll(".content .card[data-panel]"));
+    if (!cards.length) return;
+    var byCardId = {};
+    var owners = [];
+    var seq = 0;
+
+    function toolbarFor(owner, inPane) {
+      for (var i = 0; i < owners.length; i++) {
+        if (owners[i].owner === owner) return owners[i].el;
+      }
+      var tb = document.createElement("div");
+      tb.className = "panel-tools";
+      if (inPane) {
+        owner.insertBefore(tb, owner.firstChild);
+      } else {
+        var head = owner.querySelector(":scope > .page-head") || owner.querySelector(":scope > .hero");
+        if (head) {
+          if (head.nextSibling) owner.insertBefore(tb, head.nextSibling);
+          else owner.appendChild(tb);
+        } else {
+          owner.insertBefore(tb, owner.firstChild);
+        }
+      }
+      owners.push({ owner: owner, el: tb });
+      return tb;
+    }
+
+    cards.forEach(function (card) {
+      seq++;
+      var title = (card.getAttribute("data-panel") || "").trim() ||
+        ((card.querySelector(".card-h h2, .card-h h3") || {}).textContent || "").trim() || "详情";
+      var width = card.getAttribute("data-panel-width") || "760px";
+      var icon = card.getAttribute("data-panel-ic") || "▤";
+      var pane = card.closest(".tabpane");
+      var owner = pane || card.closest(".content") || document.body;
+
+      /* 每张卡片一个独立弹窗：标题、内容、尺寸各自独立 */
+      var mask = document.createElement("div");
+      mask.className = "modal-mask panel-modal";
+      mask.id = "panelModal" + seq;
+      mask.innerHTML =
+        '<div class="modal" style="max-width:' + width + '">' +
+          '<div class="modal-h"><b>' + escHtml(title) + '</b>' +
+            '<button class="x" type="button" data-close-modal aria-label="关闭">×</button></div>' +
+          '<div class="modal-b panel-body"></div>' +
+          '<div class="modal-f"><button class="btn" type="button" data-close-modal>关闭</button></div>' +
+        '</div>';
+      if (pane) document.body.appendChild(mask);
+      else card.parentNode.insertBefore(mask, card);
+      mask.addEventListener("click", function (e) { if (e.target === mask) mask.classList.remove("on"); });
+
+      card.classList.remove("fold", "open");
+      card.style.margin = "0";
+      card.style.marginTop = "0";
+      mask.querySelector(".panel-body").appendChild(card);
+      if (card.id) byCardId[card.id] = mask;
+
+      var btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "btn sm panel-btn";
+      btn.setAttribute("data-open-panel", mask.id);
+      btn.innerHTML = '<span class="pi">' + escHtml(icon) + '</span>' + escHtml(title);
+      toolbarFor(owner, !!pane).appendChild(btn);
+
+      /* 生成结果类卡片：由隐藏变可见时自动打开弹窗 */
+      if (card.hasAttribute("data-panel-auto") && window.MutationObserver) {
+        new MutationObserver(function () {
+          if (!card.hidden) mask.classList.add("on");
+        }).observe(card, { attributes: true, attributeFilter: ["hidden"] });
+      }
+    });
+
+    document.addEventListener("click", function (e) {
+      var b = e.target.closest("[data-open-panel]");
+      if (b) {
+        var m2 = document.getElementById(b.getAttribute("data-open-panel"));
+        if (m2) m2.classList.add("on");
+        return;
+      }
+      /* 页面里原有用 href="#id" 的入口继续可用：指向已弹窗化的卡片时改为打开弹窗 */
+      var a = e.target.closest('a[href^="#"]');
+      if (!a) return;
+      var id = a.getAttribute("href").slice(1);
+      if (byCardId[id]) { e.preventDefault(); byCardId[id].classList.add("on"); }
+    });
+
+    if (location.hash && byCardId[location.hash.slice(1)]) {
+      byCardId[location.hash.slice(1)].classList.add("on");
+    }
   }
 
   /* ---------- 个人资料弹窗（单卡：修改公开资料） ---------- */
@@ -1464,6 +1556,7 @@
     initChecks();
     initHashTabs();
     initFolds();
+    initPanels();
     fillCourseFields();
     Edu.onCourseChange(function () { fillCourseFields(); renderTopCourseSummary(); });
     initLive();

@@ -537,6 +537,18 @@ tbody tr:focus-visible,.tq:focus-visible{outline:2px solid var(--accent);outline
 .modal-h .x{margin-left:auto;border:0;background:transparent;font-size:18px;color:var(--text-3);cursor:pointer}
 .modal-b{padding:16px 18px}
 .modal-f{padding:12px 18px;border-top:1px solid var(--line);display:flex;justify-content:flex-end;gap:8px}
+/* 卡片弹窗化：页面上留一排按钮，内容进各自的弹窗 */
+.panel-tools{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 14px}
+.panel-tools .panel-btn{background:var(--panel);border:1px solid var(--line);color:var(--text)}
+.panel-tools .panel-btn:hover{background:var(--hover);border-color:var(--accent-line)}
+.panel-tools .panel-btn .pi{margin-right:5px;color:var(--accent);font-size:12px}
+.modal-b.panel-body{padding:14px 18px}
+.modal-b.panel-body > .card{border:0;box-shadow:none;background:transparent;margin:0!important;border-radius:0}
+.modal-b.panel-body > .card > .card-h{padding:2px 0 10px;border-bottom:1px solid var(--line);margin-bottom:12px}
+.modal-b.panel-body > .card > .card-b{padding:0}
+.modal-b.panel-body > .card > .table-wrap{border-top:0}
+.modal-b.panel-body > .card.fold > .card-b,
+.modal-b.panel-body > .card.fold > .table-wrap{display:block}
 .skel{background:linear-gradient(90deg,#EAE3D6 25%,#F5F1E8 37%,#EAE3D6 63%);background-size:400% 100%;animation:sk 1.2s infinite}
 @keyframes sk{0%{background-position:100% 50%}100%{background-position:0 50%}}
 .spin{width:14px;height:14px;border:2px solid rgba(54,91,76,.25);border-top-color:var(--accent);border-radius:50%;display:inline-block;animation:sp .8s linear infinite}

@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>学情分析 · 致壹 智能教育工作台</title>
-<link rel="stylesheet" href="assets/css/site.css?v=1795789601">
+<link rel="stylesheet" href="assets/css/site.css?v=1795789921">
 <script src="assets/js/auth.js?v=1795770200"></script>
 </head>
 <body data-page="analytics">
@@ -28,7 +28,7 @@
         <div><span class="k">进度</span><b data-fill="course.progress">—</b></div>
       </div>
 
-      <div class="card" style="margin-bottom:14px">
+      <div class="card" style="margin-bottom:14px" data-panel="筛选条件" data-panel-width="760px" data-panel-ic="⚙">
         <div class="card-b" style="display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end">
           <div class="field" style="margin:0;min-width:130px"><label>时间范围</label>
             <select id="anaDays"><option value="7">近 7 天</option><option value="30" selected>近 30 天</option><option value="">全部</option></select>
@@ -48,11 +48,15 @@
         </div>
       </div>
 
-      <div class="grid g4" style="margin-bottom:14px">
+      <div class="card" style="margin-bottom:14px" data-panel="分析概览" data-panel-width="860px" data-panel-ic="▦">
+        <div class="card-b">
+      <div class="grid g4">
         <div class="kpi"><div class="label">答疑记录</div><div class="value">—</div><div class="foot">—</div></div>
         <div class="kpi"><div class="label">作业评审</div><div class="value">—</div><div class="foot">—</div></div>
         <div class="kpi warn"><div class="label">建议重点支持</div><div class="value">—</div><div class="foot">均分 &lt; 60</div></div>
         <div class="kpi ok"><div class="label">建议提供拓展任务</div><div class="value">—</div><div class="foot">均分 ≥ 85</div></div>
+      </div>
+        </div>
       </div>
 
       <div class="card" style="margin-bottom:14px">
@@ -112,7 +116,7 @@
       </div>
 
       <div class="split">
-        <div class="card" id="actionCenter">
+        <div class="card" id="actionCenter" data-panel="下一课行动中心" data-panel-width="760px" data-panel-ic="✦">
           <div class="card-h"><h2>下一课行动中心</h2><div class="right"><span class="tag acc" id="actionLessonTag">—</span></div></div>
           <div class="card-b">
             <div class="stack" id="weakStack" style="gap:6px;margin-bottom:14px">
@@ -125,8 +129,8 @@
           </div>
         </div>
 
-        <div class="card fold">
-          <div class="card-h" data-fold-head aria-expanded="false"><h2>数据来源</h2><div class="right"><span class="mini">近 30 天</span><span class="fold-caret">▾</span></div></div>
+        <div class="card fold" data-panel="数据来源" data-panel-width="700px" data-panel-ic="▤">
+          <div class="card-h"><h2>数据来源</h2><div class="right"><span class="mini">近 30 天</span></div></div>
           <div class="card-b">
             <div class="bars">
               <div class="mini" style="padding:10px 0">暂无数据</div>
@@ -190,8 +194,8 @@
 })();
 </script>
 <script src="assets/js/data.js?v=1795420906"></script>
-<script src="assets/js/site.js?v=1795789812"></script>
+<script src="assets/js/site.js?v=1795789922"></script>
 <script src="assets/js/api.js?v=1795770000"></script>
-<script src="assets/js/live.js?v=1795789603"></script>
+<script src="assets/js/live.js?v=1795789903"></script>
 </body>
 </html>

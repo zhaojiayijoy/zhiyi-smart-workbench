@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>学生答疑 · 致壹 智能教育工作台</title>
-<link rel="stylesheet" href="assets/css/site.css?v=1795789601">
+<link rel="stylesheet" href="assets/css/site.css?v=1795789921">
 <script src="assets/js/auth.js?v=1795770200"></script>
 </head>
 <body data-page="tutor">
@@ -25,11 +25,15 @@
         <div><span class="k">进度</span><b data-fill="course.progress">—</b></div>
       </div>
 
-      <div class="grid g4" style="margin-bottom:14px">
+      <div class="card" style="margin-bottom:14px" data-panel="答疑概览" data-panel-width="860px" data-panel-ic="▦">
+        <div class="card-b">
+      <div class="grid g4">
         <div class="kpi"><div class="label">答疑记录</div><div class="value">—</div><div class="foot">近 30 天</div></div>
         <div class="kpi ok"><div class="label">已解决</div><div class="value">—</div><div class="foot">解决率 —</div></div>
         <div class="kpi warn"><div class="label">需要关注</div><div class="value">—</div><div class="foot">连续两次未解决</div></div>
         <div class="kpi"><div class="label">高频知识点</div><div class="value" style="font-size:14px">—</div><div class="foot">出现 — 次</div></div>
+      </div>
+        </div>
       </div>
 
       <div class="tutor-layout">
@@ -38,7 +42,7 @@
           <div class="card-b" style="padding-top:8px"><div class="mini" style="padding:10px 0">暂无数据</div></div>
         </div>
 
-        <div class="card">
+        <div class="card" data-panel="答疑详情" data-panel-width="860px" data-panel-ic="◌">
           <div class="card-h"><h2 id="tutorDetailTitle">暂无提问</h2><div class="right"><span class="tag acc" id="tutorDetailStatus">—</span></div></div>
           <div class="card-b">
             <div class="msg me" style="margin-bottom:12px">
@@ -66,7 +70,7 @@
           </div>
         </div>
 
-        <div class="card" id="newAsk">
+        <div class="card" id="newAsk" data-panel="新建答疑" data-panel-width="640px" data-panel-ic="＋">
           <div class="card-h"><h2>新建答疑</h2></div>
           <div class="card-b">
             <form data-sim="#askOut" data-msg="答疑已创建">
@@ -85,8 +89,8 @@
 
 <div class="toast"></div>
 <script src="assets/js/data.js?v=1795420906"></script>
-<script src="assets/js/site.js?v=1795789812"></script>
+<script src="assets/js/site.js?v=1795789922"></script>
 <script src="assets/js/api.js?v=1795770000"></script>
-<script src="assets/js/live.js?v=1795789603"></script>
+<script src="assets/js/live.js?v=1795789903"></script>
 </body>
 </html>

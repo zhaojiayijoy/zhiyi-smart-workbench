@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>任务中心 · 致壹 智能教育工作台</title>
-<link rel="stylesheet" href="assets/css/site.css?v=1795789601">
+<link rel="stylesheet" href="assets/css/site.css?v=1795789921">
 <script src="assets/js/auth.js?v=1795770200"></script>
 </head>
 <body data-page="tasks">
@@ -19,11 +19,15 @@
         <div class="right"><button class="btn primary" type="button" data-go="index.html">＋ 新建教学任务</button></div>
       </div>
 
-      <div class="grid g4" style="margin-bottom:14px">
+      <div class="card" style="margin-bottom:14px" data-panel="任务概览" data-panel-width="820px" data-panel-ic="▦">
+        <div class="card-b">
+      <div class="grid g4">
         <div class="kpi"><div class="label">进行中</div><div class="value">—</div><div class="foot">—</div></div>
         <div class="kpi warn"><div class="label">待处理</div><div class="value">—</div><div class="foot">—</div></div>
         <div class="kpi ok"><div class="label">已完成</div><div class="value">—</div><div class="foot">近 30 天</div></div>
         <div class="kpi"><div class="label">累计参与学生</div><div class="value">—</div><div class="foot">—</div></div>
+      </div>
+        </div>
       </div>
 
       <div class="card" style="margin-bottom:14px">
@@ -41,8 +45,7 @@
         </div>
       </div>
 
-      <div class="card">
-        <div class="card-h"><h2>最近动态</h2><div class="right"><span class="tag warn">本周待办 —</span></div></div>
+      <div class="card" data-panel="最近动态" data-panel-width="760px" data-panel-ic="◷">
         <div class="card-b tight">
           <div class="recent-h" style="padding-bottom:6px"><b>本周待办</b><span class="mini">未完成的任务</span></div>
           <div class="stack" id="weekTodos" style="gap:8px;margin-bottom:12px">
@@ -60,8 +63,8 @@
 <div class="toast"></div>
 
 <script src="assets/js/data.js?v=1795420906"></script>
-<script src="assets/js/site.js?v=1795789812"></script>
+<script src="assets/js/site.js?v=1795789922"></script>
 <script src="assets/js/api.js?v=1795770000"></script>
-<script src="assets/js/live.js?v=1795789603"></script>
+<script src="assets/js/live.js?v=1795789903"></script>
 </body>
 </html>
