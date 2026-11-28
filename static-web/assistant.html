@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>AI 助手 · 致壹 智能教育工作台</title>
-<link rel="stylesheet" href="assets/css/site.css?v=1795789921">
+<link rel="stylesheet" href="assets/css/site.css?v=1795799601">
 <script src="assets/js/auth.js?v=1795770200"></script>
 </head>
 <body data-page="assistant">
@@ -15,7 +15,7 @@
     <main class="content" style="max-width:none;display:flex;flex-direction:column">
 
       <div class="page-head">
-        <div><h1>AI 助手</h1><p class="sub" data-page-sub>结合当前课程资料与学情回答问题，生成内容需教师确认<span class="mini" style="margin-left:8px">已加载 <b data-fill="course.resourceCount">—</b> 份课程资料</span></p></div>
+        <div><h1>AI 助手</h1></div>
         <div class="right"><button class="btn" type="button" data-new-chat>新建对话</button></div>
       </div>
 
@@ -27,15 +27,10 @@
         <div style="flex:1;min-width:0;display:flex;flex-direction:column">
           <div style="flex:1;min-height:0;overflow:auto;padding:4px 2px 12px">
             <div class="chat" id="chat">
-              <div class="msg ai">
-                <div class="who">AI</div>
-                <div class="bubble">你好。我可以围绕「<b data-fill="course.name">—</b>」协助备课与学情分析，生成内容请核对后使用：
-                  <ul>
-                    <li>把某个知识点改写成课堂导入</li>
-                    <li>根据错误类型生成针对性练习</li>
-                    <li>对比两版教案的差异并给出修改建议</li>
-                  </ul>
-                </div>
+              <div class="chat-empty" id="chatEmpty">
+                <div class="ce-ic">✦</div>
+                <b>今天想让 AI 帮你做什么？</b>
+                <span>把知识点改写成课堂导入、按错误类型出练习题、压缩教案……直接输入即可。</span>
               </div>
             </div>
             <div class="checks" id="suggests" style="margin-top:12px">
@@ -59,8 +54,8 @@
 
 <div class="toast"></div>
 <script src="assets/js/data.js?v=1795420906"></script>
-<script src="assets/js/site.js?v=1795789922"></script>
-<script src="assets/js/api.js?v=1795770000"></script>
-<script src="assets/js/live.js?v=1795789903"></script>
+<script src="assets/js/site.js?v=1795799511"></script>
+<script src="assets/js/api.js?v=1795799200"></script>
+<script src="assets/js/live.js?v=1795799301"></script>
 </body>
 </html>

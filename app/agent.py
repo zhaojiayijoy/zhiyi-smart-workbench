@@ -64,6 +64,25 @@ SYSTEM = """你是一个**数据分析智能体**。用户可以上传 Excel / C
 """
 
 
+ASSISTANT_SYSTEM = """你是「致壹 智能教育工作台」里的教学 AI 助手，服务对象是职业院校教师。
+
+## 工作方式
+
+1. **直接用自己的知识思考和完成任务**。用户要的是任务结果本身（讲解、示范、教案、话术、方案等），请直接作答，不要先查资料、不要等其他条件。
+2. **课程资料只是可选参考**。如果下方附带了课程上下文（课程信息、资料清单或摘录），仅在它与问题相关时用来贴合课程；资料里没写到，不代表无法回答。
+3. **不得因为资料缺失而拒答**。不要输出“资料中没有”“无法从资料中找到”“本轮没有调用工具/没有数据”这类说明，也不要主动解释信息来源的限制。只有用户明确问“我的资料里怎么写的”时，才需要区分资料内容与通用知识。
+4. **可以正常使用通用学科知识**（数学、营销、办公软件、教学法、写作等），给出完整、可执行、结构清晰的回答。
+5. **不编造文件内部细节**。具体页码、章节号、资料内部数据如未提供，用“可按教材补充”带过，但不要因此拒绝作答。
+6. 只有确实需要最新资讯、价格、官网说明等实时信息时，才使用 web_search 工具。
+
+## 回答风格
+
+- 先给结论或成品，再给必要说明；不要“作为 AI”之类的免责声明。
+- 步骤用编号列表；需要成稿（导入语、教案片段、练习题、复盘方案）时直接写出可用正文。
+- **输出纯文本**：不要使用 Markdown 标记（#、**、`、表格、代码块），小标题单独占一行即可，分点用「1. 2. 3.」。
+"""
+
+
 def build_llm(temperature: float | None = None, review_model: bool = False):
     """构建 ChatOpenAI 实例。
 
@@ -124,8 +143,11 @@ def build_llm(temperature: float | None = None, review_model: bool = False):
     return ChatOpenAI(**kwargs)
 
 
-def build_agent_executor(max_iterations: int = 12) -> AgentExecutor:
+def build_agent_executor(max_iterations: int = 12, mode: str = "analysis") -> AgentExecutor:
     """创建并返回一个新鲜的 AgentExecutor。
+
+    mode="analysis"：数据分析智能体（默认，强调工具取数与可追溯）；
+    mode="assistant"：教学 AI 助手（直接用模型自身知识推理作答，课程资料仅作可选参考）。
 
     注意：不清空 registry。UI 已经把用户上传的真实数据注册在里面，
     清空会导致 Agent 丢失上下文。会话重置由 UI 显式调用 clear_registry()。
@@ -133,10 +155,15 @@ def build_agent_executor(max_iterations: int = 12) -> AgentExecutor:
     llm = build_llm()
     tools = all_tools()
 
+    if mode == "assistant":
+        system_text = ASSISTANT_SYSTEM
+    else:
+        system_text = (SYSTEM + "\n## 工作方式\n"
+                       "直接调用工具取数后再作答，不要凭空推测；"
+                       "工具未返回的信息就写“工具未返回该信息”，不要编造列名或数字。")
+
     prompt = ChatPromptTemplate.from_messages([
-        ("system", SYSTEM + "\n## 工作方式\n"
-         "直接调用工具取数后再作答，不要凭空推测；"
-         "工具未返回的信息就写“工具未返回该信息”，不要编造列名或数字。"),
+        ("system", system_text),
         MessagesPlaceholder("chat_history", optional=True),
         ("human", "{input}"),
         MessagesPlaceholder("agent_scratchpad"),
@@ -154,11 +181,13 @@ def build_agent_executor(max_iterations: int = 12) -> AgentExecutor:
     )
 
 
-def run(user_input: str, chat_history: list[tuple[str, str]] | None = None, context: str = "") -> dict[str, Any]:
+def run(user_input: str, chat_history: list[tuple[str, str]] | None = None, context: str = "",
+        mode: str = "analysis") -> dict[str, Any]:
     """执行一次对话，返回结构化结果。
 
     context：UI 注入的会话事实（当前已加载文件的 provenance），
     让 Agent 不必猜测文件路径。
+    mode：analysis（数据分析，默认）/ assistant（教学助手，自由作答）。
 
     返回额外字段：
         finish_reason   模型终止原因（stop / tool_calls / length / sensitive / network_error / model_context_window_exceeded）
@@ -168,7 +197,7 @@ def run(user_input: str, chat_history: list[tuple[str, str]] | None = None, cont
     """
     from app.zhipu_media import classify_finish_reason, format_content_filter, format_web_search
 
-    ex = build_agent_executor()
+    ex = build_agent_executor(mode=mode)
     payload = f"{context}\n\n用户问题：{user_input}" if context else user_input
     try:
         result = ex.invoke({

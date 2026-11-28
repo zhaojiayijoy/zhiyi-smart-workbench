@@ -4,7 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>教学工具 · 致壹 智能教育工作台</title>
-<link rel="stylesheet" href="assets/css/site.css?v=1795789921">
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="assets/css/site.css?v=1795799601">
 <script src="assets/js/auth.js?v=1795770200"></script>
 </head>
 <body data-page="tools">
@@ -15,51 +16,80 @@
     <main class="content">
 
       <div class="page-head">
-        <div><h1>教学工具</h1><p class="sub">课程资源、任务管理与常用教学小工具</p></div>
+        <div><h1>教学工具</h1></div>
         <div class="right"><span class="tag">本地运行</span></div>
       </div>
 
-      <div class="card" style="margin-bottom:14px">
-        <div class="card-h"><h2>智能体对话</h2><div class="right"><span class="tag" id="agentState">—</span></div></div>
-        <div class="card-b">
-          <div class="grid g2" style="gap:12px">
-            <div class="field"><label>智能体</label><select id="agentPick"></select></div>
-            <div class="field" id="agentExtra"></div>
+      <div class="pnav" data-pnav>
+        <button type="button" class="on" data-pnav-tab="rubric">评分量规</button>
+        <button type="button" data-pnav-tab="score">成绩汇总</button>
+        <button type="button" data-pnav-tab="mistake">错题归因</button>
+        <button type="button" data-pnav-tab="timer">课堂计时</button>
+      </div>
+
+      <div class="pnav-pane on" data-pnav-pane="rubric">
+        <div class="card">
+          <div class="card-h"><h2>评分量规模板</h2><div class="right"><span class="tag">3 类</span></div></div>
+          <div class="card-b">
+            <div class="grid g3">
+              <div class="rule"><b>洞察报告量规</b><div class="mini" style="margin-top:4px">结构完整、数据支撑、结论可执行</div></div>
+              <div class="rule"><b>促销方案量规</b><div class="mini" style="margin-top:4px">目标明确、活动设计、预算合理</div></div>
+              <div class="rule"><b>实训任务量规</b><div class="mini" style="margin-top:4px">操作规范、结果正确、过程记录</div></div>
+            </div>
+            <div class="form-actions" style="margin-top:12px">
+              <button class="btn primary" type="button" data-demo="已导出量规模板（示例）">导出模板</button>
+              <span class="mini">导出后可在「作业评审」中直接套用。</span>
+            </div>
           </div>
-          <div class="chat" id="agentChat" style="max-height:380px;overflow:auto">
-            <div class="msg ai"><div class="who">AI</div><div class="bubble">选择智能体后输入内容开始对话；多轮消息会按顺序带上文，切换智能体会清空上下文。</div></div>
-          </div>
-          <form class="composer" id="agentForm" style="margin-top:10px">
-            <textarea rows="2" placeholder="输入内容，Enter 发送，Shift+Enter 换行"></textarea>
-            <button class="btn primary" type="submit">发送</button>
-            <button class="btn danger" type="button" id="agentClear">清空</button>
-          </form>
-          <div class="mini" id="agentNote" style="margin-top:6px">正在读取本地接口…</div>
         </div>
       </div>
 
-      <div class="card" data-panel="快捷入口" data-panel-width="760px" data-panel-ic="▦">
-        <div class="card-b">
-          <div class="grid g2">
+      <div class="pnav-pane" data-pnav-pane="score">
+        <div class="card">
+          <div class="card-h"><h2>成绩汇总</h2><div class="right"><span class="tag">按班级</span></div></div>
+          <div class="card-b">
             <div class="rule">
-              <b>评分量规模板</b>
-              <div class="mini" style="margin:2px 0 6px">洞察报告、促销方案、实训任务三类量规，可直接用于作业评审</div>
-              <div class="form-actions" style="margin:0"><button class="btn sm" type="button" data-demo="已导出量规模板（示例）">导出模板</button></div>
+              <b>已发布终评成绩</b>
+              <div class="mini" style="margin-top:4px">按班级汇总已发布的终评成绩，导出 Excel 用于教务报送；未发布的评审不会计入。</div>
             </div>
-            <div class="rule">
-              <b>成绩汇总</b>
-              <div class="mini" style="margin:2px 0 6px">按班级汇总已发布的终评成绩，导出 Excel 用于教务报送</div>
-              <div class="form-actions" style="margin:0"><button class="btn sm" type="button" data-demo="已导出成绩汇总（示例）">导出 Excel</button></div>
+            <div class="form-actions" style="margin-top:12px">
+              <button class="btn primary" type="button" data-demo="已导出成绩汇总（示例）">导出 Excel</button>
+              <span class="mini">导出范围为当前课程已发布终评的学生。</span>
             </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="pnav-pane" data-pnav-pane="mistake">
+        <div class="card">
+          <div class="card-h"><h2>错题归因</h2><div class="right"><span class="tag">按知识点</span></div></div>
+          <div class="card-b">
             <div class="rule">
-              <b>错题归因</b>
-              <div class="mini" style="margin:2px 0 6px">按知识点与错误类型归类错题，生成讲评顺序</div>
-              <div class="form-actions" style="margin:0"><a class="btn sm" href="analytics.html">查看学情分析</a></div>
+              <b>按知识点与错误类型归类</b>
+              <div class="mini" style="margin-top:4px">把作业与练习中的错题按知识点、错误类型聚类，生成讲评顺序：先讲共性错误，再补个别卡点。</div>
             </div>
-            <div class="rule">
-              <b>课堂计时</b>
-              <div class="mini" style="margin:2px 0 6px">小组练习倒计时 5 分钟</div>
-              <div class="form-actions" style="margin:0"><button class="btn sm" type="button" id="timerBtn">开始</button><span class="mini" id="timerResult"></span></div>
+            <div class="form-actions" style="margin-top:12px">
+              <a class="btn primary" href="analytics.html">查看学情分析</a>
+              <span class="mini">讲评顺序可在学情分析的「下一课行动中心」查看。</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="pnav-pane" data-pnav-pane="timer">
+        <div class="card">
+          <div class="card-h"><h2>课堂计时</h2><div class="right"><span class="tag">小组练习</span></div></div>
+          <div class="card-b">
+            <div style="display:flex;align-items:center;gap:18px;flex-wrap:wrap">
+              <div id="timerResult" style="font-size:34px;font-weight:600;font-variant-numeric:tabular-nums;letter-spacing:1px">05:00</div>
+              <div class="field" style="margin:0;display:flex;align-items:center;gap:6px">
+                <label for="timerMinutes" style="margin:0">时长</label>
+                <input id="timerMinutes" type="number" min="1" max="180" step="1" value="5" style="width:88px">
+                <span class="mini">分钟</span>
+              </div>
+              <button class="btn primary" type="button" id="timerBtn">开始</button>
+              <button class="btn" type="button" id="timerReset">重置</button>
+              <span class="mini">可填 1–180 分钟，倒计时结束会提示「时间到」。</span>
             </div>
           </div>
         </div>
@@ -71,174 +101,52 @@
 
 <div class="toast"></div>
 <script src="assets/js/data.js?v=1795420906"></script>
-<script src="assets/js/site.js?v=1795789922"></script>
-<script src="assets/js/api.js?v=1795770000"></script>
-<script src="assets/js/live.js?v=1795789903"></script>
+<script src="assets/js/site.js?v=1795799511"></script>
+<script src="assets/js/api.js?v=1795799200"></script>
+<script src="assets/js/live.js?v=1795799301"></script>
 <script>
 (function(){
   var btn = document.getElementById('timerBtn'), out = document.getElementById('timerResult'), t = null;
+  var minEl = document.getElementById('timerMinutes'), resetBtn = document.getElementById('timerReset');
+  if (!btn || !out || !minEl) return;
+
+  function totalSeconds(){
+    var m = Math.round(Number(minEl.value));
+    if (!isFinite(m) || m < 1) m = 1;
+    if (m > 180) m = 180;
+    minEl.value = m;
+    return m * 60;
+  }
+  function show(sec){
+    var m = String(Math.floor(Math.max(0, sec) / 60)).padStart(2, '0');
+    var s = String(Math.max(0, sec) % 60).padStart(2, '0');
+    out.textContent = m + ':' + s;
+  }
+  function stop(label){
+    if (t) { clearInterval(t); t = null; }
+    btn.textContent = '开始';
+    minEl.disabled = false;
+    if (label) out.textContent = label;
+  }
   btn.addEventListener('click', function(){
-    if(t){ clearInterval(t); t = null; btn.textContent = '开始'; out.textContent = '已停止'; return; }
-    var left = 300;
-    btn.textContent = '停止';
-    out.textContent = '剩余 05:00';
+    if (t) { stop('已暂停'); return; }
+    var left = totalSeconds();
+    if (left <= 0) return;
+    btn.textContent = '暂停';
+    minEl.disabled = true;
+    show(left);
     t = setInterval(function(){
       left--;
-      var m = String(Math.floor(left/60)).padStart(2,'0'), s = String(left%60).padStart(2,'0');
-      out.textContent = '剩余 ' + m + ':' + s;
-      if(left <= 0){ clearInterval(t); t = null; btn.textContent = '开始'; out.textContent = '时间到'; }
+      show(left);
+      if (left <= 0) stop('时间到');
     }, 1000);
   });
-})();
-</script>
-<script>
-/* 智能体对话：调用本地 /api/agent/chat（智谱 POST /v1/agents） */
-(function(){
-  var API = window.EduAPI;
-  var pick = document.getElementById('agentPick');
-  var extra = document.getElementById('agentExtra');
-  var chat = document.getElementById('agentChat');
-  var form = document.getElementById('agentForm');
-  var note = document.getElementById('agentNote');
-  var state = document.getElementById('agentState');
-  var clearBtn = document.getElementById('agentClear');
-  if (!pick || !form || !chat) return;
-
-  var FALLBACK_AGENTS = [
-    { id:'intelligent_education_solve_agent', name:'智能教育解题', custom:[] },
-    { id:'general_translation', name:'通用翻译', custom:['source_lang','target_lang'] },
-    { id:'slides_glm_agent', name:'幻灯片生成', custom:[] },
-    { id:'ai_drawing_agent', name:'AI 绘画', custom:[] },
-    { id:'receipt_recognition_agent', name:'票据识别', custom:[] },
-    { id:'clothes_recognition_agent', name:'服饰识别', custom:[] },
-    { id:'vidu_template_agent', name:'视频模板', custom:[] }
-  ];
-  var FALLBACK_LANGS = ['auto','zh-CN','zh-TW','en','en-US','ja','ko','fr','de','es','ru'];
-  var LANG_LABEL = { auto:'自动识别' };
-
-  var agents = FALLBACK_AGENTS, langs = FALLBACK_LANGS, history = [], busy = false;
-
-  function h(s){
-    var d = document.createElement('div');
-    d.textContent = s == null ? '' : String(s);
-    return d.innerHTML;
-  }
-  function lines(s){ return h(s).replace(/\n/g, '<br>'); }
-  function agentById(id){
-    for (var i = 0; i < agents.length; i++) if (agents[i].id === id) return agents[i];
-    return null;
-  }
-  function langLabel(v){ return LANG_LABEL[v] || v; }
-
-  function options(list, def){
-    return list.map(function(v){
-      return '<option value="' + h(v) + '"' + (v === def ? ' selected' : '') + '>' + h(langLabel(v)) + '</option>';
-    }).join('');
-  }
-  function renderExtra(){
-    var a = agentById(pick.value);
-    extra.innerHTML = '';
-    if (!a || !a.custom || a.custom.indexOf('source_lang') < 0) return;
-    extra.innerHTML =
-      '<label>翻译语言</label><div style="display:flex;gap:8px">' +
-        '<div style="flex:1"><span class="k mini">源语言</span><select id="agentSrc">' + options(langs, 'auto') + '</select></div>' +
-        '<div style="flex:1"><span class="k mini">目标语言</span><select id="agentTgt">' + options(langs, 'zh-CN') + '</select></div>' +
-      '</div>';
-  }
-  function append(role, html){
-    var d = document.createElement('div');
-    d.className = 'msg ' + (role === 'me' ? 'me' : 'ai');
-    d.innerHTML = '<div class="who">' + (role === 'me' ? '我' : 'AI') + '</div><div class="bubble">' + html + '</div>';
-    chat.appendChild(d);
-    d.scrollIntoView({ behavior:'smooth', block:'end' });
-    return d;
-  }
-  function reset(msg){
-    history = [];
-    chat.innerHTML = '';
-    append('ai', msg || '上下文已清空，可以重新开始。');
-    renderExtra();
-  }
-
-  function fill(data){
-    if (data && data.agents && data.agents.length) agents = data.agents;
-    if (data && data.languages && data.languages.length) langs = data.languages;
-    pick.innerHTML = agents.map(function(a){
-      return '<option value="' + h(a.id) + '">' + h(a.name) + '</option>';
-    }).join('');
-    if (data && data.default) pick.value = data.default;
-    renderExtra();
-  }
-
-  function send(){
-    if (busy) return;
-    var ta = form.querySelector('textarea');
-    var text = (ta.value || '').trim();
-    if (!text) return;
-    if (!API || !API.agent) { note.textContent = '接口客户端未加载，请刷新页面。'; return; }
-
-    var cv = null;
-    var src = document.getElementById('agentSrc');
-    var tgt = document.getElementById('agentTgt');
-    if (src && tgt) cv = { source_lang: src.value, target_lang: tgt.value };
-
-    append('me', lines(text));
-    history.push({ role:'user', content:text });
-    ta.value = '';
-    var thinking = append('ai', '<span class="spin"></span> 智能体思考中…');
-    busy = true;
-    state.textContent = '调用中';
-
-    API.agent.chat({ agent_id: pick.value, messages: history.slice(-12), custom_variables: cv })
-      .then(function(res){
-        var out = (res && res.content) || '(无输出)';
-        var html = lines(out);
-        (res && res.attachments || []).forEach(function(a){
-          if (a.type === 'image') html += '<div style="margin-top:8px"><img src="' + h(a.url) + '" alt="" style="max-width:100%;border-radius:8px"></div>';
-          else html += '<div style="margin-top:8px"><a href="' + h(a.url) + '" target="_blank" rel="noopener">' + h(a.type) + ' 链接</a></div>';
-        });
-        var u = (res && res.usage) || {};
-        if (u.total_tokens) html += '<div class="mini" style="margin-top:8px">tokens：输入 ' + u.prompt_tokens + ' / 输出 ' + u.completion_tokens + ' / 合计 ' + u.total_tokens + '</div>';
-        thinking.querySelector('.bubble').innerHTML = html;
-        thinking.scrollIntoView({ behavior:'smooth', block:'end' });
-        history.push({ role:'assistant', content:out });
-        state.textContent = '就绪';
-      })
-      .catch(function(e){
-        thinking.querySelector('.bubble').innerHTML = '<span style="color:var(--warn)">调用失败：' + h(e.message || e) + '</span>';
-        history.pop();
-        state.textContent = '失败';
-      })
-      .then(function(){ busy = false; });
-  }
-
-  pick.addEventListener('change', function(){ reset('已切换智能体，上下文已清空。'); });
-  form.addEventListener('submit', function(e){ e.preventDefault(); send(); });
-  form.querySelector('textarea').addEventListener('keydown', function(e){
-    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); }
+  if (resetBtn) resetBtn.addEventListener('click', function(){
+    stop();
+    show(totalSeconds());
   });
-  if (clearBtn) clearBtn.addEventListener('click', function(){
-    if (!window.confirm('确定清空当前对话上下文？此操作不可撤销。')) return;
-    reset();
-  });
-
-  if (API && API.agent && API.agent.list) {
-    API.agent.list().then(function(d){
-      fill(d);
-      state.textContent = '已连接';
-      var debug = false;
-      try { debug = localStorage.getItem("edu.debug") === "1"; } catch (e) {}
-      note.textContent = debug ? "已连接本地接口：" + API.base : "本地接口已连接";
-    }).catch(function(){
-      fill(null);
-      state.textContent = '未连接';
-      note.textContent = '未连接本地接口（先启动 api_server.py），当前为内置智能体清单，发送会失败。';
-    });
-  } else {
-    fill(null);
-    state.textContent = '未连接';
-    note.textContent = '接口客户端未加载，请刷新页面。';
-  }
+  minEl.addEventListener('change', function(){ if (!t) show(totalSeconds()); });
+  show(totalSeconds());
 })();
 </script>
 </body>

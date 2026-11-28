@@ -1035,6 +1035,48 @@ def delete_task(tid: int) -> dict:
     return ok({"id": tid})
 
 
+class TaskPublishIn(BaseModel):
+    project_id: int
+    title: str
+    description: str = ""
+    due: str = ""
+    audience: Optional[list[str]] = None
+
+
+@app.post("/api/tasks/publish")
+def publish_task(body: TaskPublishIn, request: Request) -> dict:
+    """教师一键发布班级任务（kind=homework），学生端按发布班级匹配后出现在首页。"""
+    user = _user(request)
+    if user.get("role") == "student":
+        raise HTTPException(403, "仅教师可发布任务")
+    title = (body.title or "").strip()
+    if not title:
+        raise HTTPException(400, "任务标题不能为空")
+    pid = int(body.project_id)
+    if not db.get_project(pid):
+        raise HTTPException(404, "课程项目不存在")
+    desc = (body.description or "").strip()
+    # 防重复下发：10 秒内同标题同描述视为重复点击，直接返回已有任务
+    for t in db.list_tasks(project_id=pid, kind="homework", limit=20):
+        meta = t.get("meta") or {}
+        if (t.get("prompt") or "").strip() == title and (meta.get("description") or "").strip() == desc \
+                and (time.time() - float(t.get("created_at") or 0)) < 10:
+            return ok({"task_id": t.get("id"), "duplicate": True})
+    classes = [str(c).strip() for c in (body.audience or []) if str(c).strip()]
+    meta = {
+        "published": True,
+        "type": "homework",
+        "description": desc,
+        "due": (body.due or "").strip(),
+        "audience": {"classes": classes},
+        "published_at": time.time(),
+        "publisher": str(user.get("display_name") or user.get("username") or "教师"),
+    }
+    tid = db.save_task(prompt=title, kind="homework", status="ok", project_id=pid, meta=meta)
+    return ok({"task_id": tid, "duplicate": False,
+               "audience": classes, "title": title})
+
+
 # ---------------------------------------------------------------------------
 # 一键备课
 # ---------------------------------------------------------------------------
@@ -1841,8 +1883,11 @@ def assistant_chat(body: ChatIn) -> dict:
             ctx = edu.course_context(body.project_id)
         except Exception:
             ctx = ""
+    if ctx:
+        ctx = ("以下课程上下文仅供参考（与问题无关或缺失时可忽略，不得因此拒绝回答）：\n" + ctx)
     try:
-        res = agent.run(body.prompt, chat_history=[], context=ctx or "")
+        # assistant 模式：直接用大模型自身能力作答，课程资料不作为限制条件
+        res = agent.run(body.prompt, chat_history=[], context=ctx or "", mode="assistant")
     except Exception as e:
         return err(f"助手异常：{e.__class__.__name__}: {e}", 500)
     output = res.get("output") or res.get("error") or "(无输出)"
@@ -1961,6 +2006,12 @@ def _published_trainings(project_id: Optional[int], class_name: str = "") -> lis
             and _audience_match(t, class_name)]
 
 
+def _published_homework(project_id: Optional[int], class_name: str = "") -> list[dict[str, Any]]:
+    """教师一键发布的班级任务（kind=homework）。"""
+    return [t for t in db.list_tasks(project_id=project_id, kind="homework", limit=100)
+            if bool((t.get("meta") or {}).get("published")) and _audience_match(t, class_name)]
+
+
 def _wrong_payload(project_id: Optional[int], keys: set[str]) -> dict[str, Any]:
     """错题本：由真实评审低分维度与答疑错因派生，无数据时返回空列表。"""
     items: list[dict[str, Any]] = []
@@ -2031,6 +2082,7 @@ def student_overview(request: Request, project_id: Optional[int] = Query(None)) 
     cls = (user.get("class_name") or "").strip()
     lessons = _published_lessons(pid, cls) if pid else []
     trainings = _published_trainings(pid, cls) if pid else []
+    homework = _published_homework(pid, cls) if pid else []
     reviews = ([t for t in db.list_tasks(project_id=pid, kind="review", limit=200)
                 if not keys or _stu_key(t) in keys] if pid else [])
     qa = ([t for t in db.list_tasks(project_id=pid, kind="qa", limit=200)
@@ -2043,6 +2095,7 @@ def student_overview(request: Request, project_id: Optional[int] = Query(None)) 
         "project_id": pid,
         "lessons": lessons,
         "trainings": trainings,
+        "homework": homework,
         "my_reviews": reviews,
         "my_qa": qa,
         "my_submissions": submissions,
@@ -2071,6 +2124,8 @@ def student_dashboard(request: Request, project_id: Optional[int] = Query(None),
                                           str((_user(request).get("class_name") or ""))),
         "lessons": _published_lessons(project_id,
                                       str((_user(request).get("class_name") or ""))),
+        "homework": _published_homework(project_id,
+                                        str((_user(request).get("class_name") or ""))),
         "tutor_threads": [],
     })
 
@@ -2094,7 +2149,7 @@ def student_submit_task(tid: int, request: Request, note: str = Form(""),
     if user.get("role") != "student":
         raise HTTPException(403, "仅学生账号可提交")
     task = db.get_task(tid)
-    if not task or task.get("kind") not in ("lesson", "training"):
+    if not task or task.get("kind") not in ("lesson", "training", "homework"):
         raise HTTPException(404, "任务不存在")
     pid = task.get("project_id")
     allowed = {int(c["id"]) for c in _student_courses(user) if c and c.get("id") is not None}

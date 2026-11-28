@@ -180,8 +180,8 @@
       if (foot && v.foot !== undefined) foot.textContent = v.foot;
     });
   }
-  var KIND = { lesson: "备课", training: "实训", qa: "答疑", review: "评审", nextlesson: "下一课", agent: "助手", load: "加载" };
-  var KIND_IC = { lesson: "✦", training: "◈", qa: "◌", review: "✓", nextlesson: "◔", agent: "✧", load: "▤" };
+  var KIND = { lesson: "备课", training: "实训", qa: "答疑", review: "评审", nextlesson: "下一课", agent: "助手", load: "加载", homework: "班级任务" };
+  var KIND_IC = { lesson: "✦", training: "◈", qa: "◌", review: "✓", nextlesson: "◔", agent: "✧", load: "▤", homework: "✎" };
   function kindLabel(k) { return KIND[k] || k || "任务"; }
   function bindBtn(scope, text, fn) {
     $all("button, a", scope).forEach(function (b) {
@@ -1334,14 +1334,26 @@
           '</button>';
       }).join("");
     }
+    /* 空对话占位：没有消息时显示引导卡，有消息时隐藏 */
+    function syncEmpty() {
+      var box = document.getElementById("chatEmpty");
+      if (!box || !chat) return;
+      box.style.display = chat.querySelector(".msg") ? "none" : "";
+    }
+    function clearMsgs() {
+      if (!chat) return;
+      [].slice.call(chat.querySelectorAll(".msg")).forEach(function (n) { n.parentNode.removeChild(n); });
+    }
+    function clearChat() {
+      clearMsgs();
+      syncEmpty();
+    }
     function snapshotChat() {
       if (!chat) return null;
-      var welcome = chat.querySelector(".msg.ai");
       var all = chat.querySelectorAll(".msg");
       var msgs = [];
       for (var i = 0; i < all.length; i++) {
         var m = all[i];
-        if (welcome && m === welcome) continue;
         var bubble = m.querySelector(".bubble");
         if (!bubble) continue;
         var role = m.classList.contains("me") ? "me" : "ai";
@@ -1359,25 +1371,21 @@
     }
     function restoreChat(histItem) {
       if (!chat || !histItem) return;
-      var welcome = chat.querySelector(".msg.ai");
-      chat.innerHTML = "";
-      if (welcome) chat.appendChild(welcome);
+      clearMsgs();
       (histItem.messages || []).forEach(function (m) {
         appendMsg(m.role, m.text.replace(/\n/g, "<br>"));
       });
+      syncEmpty();
     }
 
     onLive(function () {
-      // 清空内置演示对话，只保留欢迎语（第一条 .msg.ai），并隐藏演示提示
-      if (chat) {
-        var welcome = chat.querySelector(".msg.ai");
-        chat.innerHTML = "";
-        if (welcome) chat.appendChild(welcome);
-      }
+      // 进入真实数据模式：清空演示内容（保留空对话占位）
+      clearChat();
       var demoNote = document.getElementById("assistantDemoNote");
       if (demoNote) demoNote.style.display = "none";
     });
     renderHist();
+    syncEmpty();
 
     // 历史侧栏点击
     var histList = $("#chatHistoryList");
@@ -1398,7 +1406,7 @@
       var h = loadHist(); h.splice(idx, 1); saveHist(h); renderHist();
     });
 
-    // 新建对话按钮：保存当前到历史 → 清空 chat（保留 welcome）
+    // 新建对话按钮：保存当前到历史 → 清空 chat（显示空对话占位）
     document.addEventListener("click", function (e) {
       var btn = e.target.closest("[data-new-chat]");
       if (!btn) return;
@@ -1406,19 +1414,15 @@
       if (snap) {
         var h = loadHist(); h.unshift(snap); saveHist(h);
       }
-      if (chat) {
-        var welcome = chat.querySelector(".msg.ai");
-        chat.innerHTML = "";
-        if (welcome) chat.appendChild(welcome);
-      }
+      clearChat();
       renderHist();
       notify(snap ? "已保存到历史" : "已新建对话");
     });
     function appendMsg(role, html) {
       if (!chat) return;
       var d = document.createElement("div"); d.className = "msg " + (role === "me" ? "me" : "ai");
-      d.innerHTML = '<div class="who">' + (role === "me" ? "李" : "AI") + '</div><div class="bubble">' + html + '</div>';
-      chat.appendChild(d); d.scrollIntoView({ behavior: "smooth", block: "end" }); return d;
+      d.innerHTML = '<div class="who">' + (role === "me" ? "我" : "AI") + '</div><div class="bubble">' + html + '</div>';
+      chat.appendChild(d); syncEmpty(); d.scrollIntoView({ behavior: "smooth", block: "end" }); return d;
     }
     function addActs(msg) {
       if (!msg || msg.querySelector(".msg-acts")) return;
@@ -1432,7 +1436,7 @@
     function realSend(text) {
       text = (text || "").trim(); if (!text) return;
       appendMsg("me", h(text));
-      var thinking = appendMsg("ai", '<span class="spin"></span> 正在结合课程资料整理…');
+      var thinking = appendMsg("ai", '<span class="spin"></span> 正在思考…');
       if (!Edu.isLive()) {
         setTimeout(function () { thinking.querySelector(".bubble").innerHTML = '<b>示例回复</b><br>静态演示：未连接本地接口，启动 api_server.py 后返回真实结果。'; }, 700);
         return;
@@ -1481,9 +1485,36 @@
     $all("[data-prompt]").forEach(function (b) {
       b.addEventListener("click", function (e) { e.preventDefault(); e.stopImmediatePropagation(); realSend(b.getAttribute("data-prompt")); });
     });
-    // ?q= 自动发送（inline 脚本已被守卫跳过，这里统一处理）
-    var q = new URLSearchParams(location.search).get("q");
-    if (q) { if (Edu.isLive()) realSend(q); else setTimeout(function () { realSend(q); }, 0); }
+    /* ?q= 自动发送：首页对话框带过来的任务只发一次
+       - 读完立即把 q 从地址栏移除，刷新页面不会重发
+       - 等课程上下文就绪（Live 的课程变更事件）后再发，避免被“清空演示对话”覆盖
+       - 空内容不发 */
+    function takeQueryTask() {
+      var params;
+      try { params = new URLSearchParams(location.search); } catch (e) { return ""; }
+      if (!params.has("q")) return "";
+      var text = (params.get("q") || "").trim();
+      params.delete("q");
+      var rest = params.toString();
+      try {
+        history.replaceState(null, "", location.pathname + (rest ? "?" + rest : "") + (location.hash || ""));
+      } catch (e) {}
+      return text;
+    }
+    var queryTask = takeQueryTask();
+    if (queryTask) {
+      var querySent = false;
+      var fireQueryTask = function () {
+        if (querySent) return;
+        querySent = true;
+        setTimeout(function () { realSend(queryTask); }, 30);
+      };
+      if (typeof Edu.onCourseChange === "function") {
+        Edu.onCourseChange(function () { if (Edu.isLive()) fireQueryTask(); });
+      }
+      // 离线演示模式兜底：接口一直不可达时，1.5 秒后按演示逻辑发送一次
+      setTimeout(function () { if (!querySent && !Edu.isLive()) fireQueryTask(); }, 1500);
+    }
   }
 
   /* ---------------- files ---------------- */
@@ -1614,6 +1645,7 @@
       }).catch(function () {});
     }
     onLive(loadTasks);
+    window.__eduTasksRefresh = loadTasks;
   }
 
   /* ---------------- settings ---------------- */
@@ -1749,8 +1781,8 @@
     var courses = [];
 
     function renderProfile(p) {
-      // 学生页的「个人资料」tab 已移除：现在改资料走侧栏头像卡弹窗
-      if (!document.getElementById("pfName")) return;
+      // 学生页的「个人资料」tab 已移除：现在改资料走侧栏头像卡弹窗；
+      // 但页头姓名/班级仍需渲染，因此只在填充设置表单前判断元素是否存在。
       profile = p || {};
       var name = profile.display_name || profile.username || "同学";
       var nameEl = document.getElementById("stuName");
@@ -1763,7 +1795,7 @@
       }
       var tip = document.getElementById("stuBindTip");
       if (tip) tip.hidden = !!profile.bound;
-
+      if (!document.getElementById("pfName")) return;
       /* 设置面板：填充表单字段 */
       var fName = document.getElementById("pfName");
       if (fName) fName.value = name;
@@ -1989,21 +2021,69 @@
       }
     });
 
+    /* 登录后待完成任务提示：同一任务只提示一次（按学号记录） */
+    var noticeDone = false;
+    function taskType(t) { return t.kind === "training" ? "实训" : (t.kind === "homework" ? "班级任务" : "备课"); }
+    function taskTitle(t) { return (t.kind === "homework" ? t.prompt : ((t.meta || {}).pkg && (t.meta || {}).pkg.title) || t.prompt) || "任务"; }
+    function isStuPending(t, subs) { var s = subs[String(t.id)]; return !s || s.status === "returned"; }
+    function noticeKey() {
+      var no = (profile && (profile.student_no || profile.username)) || "";
+      return "edu.stuTaskNoticed" + (no ? "." + no : "");
+    }
+    function noticedIds() {
+      try { return JSON.parse(localStorage.getItem(noticeKey()) || "[]").map(String); } catch (e) { return []; }
+    }
+    function notifyPending(tasks) {
+      if (!tasks.length || document.getElementById("stuTaskNotice")) return;
+      var seen = noticedIds();
+      var fresh = tasks.filter(function (t) { return seen.indexOf(String(t.id)) < 0; });
+      if (!fresh.length) return;
+      var mask = document.createElement("div");
+      mask.className = "modal-mask on";
+      mask.id = "stuTaskNotice";
+      var items = fresh.slice(0, 6).map(function (t) {
+        var due = ((t.meta || {}).due || "").trim();
+        return '<div class="list-item"><div class="li-ic">✎</div><div><div class="li-t">' + h(taskTitle(t)) +
+          '</div><div class="li-s">' + taskType(t) + (due ? " · 截止 " + h(due) : "") + "</div></div></div>";
+      }).join("");
+      var more = fresh.length > 6 ? '<div class="mini" style="margin-top:6px">还有 ' + (fresh.length - 6) + ' 个待完成任务</div>' : "";
+      mask.innerHTML = '<div class="modal" style="max-width:520px">' +
+        '<div class="modal-h"><b>你有 ' + fresh.length + ' 个待完成任务</b><button class="x" type="button" data-close>×</button></div>' +
+        '<div class="modal-b"><div class="stack" style="gap:6px">' + items + '</div>' + more + '</div>' +
+        '<div class="modal-f"><button class="btn" type="button" data-close>稍后处理</button>' +
+        '<button class="btn primary" type="button" data-go-tasks>去完成任务</button></div></div>';
+      document.body.appendChild(mask);
+      function close() {
+        try {
+          var merged = noticedIds().concat(fresh.map(function (t) { return String(t.id); }));
+          localStorage.setItem(noticeKey(), JSON.stringify(merged.slice(-300)));
+        } catch (e) {}
+        if (mask.parentNode) mask.parentNode.removeChild(mask);
+      }
+      mask.addEventListener("click", function (e) {
+        if (e.target === mask || e.target.closest("[data-close]")) { close(); return; }
+        if (e.target.closest("[data-go-tasks]")) {
+          close();
+          var tab = document.querySelector('.tabs [data-tab="tasks"]');
+          if (tab) tab.click();
+        }
+      });
+    }
+
     function renderStudent(d, wrong) {
       d = d || {};
+      if (d.profile) profile = d.profile;
       wrong = wrong || { items: [], total: 0, corrected: 0 };
       var myQa = d.my_qa || [], myRev = d.my_reviews || [],
-          trains = d.trainings || [], lessons = d.lessons || [];
+          trains = d.trainings || [], lessons = d.lessons || [], hw = d.homework || [];
       var subs = {};
       (d.my_submissions || []).forEach(function (s) { subs[String(s.task_id)] = s; });
+      function isPending(t) { return isStuPending(t, subs); }
       fillPointSelect(document.getElementById("qaPointSelect"),
         myQa.map(function (q) { return q.knowledge_point; }),
         document.getElementById("qaPointHint"));
-      var allTasks = trains.concat(lessons);
-      var pending = allTasks.filter(function (t) {
-        var s = subs[String(t.id)];
-        return !s || s.status === "returned";
-      }).length;
+      var allTasks = hw.concat(trains, lessons);
+      var pending = allTasks.filter(isPending).length;
       var scored = (d.my_submissions || []).filter(function (s) { return s.status === "reviewed" && s.score != null; });
       setKpis(document, [
         { value: pending, foot: "含退回待重交" },
@@ -2015,24 +2095,20 @@
       // 今日安排
       var homeStack = document.querySelector('[data-pane="home"] .stack');
       if (homeStack) {
-        var todos = allTasks.filter(function (t) {
-          var s = subs[String(t.id)];
-          return !s || s.status === "returned";
-        }).slice(0, 3);
+        var todos = allTasks.filter(isPending).slice(0, 3);
         if (!todos.length) {
           homeStack.innerHTML = (courses && courses.length)
             ? '<div class="list-item"><div class="li-ic">✓</div><div><div class="li-t">今日暂无待办</div><div class="li-s">所有任务已完成</div></div></div>'
             : '<div class="list-item"><div class="li-ic">◌</div><div><div class="li-t">暂无可学习的课程</div><div class="li-s">课程尚未发布或已归档，请联系教师</div></div></div>';
         }
         else homeStack.innerHTML = todos.map(function (t, i) {
-          var meta = t.meta || {}; var title = (meta.pkg && meta.pkg.title) || t.prompt || "任务";
-          return '<div class="list-item"><div class="li-ic">' + (i + 1) + '</div><div><div class="li-t">' + h(title) + '</div><div class="li-s">' + (t.kind === "training" ? "实训" : "备课") + " · " + (fmtTime(t.created_at) || "未排期") + '</div></div></div>';
+          return '<div class="list-item"><div class="li-ic">' + (i + 1) + '</div><div><div class="li-t">' + h(taskTitle(t)) + '</div><div class="li-s">' + taskType(t) + " · " + (fmtTime(t.created_at) || "未排期") + '</div></div></div>';
         }).join("");
       }
       // 学习进度
       var homeBars = document.querySelector('[data-pane="home"] .bars');
       if (homeBars) {
-        var all = trains.concat(lessons), done = all.filter(function (t) {
+        var all = allTasks, done = all.filter(function (t) {
           var s = subs[String(t.id)];
           return s && s.status === "reviewed";
         }).length;
@@ -2044,9 +2120,7 @@
         var taskRows = allTasks.slice(0, 20);
         if (!taskRows.length) taskTb.innerHTML = '<tr><td colspan="5" class="mini">暂无任务</td></tr>';
         else taskTb.innerHTML = taskRows.map(function (t) {
-          var isTrain = t.kind === "training";
-          var meta = t.meta || {};
-          var title = isTrain ? ((meta.pkg && meta.pkg.title) || t.prompt || "实训任务") : (t.prompt || "备课任务");
+          var title = taskTitle(t);
           var s = subs[String(t.id)];
           var st, act;
           if (!s) {
@@ -2063,7 +2137,7 @@
             act = '<button class="btn sm" type="button" data-submit-task="' + t.id + '">重新提交</button>';
           }
           if (s) act += ' <button class="btn sm" type="button" data-submission-history="' + h(s.id) + '">版本历史</button>';
-          return '<tr><td><b>' + h(title) + '</b></td><td>' + (isTrain ? "实训" : "备课") + '</td><td>' + (fmtTime(t.created_at) || "—") + '</td><td>' + st + '</td><td>' + act + '</td></tr>';
+          return '<tr><td><b>' + h(title) + '</b></td><td>' + taskType(t) + '</td><td>' + (fmtTime(t.created_at) || "—") + '</td><td>' + st + '</td><td>' + act + '</td></tr>';
         }).join("");
         $all('[data-submission-history]', taskTb).forEach(function (button) {
           button.addEventListener('click', function () {
@@ -2127,6 +2201,12 @@
       if (rvProgText) rvProgText.textContent = (wrong.corrected || 0) + " / " + (wrong.total || 0) + " 题已订正";
       var rvProgBar = document.getElementById("rvProgBar");
       if (rvProgBar) rvProgBar.style.width = (wrong.total ? Math.round((wrong.corrected || 0) / wrong.total * 100) : 0) + "%";
+
+      // 登录后待完成任务提示（同一任务只弹一次）
+      if (!noticeDone) {
+        noticeDone = true;
+        notifyPending(allTasks.filter(isPending));
+      }
     }
     onLive(function () { load(); });
     if (typeof Edu.onCourseChange === "function") {

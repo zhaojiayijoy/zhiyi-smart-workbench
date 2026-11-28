@@ -153,7 +153,8 @@
         if (kind) q += "&kind=" + encodeURIComponent(kind);
         return _req("/tasks" + q);
       },
-      remove: function (id) { return _req("/tasks/" + id, { method: "DELETE" }); }
+      remove: function (id) { return _req("/tasks/" + id, { method: "DELETE" }); },
+      publish: function (body) { return _req("/tasks/publish", { method: "POST", body: body }); }
     },
     lesson: {
       generate: function (p) { return _req("/lesson/generate", { method: "POST", body: p }); },

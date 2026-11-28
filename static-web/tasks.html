@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>任务中心 · 致壹 智能教育工作台</title>
-<link rel="stylesheet" href="assets/css/site.css?v=1795789921">
+<link rel="stylesheet" href="assets/css/site.css?v=1795799601">
 <script src="assets/js/auth.js?v=1795770200"></script>
 </head>
 <body data-page="tasks">
@@ -15,8 +15,11 @@
     <main class="content">
 
       <div class="page-head">
-        <div><h1>任务中心</h1><p class="sub">备课、实训、评审与答疑的执行记录</p></div>
-        <div class="right"><button class="btn primary" type="button" data-go="index.html">＋ 新建教学任务</button></div>
+        <div><h1>任务中心</h1></div>
+        <div class="right">
+          <button class="btn primary" type="button" id="publishTaskBtn">＋ 一键发布任务</button>
+          <button class="btn" type="button" data-go="index.html">新建教学任务</button>
+        </div>
       </div>
 
       <div class="card" style="margin-bottom:14px" data-panel="任务概览" data-panel-width="820px" data-panel-ic="▦">
@@ -62,9 +65,80 @@
 
 <div class="toast"></div>
 
+<div class="modal-mask" id="modalPublishTask">
+  <div class="modal" style="max-width:620px">
+    <div class="modal-h"><b>一键发布班级任务</b><button class="x" type="button" data-close-modal>×</button></div>
+    <div class="modal-b">
+      <div class="field"><label>任务标题 *</label><input id="ptTitle" type="text" placeholder="例如：完成第 3 章练习并提交"></div>
+      <div class="field"><label>任务说明</label><textarea id="ptDesc" rows="3" placeholder="要求、提交方式、注意事项"></textarea></div>
+      <div class="grid g2">
+        <div class="field"><label>截止时间</label><input id="ptDue" type="text" placeholder="例如：本周五 18:00"></div>
+        <div class="field"><label>发布班级（留空=全部班级）</label><input id="ptClass" type="text" placeholder="默认取当前课程班级"></div>
+      </div>
+      <div class="form-actions">
+        <button class="btn primary" type="button" id="ptSubmit">发布给学生</button>
+        <span class="mini" id="ptMsg">发布后学生首页即可看到该任务。</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* 一键发布班级任务：写入 kind=homework 任务，学生端按班级匹配 */
+(function(){
+  var btn = document.getElementById('publishTaskBtn');
+  var mask = document.getElementById('modalPublishTask');
+  if (!btn || !mask) return;
+  var submit = document.getElementById('ptSubmit');
+  var msg = document.getElementById('ptMsg');
+  var titleEl = document.getElementById('ptTitle');
+  var descEl = document.getElementById('ptDesc');
+  var dueEl = document.getElementById('ptDue');
+  var classEl = document.getElementById('ptClass');
+
+  function course() {
+    return (window.Edu && typeof Edu.getSelectedCourse === 'function') ? Edu.getSelectedCourse() : null;
+  }
+
+  btn.addEventListener('click', function () {
+    var c = course();
+    if (!classEl.value && c && c.class_name) classEl.value = c.class_name;
+    msg.textContent = c && c.name ? ('当前课程：' + c.name) : '请先在顶部选择课程';
+    mask.classList.add('on');
+    setTimeout(function () { titleEl.focus(); }, 60);
+  });
+
+  submit.addEventListener('click', function () {
+    var c = course();
+    var title = titleEl.value.trim();
+    if (!c || !c.id) { msg.textContent = '请先在顶部选择课程'; return; }
+    if (!title) { msg.textContent = '请填写任务标题'; titleEl.focus(); return; }
+    if (submit.disabled) return;              // 防重复点击
+    var classes = classEl.value.split(/[,，、\s]+/).filter(Boolean);
+    submit.disabled = true; submit.textContent = '发布中…';
+    EduAPI.tasks.publish({
+      project_id: c.id,
+      title: title,
+      description: descEl.value.trim(),
+      due: dueEl.value.trim(),
+      audience: classes
+    }).then(function (r) {
+      submit.disabled = false; submit.textContent = '发布给学生';
+      mask.classList.remove('on');
+      (window.toast || function(){}) (r && r.duplicate ? '相同任务已发布，未重复下发' : '任务已发布，学生首页可见');
+      titleEl.value = ''; descEl.value = ''; dueEl.value = '';
+      if (window.__eduTasksRefresh) window.__eduTasksRefresh();
+    }).catch(function (e) {
+      submit.disabled = false; submit.textContent = '发布给学生';
+      msg.textContent = (e && e.message) || '发布失败';
+    });
+  });
+})();
+</script>
+
 <script src="assets/js/data.js?v=1795420906"></script>
-<script src="assets/js/site.js?v=1795789922"></script>
-<script src="assets/js/api.js?v=1795770000"></script>
-<script src="assets/js/live.js?v=1795789903"></script>
+<script src="assets/js/site.js?v=1795799511"></script>
+<script src="assets/js/api.js?v=1795799200"></script>
+<script src="assets/js/live.js?v=1795799301"></script>
 </body>
 </html>
