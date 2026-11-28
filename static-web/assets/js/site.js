@@ -27,21 +27,32 @@
 
   var GROUPS = [
     {
-      label: "教学流程",
+      label: "课前准备",
       items: [
         { href: "courses.html", icon: "book", text: "课程项目", page: "courses" },
         { href: "outline.html", icon: "file", text: "备课大纲", page: "outline" },
-        { href: "lesson.html", icon: "spark", text: "一键备课", page: "lesson" },
-        { href: "rehearsal.html", icon: "eye", text: "课堂预演", page: "rehearsal" },
-        { href: "training.html", icon: "tool", text: "创建实训", page: "training" },
-        { href: "tutor.html", icon: "chat", text: "学生答疑", page: "tutor" },
-        { href: "review.html", icon: "check", text: "作业评审", page: "review" },
-        { href: "analytics.html", icon: "chart", text: "学情分析", page: "analytics" }
+        { href: "lesson.html", icon: "spark", text: "一键备课", page: "lesson" }
       ]
     },
     {
-      label: "工具",
+      label: "发布与课堂",
       items: [
+        { href: "tasks.html", icon: "grid", text: "任务中心", page: "tasks" },
+        { href: "rehearsal.html", icon: "eye", text: "课堂预演", page: "rehearsal" },
+        { href: "training.html", icon: "tool", text: "创建实训", page: "training" }
+      ]
+    },
+    {
+      label: "答疑与批改",
+      items: [
+        { href: "tutor.html", icon: "chat", text: "学生答疑", page: "tutor" },
+        { href: "review.html", icon: "check", text: "作业评审", page: "review" }
+      ]
+    },
+    {
+      label: "分析与工具",
+      items: [
+        { href: "analytics.html", icon: "chart", text: "学情分析", page: "analytics" },
         { href: "tools.html", icon: "tool", text: "教学工具", page: "tools" }
       ]
     }
@@ -1083,6 +1094,14 @@
       }
     });
 
+    /* 多列容器里只剩一张卡时，让它占满整行，避免右侧大片空白 */
+    document.querySelectorAll(".content .split, .content .tutor-layout").forEach(function (box) {
+      var left = [].filter.call(box.children, function (c) {
+        return c.tagName !== "SCRIPT" && c.tagName !== "TEMPLATE" && !c.classList.contains("modal-mask");
+      });
+      if (left.length === 1) box.classList.add("single-col");
+    });
+
     document.addEventListener("click", function (e) {
       var b = e.target.closest("[data-open-panel]");
       if (b) {
@@ -1100,6 +1119,41 @@
     if (location.hash && byCardId[location.hash.slice(1)]) {
       byCardId[location.hash.slice(1)].classList.add("on");
     }
+  }
+
+  /* ---------- 页内模块导航：一屏放不下时，点击切换内容模块 ----------
+     约定：
+       <div class="pnav" data-pnav>
+         <button data-pnav-tab="a" class="on">A</button>
+         <button data-pnav-tab="b">B</button>
+       </div>
+       <div class="pnav-pane on" data-pnav-pane="a">…</div>
+       <div class="pnav-pane" data-pnav-pane="b">…</div>
+     模块与导航需在同一个父亲容器内（默认取导航的 parentNode）。 */
+  function initPageNav() {
+    var navs = [].slice.call(document.querySelectorAll("[data-pnav]"));
+    if (!navs.length) return;
+    navs.forEach(function (nav) {
+      var scope = nav.parentNode;
+      var tabs = [].slice.call(nav.querySelectorAll("[data-pnav-tab]"));
+      var panes = [].slice.call(scope.querySelectorAll("[data-pnav-pane]"));
+      if (!tabs.length || !panes.length) return;
+      function show(name) {
+        tabs.forEach(function (t) {
+          t.classList.toggle("on", t.getAttribute("data-pnav-tab") === name);
+        });
+        panes.forEach(function (p) {
+          p.classList.toggle("on", p.getAttribute("data-pnav-pane") === name);
+        });
+      }
+      nav.addEventListener("click", function (e) {
+        var b = e.target.closest("[data-pnav-tab]");
+        if (!b || !nav.contains(b)) return;
+        show(b.getAttribute("data-pnav-tab"));
+      });
+      var active = nav.querySelector("[data-pnav-tab].on") || tabs[0];
+      show(active.getAttribute("data-pnav-tab"));
+    });
   }
 
   /* ---------- 个人资料弹窗（单卡：修改公开资料） ---------- */
@@ -1557,6 +1611,7 @@
     initHashTabs();
     initFolds();
     initPanels();
+    initPageNav();
     fillCourseFields();
     Edu.onCourseChange(function () { fillCourseFields(); renderTopCourseSummary(); });
     initLive();

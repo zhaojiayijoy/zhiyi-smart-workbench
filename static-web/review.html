@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>作业评审 · 致壹 智能教育工作台</title>
-<link rel="stylesheet" href="assets/css/site.css?v=1795789921">
+<link rel="stylesheet" href="assets/css/site.css?v=1795799601">
 <script src="assets/js/auth.js?v=1795770200"></script>
 </head>
 <body data-page="review">
@@ -15,7 +15,7 @@
     <main class="content">
 
       <div class="page-head">
-        <div><h1>作业评审</h1><p class="sub" data-page-sub>AI 给出分维度评分证据，教师复核后发布</p></div>
+        <div><h1>作业评审</h1></div>
         <div class="right" id="reviewHeadTags"><span class="tag warn">— 份待复核</span><span class="tag ok">— 份已发布</span></div>
       </div>
 
@@ -65,8 +65,10 @@
           <div class="card-h"><h2>学生提交</h2><div class="right"><span class="mini" id="reviewSubmitCount">—</span></div></div>
           <div class="card-b">
             <div class="row"><span class="mini" id="reviewSelectedCount">已选 0 份</span><button class="btn sm" type="button" id="reviewBatchPublish" disabled>批量发布</button><button class="btn sm" type="button" id="reviewBatchReturn" disabled>批量退回</button></div>
-            <div class="field"><label for="reviewBatchReason">退回原因（退回时必填）</label><textarea id="reviewBatchReason" rows="2"></textarea></div>
-            <div class="field"><label for="reviewBatchComment">批量评语（可选）</label><textarea id="reviewBatchComment" rows="2"></textarea></div>
+            <div class="grid g2">
+              <div class="field"><label for="reviewBatchReason">退回原因（退回时必填）</label><textarea id="reviewBatchReason" rows="2"></textarea></div>
+              <div class="field"><label for="reviewBatchComment">批量评语（可选）</label><textarea id="reviewBatchComment" rows="2"></textarea></div>
+            </div>
             <div class="mini" id="reviewBatchResult" role="status" aria-live="polite" style="white-space:pre-wrap"></div>
           </div>
           <div class="table-wrap">
@@ -201,8 +203,8 @@
 })();
 </script>
 <script src="assets/js/data.js?v=1795420906"></script>
-<script src="assets/js/site.js?v=1795789922"></script>
-<script src="assets/js/api.js?v=1795770000"></script>
-<script src="assets/js/live.js?v=1795789903"></script>
+<script src="assets/js/site.js?v=1795799511"></script>
+<script src="assets/js/api.js?v=1795799200"></script>
+<script src="assets/js/live.js?v=1795799301"></script>
 </body>
 </html>

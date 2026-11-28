@@ -194,9 +194,9 @@ button,input,select,textarea{font-family:inherit;font-size:var(--edu-font,13.5px
 .side-new{margin:4px 12px 8px;display:flex;flex-direction:column;gap:6px}
 .side-new button{width:100%;border:1px solid var(--accent-line);background:var(--accent);color:#FFFCF6;border-radius:9px;padding:8px 10px;font-weight:600;cursor:pointer;box-shadow:0 1px 2px rgba(54,91,76,.25)}
 .side-new button:hover{background:var(--accent-2)}
-.nav{flex:1;overflow:auto;padding:2px 10px 14px}
-.nav-label{font-size:10.5px;letter-spacing:.1em;color:var(--text-3);font-weight:650;padding:14px 8px 6px}
-.nav a{display:flex;align-items:center;gap:9px;padding:7px 9px;border-radius:8px;color:var(--text-2);margin-bottom:1px}
+.nav{flex:1;overflow:auto;padding:2px 10px 8px}
+.nav-label{font-size:10.5px;letter-spacing:.1em;color:var(--text-3);font-weight:650;padding:9px 8px 4px}
+.nav a{display:flex;align-items:center;gap:9px;padding:6px 9px;border-radius:8px;color:var(--text-2);margin-bottom:1px}
 .nav a:hover{background:var(--hover);color:var(--text)}
 .nav a.active{background:var(--active-bg);color:var(--active-text);font-weight:600}
 .nav .ic{width:16px;text-align:center;font-size:14px;opacity:.9}
@@ -751,6 +751,84 @@ body[data-page="courses"] .form-actions .mini{line-height:1.5}
 .chat-history .ch-item b{display:block;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .chat-history .ch-item .mini{color:var(--text-3);font-size:11px;margin-top:3px}
 .chat-history .ch-item:hover{background:var(--panel);border-color:var(--line)}
+
+/* ===== 一屏优先：压缩留白（不隐藏内容，只收紧间距） ===== */
+.topbar{height:42px}
+.content{max-width:1240px;padding:14px 22px 14px}
+h1{font-size:19px;margin-bottom:0}
+.page-head{margin-bottom:10px;align-items:center}
+.card-h{padding:9px 14px;gap:8px}
+.card-b{padding:12px 14px}
+.card-b.tight{padding:8px 12px}
+.grid{gap:11px}
+.stack{gap:11px}
+.kpi{padding:10px 13px}
+.kpi .label{font-size:11px}
+.kpi .value{font-size:18px;margin:3px 0 1px}
+.kpi .foot{font-size:10.5px}
+.field{margin-bottom:9px}
+.field > label{font-size:11.5px}
+.ctx{padding:7px 12px;margin-bottom:10px}
+.panel-tools{margin-bottom:10px;gap:6px}
+.tabs{margin-bottom:10px}
+.tabs button{padding:7px 11px}
+.steps{margin-bottom:10px}
+.form-actions{margin-top:4px}
+.hero{padding:18px 20px 14px;margin-bottom:12px}
+.hero h1{font-size:21px}
+.hero p{margin:4px 0 10px}
+.hero-quick{margin-top:12px;padding-top:10px}
+.quick{gap:8px}
+.quick a{padding:9px 10px;gap:8px}
+.quick .qi{width:28px;height:28px;flex-basis:28px;font-size:13px}
+.recent-grid{margin-top:10px;gap:12px}
+th{padding:6px 12px}
+td{padding:6px 12px}
+.rule{padding:8px 10px}
+.empty{padding:18px}
+.bars{gap:9px}
+
+/* ===== AI 助手：空对话占位 ===== */
+.chat-empty{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;
+  text-align:center;padding:48px 20px;min-height:240px;color:var(--text-3);
+}
+.chat-empty .ce-ic{
+  width:38px;height:38px;border-radius:12px;background:var(--accent-soft);color:var(--accent);
+  display:grid;place-items:center;font-size:17px;margin-bottom:2px;
+}
+.chat-empty b{font-size:14px;color:var(--text);font-weight:600}
+.chat-empty span{font-size:12px;line-height:1.6;max-width:430px}
+
+/* ===== 页内模块导航：内容一屏放不下时，用导航切换模块 ===== */
+.pnav{
+  display:inline-flex;flex-wrap:wrap;gap:4px;padding:4px;margin-bottom:10px;
+  background:var(--panel-3);border:1px solid var(--line);border-radius:10px;max-width:100%;
+}
+.pnav button{
+  border:0;background:transparent;padding:6px 14px;border-radius:7px;
+  font-size:12.5px;color:var(--text-2);cursor:pointer;white-space:nowrap;line-height:1.5;
+}
+.pnav button:hover{background:var(--hover);color:var(--text)}
+.pnav button.on{background:var(--panel);color:var(--text);font-weight:600;box-shadow:0 1px 2px rgba(37,50,45,.10)}
+.pnav-pane{display:none}
+.pnav-pane.on{display:block}
+/* 模块里的长表格：在容器内滚动，避免整页滚动 */
+.pnav-pane .table-wrap{max-height:calc(100vh - 370px)}
+.pnav-pane .table-wrap table{font-size:12px}
+.pnav-pane .table-wrap td{line-height:1.45}
+/* 多列容器只剩一张卡时占满整行 */
+.split.single-col,
+.tutor-layout.single-col{grid-template-columns:1fr}
+/* 主卡里的数据表：视口偏矮时在表格内滚动，页面本身不滚动 */
+.content > .card > .table-wrap{max-height:calc(100vh - 330px)}
+/* 备课大纲：概览模块过长时在模块内滚动 */
+.pnav-pane[data-pnav-pane="ov"]{max-height:calc(100vh - 370px);overflow:auto}
+/* 页内导航模块（直接挂在 .content 下）：视口矮时模块内滚动，页面不滚动 */
+.content > .pnav-pane{max-height:calc(100vh - 200px);overflow:auto}
+/* 备课大纲：模块行两列排布，压缩纵向高度 */
+#olSummary .stack{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+@media(max-width:680px){#olSummary .stack{grid-template-columns:1fr}}
 
 @media(max-width:960px){
   .chat-history{width:160px}

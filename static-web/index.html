@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>工作台首页 · 致壹 智能教育工作台</title>
-<link rel="stylesheet" href="assets/css/site.css?v=1795789921">
+<link rel="stylesheet" href="assets/css/site.css?v=1795799601">
 <script src="assets/js/auth.js?v=1795770200"></script>
 </head>
 <body data-page="index">
@@ -16,7 +16,6 @@
 
       <section class="hero">
         <h1>今天要完成哪项教学任务？</h1>
-        <p id="heroCourseLine">尚未选择课程，请先在顶部选择或新建课程。</p>
 
         <form class="composer" id="homeComposer">
           <textarea placeholder="输入课题、上传资料，或描述你要完成的教学任务。" rows="3"></textarea>
@@ -30,6 +29,7 @@
             <a href="training.html"><span class="qi">◈</span><span><b>创建实训</b><span>生成 Word、Excel、PPT 实训任务</span></span></a>
             <a href="tutor.html"><span class="qi">◌</span><span><b>学生答疑</b><span>提供引导式提示并汇总错因</span></span></a>
             <a href="review.html"><span class="qi">✓</span><span><b>作业评审</b><span>AI 初评、证据定位和教师复核</span></span></a>
+            <a href="tasks.html"><span class="qi">✎</span><span><b>任务中心</b><span>一键发布班级任务、查看全部任务进度</span></span></a>
             <a href="files.html"><span class="qi">▤</span><span><b>课程资源</b><span>管理教材、课件、案例和学生资料</span></span></a>
             <a href="analytics.html"><span class="qi">◔</span><span><b>学情分析</b><span>查看薄弱知识点和下一课建议</span></span></a>
           </div>
@@ -78,16 +78,18 @@
 <div class="toast"></div>
 
 <script src="assets/js/data.js?v=1795420906"></script>
-<script src="assets/js/site.js?v=1795789922"></script>
-<script src="assets/js/api.js?v=1795770000"></script>
-<script src="assets/js/live.js?v=1795789903"></script>
+<script src="assets/js/site.js?v=1795799511"></script>
+<script src="assets/js/api.js?v=1795799200"></script>
+<script src="assets/js/live.js?v=1795799301"></script>
 <script>
 (function(){
   var form = document.getElementById('homeComposer');
   form.addEventListener('submit', function(e){
     e.preventDefault();
-    var text = form.querySelector('textarea').value.trim();
-    location.href = 'assistant.html' + (text ? '?q=' + encodeURIComponent(text) : '');
+    var ta = form.querySelector('textarea');
+    var text = ta.value.trim();
+    if (!text) { ta.focus(); return; }
+    location.href = 'assistant.html?q=' + encodeURIComponent(text);
   });
   form.querySelector('textarea').addEventListener('keydown', function(e){
     if(e.key === 'Enter' && !e.shiftKey){ e.preventDefault(); form.dispatchEvent(new Event('submit')); }

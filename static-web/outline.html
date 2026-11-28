@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>备课大纲 · 致壹 智能教育工作台</title>
-<link rel="stylesheet" href="assets/css/site.css?v=1795789921">
+<link rel="stylesheet" href="assets/css/site.css?v=1795799601">
 <script src="assets/js/auth.js?v=1795770200"></script>
 </head>
 <body data-page="outline">
@@ -15,7 +15,7 @@
     <main class="content">
 
       <div class="page-head">
-        <div><h1>备课大纲</h1><p class="sub" data-page-sub>agent 工作流：先出整门课大纲，由你审查修改后，再按讲次生成备课包</p></div>
+        <div><h1>备课大纲</h1></div>
         <div class="right"><a class="btn" href="lesson.html">打开一键备课</a></div>
       </div>
 
@@ -57,28 +57,40 @@
           <div class="right"><span class="tag" id="olStatus">—</span><span class="mini" id="olMeta"></span></div>
         </div>
         <div class="card-b">
-          <div id="olSummary"></div>
-          <div id="olChecks" class="stack" style="gap:6px;margin:10px 0"></div>
-
-          <div class="table-wrap">
-            <table>
-              <thead><tr><th>讲次</th><th>模块</th><th>课题</th><th>课时</th><th>教学目标</th><th>重难点</th><th>产出物</th><th>状态</th><th>操作</th></tr></thead>
-              <tbody id="olRows"><tr><td colspan="9" class="mini">暂无数据</td></tr></tbody>
-            </table>
+          <div class="pnav" data-pnav>
+            <button type="button" class="on" data-pnav-tab="ov">大纲概览</button>
+            <button type="button" data-pnav-tab="rows">讲次安排</button>
+            <button type="button" data-pnav-tab="edit">修改与审查</button>
           </div>
 
-          <div class="field" style="margin-top:14px">
-            <label>修改意见（对话式修改：写清要改什么，AI 会重写整份大纲，需重新审查）</label>
-            <textarea id="reviseNote" style="min-height:72px" placeholder="例如：第三讲太浅，加入真实企业案例；最后一讲改成复习课；总课时压缩到 32 课时"></textarea>
+          <div class="pnav-pane on" data-pnav-pane="ov">
+            <div id="olSummary"></div>
+            <div id="olChecks" class="stack" style="gap:6px;margin:8px 0 0"></div>
           </div>
-          <div class="form-actions" style="flex-wrap:wrap">
-            <button class="btn" type="button" id="btnRevise">按意见重写</button>
-            <button class="btn primary" type="button" id="btnApprove">通过大纲审查</button>
-            <button class="btn" type="button" id="btnGenAll">批量生成全部讲次</button>
-            <button class="btn ghost" type="button" id="btnCancel" hidden>停止生成</button>
-            <span class="mini" id="olHint">通过审查后才能生成备课包</span>
+
+          <div class="pnav-pane" data-pnav-pane="rows">
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>讲次</th><th>模块</th><th>课题</th><th>课时</th><th>教学目标</th><th>重难点</th><th>产出物</th><th>状态</th><th>操作</th></tr></thead>
+                <tbody id="olRows"><tr><td colspan="9" class="mini">暂无数据</td></tr></tbody>
+              </table>
+            </div>
           </div>
-          <div class="rule" id="jobBar" hidden style="margin-top:10px"></div>
+
+          <div class="pnav-pane" data-pnav-pane="edit">
+            <div class="field">
+              <label>修改意见（对话式修改：写清要改什么，AI 会重写整份大纲，需重新审查）</label>
+              <textarea id="reviseNote" style="min-height:72px" placeholder="例如：第三讲太浅，加入真实企业案例；最后一讲改成复习课；总课时压缩到 32 课时"></textarea>
+            </div>
+            <div class="form-actions" style="flex-wrap:wrap">
+              <button class="btn" type="button" id="btnRevise">按意见重写</button>
+              <button class="btn primary" type="button" id="btnApprove">通过大纲审查</button>
+              <button class="btn" type="button" id="btnGenAll">批量生成全部讲次</button>
+              <button class="btn ghost" type="button" id="btnCancel" hidden>停止生成</button>
+              <span class="mini" id="olHint">通过审查后才能生成备课包</span>
+            </div>
+            <div class="rule" id="jobBar" hidden style="margin-top:8px"></div>
+          </div>
         </div>
       </div>
 
@@ -98,8 +110,8 @@
 
 <div class="toast"></div>
 <script src="assets/js/data.js?v=1795420906"></script>
-<script src="assets/js/site.js?v=1795789922"></script>
-<script src="assets/js/api.js?v=1795770000"></script>
+<script src="assets/js/site.js?v=1795799511"></script>
+<script src="assets/js/api.js?v=1795799200"></script>
 <script>
 /* ===== 备课大纲：agent 工作流页面 ===== */
 (function () {

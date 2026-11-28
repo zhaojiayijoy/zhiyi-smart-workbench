@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>一键备课 · 致壹 智能教育工作台</title>
-<link rel="stylesheet" href="assets/css/site.css?v=1795789921">
+<link rel="stylesheet" href="assets/css/site.css?v=1795799601">
 <script src="assets/js/auth.js?v=1795770200"></script>
 </head>
 <body data-page="lesson">
@@ -15,8 +15,7 @@
     <main class="content">
 
       <div class="page-head">
-        <div><h1>一键备课</h1><p class="sub" data-page-sub>基于课程资料与学情，生成教案、课件、练习、答案与评分量规</p></div>
-        <div class="right"><a class="btn" href="#packs">备课包历史</a></div>
+        <div><h1>一键备课</h1></div>
       </div>
 
       <div class="ctx">
@@ -28,7 +27,12 @@
       <div class="card" style="margin-bottom:14px">
         <div class="card-h"><h2>备课参数</h2><div class="right"><span class="tag acc">课程上下文已带入</span></div></div>
         <div class="card-b">
+          <div class="pnav" data-pnav>
+            <button type="button" class="on" data-pnav-tab="base">基本参数</button>
+            <button type="button" data-pnav-tab="gen">输出与模型</button>
+          </div>
           <form data-sim="#lessonOut" data-msg="备课包已生成（示例）">
+            <div class="pnav-pane on" data-pnav-pane="base">
             <div class="grid g3">
               <div class="field" style="grid-column:span 2"><label>本次课题 *</label><input type="text" required value=""></div>
               <div class="field"><label>课型</label>
@@ -42,7 +46,9 @@
               <div class="field"><label>教学风格 / 课堂活动要求</label><textarea style="min-height:62px"></textarea></div>
               <div class="field"><label>补充要求</label><textarea style="min-height:62px"></textarea></div>
             </div>
+            </div>
 
+            <div class="pnav-pane" data-pnav-pane="gen">
             <div class="field">
               <label>输出物</label>
               <div class="checks" id="outChecks">
@@ -72,6 +78,7 @@
               <button class="btn" type="submit">生成备课包</button>
               <button class="btn" type="reset">清空参数</button>
               <span class="mini">生成结果需教师审核后才可发布给学生。</span>
+            </div>
             </div>
           </form>
         </div>
@@ -156,9 +163,9 @@
 
 <div class="toast"></div>
 <script src="assets/js/data.js?v=1795420906"></script>
-<script src="assets/js/site.js?v=1795789922"></script>
-<script src="assets/js/api.js?v=1795770000"></script>
-<script src="assets/js/live.js?v=1795789903"></script>
+<script src="assets/js/site.js?v=1795799511"></script>
+<script src="assets/js/api.js?v=1795799200"></script>
+<script src="assets/js/live.js?v=1795799301"></script>
 <script>
 (function(){
   function $id(id){ return document.getElementById(id); }

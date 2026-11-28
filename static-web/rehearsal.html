@@ -4,25 +4,28 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>AI 课堂预演 · 致壹 智能教育工作台</title>
-<link rel="stylesheet" href="assets/css/site.css?v=1795789921">
+<link rel="stylesheet" href="assets/css/site.css?v=1795799601">
 <script src="assets/js/auth.js?v=1795770200"></script>
 <style>
   /* 三栏布局：左配置 + 中时间轴 + 右风险修补 */
-  .rh-head{display:flex;gap:16px;align-items:flex-end;flex-wrap:wrap;margin-bottom:14px}
+  .rh-head{display:flex;gap:16px;align-items:flex-end;flex-wrap:wrap;margin-bottom:10px}
   .rh-head h1{margin:0;font-size:22px;letter-spacing:-.3px}
   .rh-meta{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
   .rh-mode-tag{background:rgba(129,167,145,.22);color:var(--accent);padding:3px 9px;border-radius:10px;font-size:11.5px;border:1px solid rgba(129,167,145,.35)}
   .rh-mock-tag{background:rgba(184,120,62,.22);color:var(--accent-soft);padding:3px 9px;border-radius:10px;font-size:11.5px;border:1px solid rgba(184,120,62,.35)}
   .rh-grid{display:grid;grid-template-columns:280px 1fr 340px;gap:14px;align-items:start}
-  @media (max-width:1200px){.rh-grid{grid-template-columns:1fr}}
-  .rh-col{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px 14px}
+  .rh-2col{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:14px;align-items:start}
+  @media (max-width:1200px){.rh-grid{grid-template-columns:1fr}.rh-2col{grid-template-columns:1fr}}
+  .rh-col{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 12px}
   .rh-col h3{margin:0 0 10px;font-size:13px;color:var(--text);letter-spacing:.03em}
-  .rh-section{margin-bottom:14px}
+  .rh-section{margin-bottom:10px}
   .rh-section .mini{margin:4px 0 8px;line-height:1.5}
-  .rh-field{margin-bottom:10px}
+  .rh-field{margin-bottom:8px}
   .rh-field label{display:block;font-size:11.5px;color:var(--text-3);margin-bottom:5px;letter-spacing:.02em}
   .rh-field .value{font-size:13px;color:var(--text-2);line-height:1.5}
   .rh-persona{display:flex;align-items:center;gap:8px;padding:6px 8px;border:1px solid var(--line);border-radius:8px;margin-bottom:6px;cursor:pointer;transition:.15s}
+  #rhPersonas{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+  #rhPersonas .rh-persona{margin-bottom:0}
   .rh-persona:hover{border-color:var(--accent);background:var(--hover)}
   .rh-persona.on{border-color:var(--accent);background:rgba(129,167,145,.12)}
   .rh-persona .avatar{width:26px;height:26px;border-radius:50%;display:grid;place-items:center;font-size:13px;font-weight:600;color:#fff;flex-shrink:0}
@@ -109,7 +112,6 @@
       <div class="rh-head">
         <div>
           <h1>AI 课堂预演</h1>
-          <div class="mini" style="margin-top:3px">基于当前备课包模拟学生反应，提前发现课堂风险。模拟结果仅用于教学准备。</div>
         </div>
         <div class="rh-meta">
           <span class="rh-mode-tag" id="rhMode">单模型预演</span>
@@ -117,8 +119,15 @@
         </div>
       </div>
 
-      <div class="rh-grid">
-        <!-- 左：配置 + 历史 -->
+      <div class="pnav" data-pnav>
+        <button type="button" class="on" data-pnav-tab="cfg">预演配置</button>
+        <button type="button" data-pnav-tab="time">课堂时间轴</button>
+        <button type="button" data-pnav-tab="risk">风险与修补</button>
+      </div>
+
+      <div class="pnav-pane on" data-pnav-pane="cfg">
+        <!-- 配置 + 历史 -->
+        <div class="rh-2col">
         <div class="rh-col">
           <div class="rh-section">
             <h3>预演配置</h3>
@@ -134,6 +143,9 @@
             <button class="btn primary" id="rhRun" style="width:100%">开始预演</button>
             <button class="btn ghost" id="rhDemo" style="width:100%;margin-top:6px">快速体验演示预演</button>
           </div>
+        </div>
+
+        <div class="rh-col">
           <div class="rh-section" id="rhProgressWrap" style="display:none">
             <h3>运行进度</h3>
             <div class="rh-progress">
@@ -147,7 +159,10 @@
             <div id="rhHistory"></div>
           </div>
         </div>
+        </div>
+      </div>
 
+      <div class="pnav-pane" data-pnav-pane="time">
         <!-- 中：课堂时间轴 -->
         <div class="rh-col">
           <h3>课堂时间轴</h3>
@@ -157,7 +172,9 @@
             <div>请先完成「一键备课」，再回到这里开始预演。</div>
           </div>
         </div>
+      </div>
 
+      <div class="pnav-pane" data-pnav-pane="risk">
         <!-- 右：风险 + 修补 -->
         <div class="rh-col">
           <h3>风险与修补</h3>
@@ -178,9 +195,9 @@
 <div class="toast"></div>
 
 <script src="assets/js/data.js?v=1795420906"></script>
-<script src="assets/js/site.js?v=1795789922"></script>
-<script src="assets/js/api.js?v=1795770000"></script>
-<script src="assets/js/live.js?v=1795789903"></script>
+<script src="assets/js/site.js?v=1795799511"></script>
+<script src="assets/js/api.js?v=1795799200"></script>
+<script src="assets/js/live.js?v=1795799301"></script>
 <script src="assets/js/rehearsal.js?v=1795700100"></script>
 </body>
 </html>
